@@ -11,6 +11,12 @@
 // frame as bit planes in the background to make the in-between levels; the
 // registers hold their state, so without it a frame is only sent when it
 // changes.
+// Font for scrolling text (everything drawn through drawScrollFrame):
+//  Small - the proportional 8-row font (a-z, A-Z, accents)
+//  Big   - the same font doubled with EPX/Scale2x: 16 rows, the whole panel
+//  Mini  - 5-row capitals, about 4 letters at a time
+enum class TextFont : uint8_t { Small, Big, Mini };
+
 class Display {
  public:
   void begin();
@@ -38,6 +44,10 @@ class Display {
   // Scroll length in pixels: offsets -COLS .. scrollWidth(text) - 1 take the
   // text from off-screen right to off-screen left.
   static int scrollWidth(const char *text);
+  static void setScrollFont(TextFont font);
+  static TextFont scrollFont();
+  // Rows of a line of scrolling text in the current font.
+  static int scrollFontHeight();
   // Top row for one line of text at a position setting: "top", "middle",
   // "bottom", or "random" - a different height from `previous` each time
   // (at least 2 rows away).
@@ -63,6 +73,10 @@ class Display {
   void drawBitmap(int x, int y, const uint16_t *bitmap, int width, int rows);
 
  private:
+  // Text in any font (drawText/textWidth use the small one).
+  static int textWidthIn(TextFont font, const char *text, int start, int end);
+  void drawTextIn(TextFont font, int x, int y, const char *text, int start, int end);
+
   // Maps logical (x, y) to an index into frame_, applying flips and the
   // rotation; returns -1 when off-screen.
   int frameIndex(int x, int y) const;

@@ -89,6 +89,7 @@ void loadSettings() {
   prefs.begin("obegransad", true);
   settings.mode = prefs.getString("mode", "text");
   settings.text = prefs.getString("text", MESSAGE);
+  settings.textFont = prefs.getString("textFont", "small");
   settings.textPosition = prefs.getString("textPos", "random");
   settings.quotesPosition = prefs.getString("quotesPos", "random");
   settings.brightness = prefs.getUChar("brightness", 255);
@@ -131,6 +132,7 @@ void saveSettings() {
   prefs.begin("obegransad", false);
   prefs.putString("mode", settings.mode);
   prefs.putString("text", settings.text);
+  prefs.putString("textFont", settings.textFont);
   prefs.putString("textPos", settings.textPosition);
   prefs.putString("quotesPos", settings.quotesPosition);
   prefs.putUChar("brightness", settings.brightness);
@@ -167,6 +169,12 @@ void saveSettings() {
   prefs.putUChar("nightBright", settings.nightBrightness);
   prefs.putString("speeds", formatSpeeds());
   prefs.end();
+}
+
+TextFont fontForSettings() {
+  if (settings.textFont == "big") return TextFont::Big;
+  if (settings.textFont == "mini") return TextFont::Mini;
+  return TextFont::Small;
 }
 
 uint16_t rotationForSettings() { return settings.vertical ? ROTATION_VERTICAL : ROTATION_HORIZONTAL; }

@@ -92,6 +92,7 @@ include/
   constants.h        - pins, matrix size, rotation, default text, WiFi names
   secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
   font_small.h       - 8px-tall proportional font (a-z, A-Z, à-ù, 0-9, . , : ! ? ' -)
+  font_mini.h        - 5px-tall capitals (the "Mini" font; "Grande" is built from font_small)
   display.h, modes.h, settings.h, web.h
 src/
   display.cpp        - shift-register driver, font renderer, brightness
@@ -151,7 +152,12 @@ animation menu, ...). General settings are in collapsible sections:
   free geocoding service and sends the lamp just the coordinates) and pick
   the time zone; picking a city also picks its time zone when it's in the
   list.
-- **Display** - horizontal/vertical and brightness.
+- **Display** - horizontal/vertical, brightness, and the font of all
+  scrolling text: *Attuale* (proportional, 8 pixels, lowercase and
+  accents), *Grande* (the same font doubled with the EPX/Scale2x algorithm,
+  which keeps diagonals smooth: it fills the whole panel, for reading from
+  across the room) or *Mini 3x5* (capitals only, 5 pixels). Fixed layouts
+  like the clock digits keep their own font.
 
 Everything is saved in flash, so the lamp comes back in the same state
 after a power cut.

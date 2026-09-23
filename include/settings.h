@@ -2,10 +2,13 @@
 
 #include <Arduino.h>
 
+#include "display.h"
+
 // User settings, kept in flash (NVS) so they survive a power cycle.
 struct Settings {
   String mode;          // mode picked by the user, see modes.h
   String text;          // scrolling text (UTF-8)
+  String textFont;      // font of all scrolling text: "small", "big" or "mini"
   // Height of the scrolling text and of the hourly quote: "top", "middle",
   // "bottom" or "random" (a different height at every pass).
   String textPosition;
@@ -64,6 +67,8 @@ extern Settings settings;
 void loadSettings();
 void saveSettings();
 
+// Font for scrolling text from settings.textFont.
+TextFont fontForSettings();
 // Display rotation for the current orientation setting.
 uint16_t rotationForSettings();
 
