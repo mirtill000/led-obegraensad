@@ -3,8 +3,11 @@
 Standalone firmware that drives the salvaged IKEA OBEGRÄNSAD 16x16 LED
 matrix from a **Sparkle IoT XH-S3E** board (ESP32-S3-WROOM-1-N16R8, 16MB
 flash / 8MB octal PSRAM, WiFi+BT). A small web page over WiFi switches
-between modes: scrolling text (by default **dare mighty things**), a quote of the hour, clock + weather, Conway's Game of Life, a Super
-Mario-style platformer, ambient animations, or off. (Inspired by
+between modes: scrolling text (by default **dare mighty things**), a quote
+of the hour, clock + weather, a 12-hour forecast, things from the web
+(word of the day, "on this day", your calendar), Conway's Game of Life,
+Super Mario and other games, animations, your own drawings, a Pomodoro
+timer, a countdown and a sunrise alarm. (Inspired by
 [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
 which this reuses the panel's shift-register wiring table from.)
 
@@ -97,7 +100,11 @@ src/
   animations/        - the animations of the "Animazioni" mode
   settings.cpp       - settings saved in flash (NVS)
   timekeeping.cpp    - NTP time sync (time zone: TIMEZONE in constants.h)
-  weather.cpp        - current weather from Open-Meteo (free, no API key)
+  net.cpp            - background task for everything downloaded
+  weather.cpp        - weather, 12-hour forecast, sunrise/sunset (Open-Meteo)
+  webinfo.cpp        - word of the day, Wikipedia "on this day", iCal calendar
+  moon.cpp           - moon phase from the date
+  gallery.cpp        - drawings saved in flash (LittleFS)
   web.cpp            - control page + JSON API
   main.cpp           - WiFi, button, main loop
 platformio.ini
@@ -132,10 +139,15 @@ animation menu, ...). General settings are in collapsible sections:
 - **Playlist** - modes shown in turn, each for the minutes you choose
   (e.g. clock 10 min, quote 3 min, animations 5 min). Picking a mode by
   hand stops the playlist.
-- **Giorno e notte** - between two times (e.g. 23:00-07:00) the lamp is off,
-  shows only stars, or keeps going at a lower brightness. The night wins
-  over the playlist and over the mode picked by hand.
-- **Luogo e ora** - search a city by name (the browser asks Open-Meteo's
+- **Sveglia con l'alba** - on the chosen days, from 5-60 minutes before the
+  alarm a sun rises on the panel while the brightness slowly goes up; it
+  stays bright for a while after. It wins over everything else; the mode
+  button (or the page) stops it, and "Prova" shows a one-minute sunrise.
+- **Giorno e notte** - between two times (e.g. 23:00-07:00), or from sunset
+  to sunrise, the lamp is off, shows only stars, or keeps going at a lower
+  brightness. The night wins over the playlist and over the mode picked by
+  hand.
+- **Luogo e ora** - today's sunrise, sunset and moon phase; search a city by name (the browser asks Open-Meteo's
   free geocoding service and sends the lamp just the coordinates) and pick
   the time zone; picking a city also picks its time zone when it's in the
   list.
@@ -167,6 +179,15 @@ Current modes:
   right, and a dot running round the border for the seconds. Weather is
   refreshed every 15 min; until the first reading arrives the clock uses
   big digits. Button: refresh weather
+- **Previsioni** - the next 12 hours: temperature curve on top, rain
+  probability bars at the bottom, one column per hour, alternating with a
+  scrolling summary (range, when it rains, sunrise and sunset). The clock
+  also shows an umbrella next to the weather icon when rain is likely
+  (>= 60%) within 2 hours
+- **Dal web** - in turn: the word of the day (built-in list), an "on this
+  day" event from Italian Wikipedia, and the next event of your calendar
+  (paste its secret iCal link, e.g. from Google Calendar; recurring events
+  aren't supported). Choose the sources and the height on the page
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
@@ -179,28 +200,46 @@ Current modes:
 - **Animazioni** - one animation, or "automatic" (a different one every 5
   minutes); button: next animation. The animations, in
   `src/animations/`:
-  - *Atmosfere*: digital rain, fire, stars, waves, breathing circle
+  - *Atmosfere*: digital rain, fire, stars, waves, breathing circle, and the
+    moon in tonight's real phase
   - *Giochi*: **Tetris** - in demo mode, for each piece the computer tries
     every rotation and column and picks the best by stack height, holes and
     surface; **Snake** - in demo mode it takes the shortest way to the food
-    only if it can still reach its tail afterwards
+    only if it can still reach its tail afterwards; **Pong** - you against
+    the computer, first to 5; **Breakout** - 3 lives, faster at each level;
+    **Flappy Bird**; **Space Invaders** - waves that get faster; **2048** -
+    tile brightness shows the value
   - *Orologi*: analog (antialiased hands, smooth seconds), binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
   - *3D e demo*: rotating wireframe cube, checkered tunnel, plasma,
     metaballs, endless zoom into the Mandelbrot set
+- **Disegni** - your drawings and animations, one or all in turn. On the
+  page there is a 16x16 pixel editor (6 brightness levels, fill, invert,
+  up to 32 frames, 2-15 frames a second) that shows the drawing live on
+  the lamp while you draw; you can also import a photo or an animated GIF
+  (cropped to a square, turned into grayscale, contrast stretched). Up to
+  60 drawings are saved in flash
+- **Pomodoro** - work and break periods (25/5 minutes by default): the panel
+  drains with the minutes left on top, flashes at the end of each period
+  and goes on to the next; start, pause and reset from the page
+- **Conto alla rovescia** - days left to a date in big digits (hours and
+  minutes on the day), alternating with "Mancano 12 giorni a Vacanze"
 - **Spento** - all LEDs off
 
 ### Games and demo mode
 
-Super Mario, Tetris and Snake have a **Modalità demo** checkbox (on by
+Super Mario and all the games in the animations have a **Modalità demo** checkbox (on by
 default), shown on the page while the game is on the panel:
 
 - **on** - the game plays by itself and ignores input;
 - **off** - you play, with the on-screen pad or the keyboard: Mario jumps
   with *Salta*, space or up (a press just before landing still counts);
   Tetris moves with left/right, rotates with up, drops with down or space;
-  Snake steers with the arrows.
+  Snake and 2048 use the arrows; Pong up/down; Breakout left/right; Flappy
+  Bird flies with *Vola*, space or up; Space Invaders moves with left/right
+  and shoots with *Spara* or space. In the paddle games holding an arrow
+  down keeps moving.
 
 Games shown by the "automatic" animation rotation or by the night schedule
 always run as demos. Controls go to the lamp over WiFi, so expect a small
