@@ -22,6 +22,8 @@ class Mode {
 
   // Whether the page offers a speed slider for this mode.
   virtual bool hasSpeed() const { return true; }
+  // Hidden modes aren't offered on the page (e.g. the alarm's sunrise).
+  virtual bool hidden() const { return false; }
 
   // Game controls from the page: 'L', 'R', 'U', 'D' (arrows) or 'A' (the
   // main button: jump / drop). Returns false if nothing is listening.
@@ -39,9 +41,9 @@ class Mode {
 extern Mode *const MODES[];
 extern const uint8_t MODE_COUNT;
 
-// What is shown is decided in this order: the night schedule (lamp off or
-// stars only), then the playlist if it is on, then the mode the user
-// picked (settings.mode).
+// What is shown is decided in this order: the sunrise alarm, the night
+// schedule (lamp off or stars only), then the playlist if it is on, then
+// the mode the user picked (settings.mode).
 Mode *currentMode();
 bool isNight();
 // Position in the playlist of the item being shown, or -1.

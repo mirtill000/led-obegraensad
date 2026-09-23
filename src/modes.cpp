@@ -3,23 +3,37 @@
 #include "display.h"
 #include "modes/ambient_mode.h"
 #include "modes/clock_mode.h"
+#include "modes/countdown_mode.h"
+#include "modes/forecast_mode.h"
+#include "modes/gallery_mode.h"
 #include "modes/life_mode.h"
 #include "modes/mario_mode.h"
 #include "modes/off_mode.h"
+#include "modes/pomodoro_mode.h"
 #include "modes/quotes_mode.h"
+#include "modes/sunrise_mode.h"
 #include "modes/text_mode.h"
+#include "modes/web_mode.h"
 #include "settings.h"
 #include "timekeeping.h"
+#include "weather.h"
 
 static TextMode textMode;
 static QuotesMode quotesMode;
 static ClockMode clockMode;
+static ForecastMode forecastMode;
+static WebMode webMode;
 static LifeMode lifeMode;
 static MarioMode marioMode;
 static AmbientMode ambientMode;
+static GalleryMode galleryModeInstance;
+static PomodoroMode pomodoroInstance;
+static CountdownMode countdownMode;
+static SunriseMode sunriseMode;
 static OffMode offMode;
 
-Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &lifeMode, &marioMode, &ambientMode, &offMode};
+Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &marioMode, &ambientMode, &galleryModeInstance, &pomodoroInstance,
+                        &countdownMode, &offMode, &sunriseMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 
 static uint8_t current = 0;       // index of the mode being shown
@@ -37,9 +51,11 @@ static int indexOf(const String &id) {
   return -1;
 }
 
-bool validModeId(const String &id) { return indexOf(id) >= 0; }
+bool validModeId(const String &id) { return indexOf(id) >= 0 && !MODES[indexOf(id)]->hidden(); }
 
 Mode *currentMode() { return MODES[current]; }
+GalleryMode &galleryMode() { return galleryModeInstance; }
+PomodoroMode &pomodoroMode() { return pomodoroInstance; }
 bool isNight() { return night; }
 int playlistPosition() { return settings.playlistOn ? playlistPos : -1; }
 
@@ -67,7 +83,15 @@ static bool inNightWindow() {
   struct tm t;
   if (!settings.nightOn || !localTime(t)) return false;
   const uint16_t now = t.tm_hour * 60 + t.tm_min;
-  const uint16_t from = settings.nightStart, to = settings.nightEnd;
+  uint16_t from = settings.nightStart, to = settings.nightEnd;
+  if (settings.nightSun) {
+    // Sunset to sunrise; the fixed times stand in until they are known.
+    const Weather w = weatherNow();
+    if (w.sunrise >= 0 && w.sunset >= 0) {
+      from = w.sunset;
+      to = w.sunrise;
+    }
+  }
   return from <= to ? (now >= from && now < to) : (now >= from || now < to);  // may cross midnight
 }
 
@@ -100,7 +124,14 @@ static void evaluate(uint32_t now) {
   }
   const bool overrideChanged = ambientMode.setOverride(override);
 
-  const uint8_t brightness = (night && settings.nightMode == "dim") ? settings.nightBrightness : settings.brightness;
+  uint8_t brightness = (night && settings.nightMode == "dim") ? settings.nightBrightness : settings.brightness;
+
+  // The sunrise alarm wins over everything, and sets its own brightness.
+  const float sunrise = SunriseMode::alarmProgress();
+  if (sunrise >= 0) {
+    wanted = indexOf("sunrise");
+    brightness = SunriseMode::brightness(sunrise);
+  }
   if (brightness != appliedBrightness) {
     display.setBrightness(brightness);
     appliedBrightness = brightness;
@@ -114,7 +145,7 @@ static void evaluate(uint32_t now) {
 }
 
 bool setMode(const String &id) {
-  if (indexOf(id) < 0) return false;
+  if (!validModeId(id)) return false;
   settings.mode = id;
   settings.playlistOn = false;
   started = false;  // restart even if it is already shown
@@ -122,7 +153,13 @@ bool setMode(const String &id) {
   return true;
 }
 
-void nextMode() { setMode(MODES[(indexOf(settings.mode) + 1) % MODE_COUNT]->id()); }
+void nextMode() {
+  int i = indexOf(settings.mode);
+  do {
+    i = (i + 1) % MODE_COUNT;
+  } while (MODES[i]->hidden());
+  setMode(MODES[i]->id());
+}
 
 void restartPlaylist() {
   playlistPos = -1;

@@ -6,8 +6,14 @@ extern Animation *const fireAnimation;
 extern Animation *const starsAnimation;
 extern Animation *const wavesAnimation;
 extern Animation *const breathAnimation;
+extern Animation *const moonAnimation;
 extern Animation *const tetrisAnimation;
 extern Animation *const snakeAnimation;
+extern Animation *const pongAnimation;
+extern Animation *const breakoutAnimation;
+extern Animation *const flappyAnimation;
+extern Animation *const invadersAnimation;
+extern Animation *const game2048Animation;
 extern Animation *const analogClockAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
@@ -24,8 +30,14 @@ Animation *const ANIMATIONS[] = {
     starsAnimation,
     wavesAnimation,
     breathAnimation,
+    moonAnimation,
     tetrisAnimation,
     snakeAnimation,
+    pongAnimation,
+    breakoutAnimation,
+    flappyAnimation,
+    invadersAnimation,
+    game2048Animation,
     analogClockAnimation,
     binaryClockAnimation,
     wordClockAnimation,

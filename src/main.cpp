@@ -4,7 +4,9 @@
 
 #include "constants.h"
 #include "display.h"
+#include "gallery.h"
 #include "modes.h"
+#include "net.h"
 #include "settings.h"
 #include "timekeeping.h"
 #include "web.h"
@@ -60,6 +62,7 @@ void setup() {
   pinMode(PIN_BUTTON, INPUT_PULLUP);
 
   loadSettings();
+  galleryBegin();
   display.begin();
   display.setBrightness(settings.brightness);
   display.setRotation(rotationForSettings());
@@ -69,6 +72,7 @@ void setup() {
   MDNS.begin(HOSTNAME);
   MDNS.addService("http", "tcp", 80);
   webBegin();
+  startNetTask();
   Serial.printf("Control page: http://%s  (http://%s.local)\n", ip.c_str(), HOSTNAME);
 
   // Show where to find the control page, then start the saved mode.

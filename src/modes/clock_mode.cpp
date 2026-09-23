@@ -1,5 +1,6 @@
 #include "modes/clock_mode.h"
 
+#include "bigdigits.h"
 #include "display.h"
 #include "settings.h"
 #include "timekeeping.h"
@@ -16,19 +17,6 @@
 // Until there is weather data the clock uses big digits over the whole
 // inner area instead.
 
-// 5x6 digits for the big clock (bit 15 = leftmost column).
-static const uint16_t BIG_DIGITS[10][6] = {
-    {0x7000, 0x8800, 0x8800, 0x8800, 0x8800, 0x7000},  // 0
-    {0x2000, 0x6000, 0x2000, 0x2000, 0x2000, 0x7000},  // 1
-    {0x7000, 0x8800, 0x1000, 0x2000, 0x4000, 0xF800},  // 2
-    {0xF000, 0x0800, 0x7000, 0x0800, 0x0800, 0xF000},  // 3
-    {0x1000, 0x3000, 0x5000, 0x9000, 0xF800, 0x1000},  // 4
-    {0xF800, 0x8000, 0xF000, 0x0800, 0x0800, 0xF000},  // 5
-    {0x7000, 0x8000, 0xF000, 0x8800, 0x8800, 0x7000},  // 6
-    {0xF800, 0x0800, 0x1000, 0x2000, 0x4000, 0x4000},  // 7
-    {0x7000, 0x8800, 0x7000, 0x8800, 0x8800, 0x7000},  // 8
-    {0x7000, 0x8800, 0x8800, 0x7800, 0x0800, 0x7000},  // 9
-};
 
 // 2-pixel-wide tens digits so a two-digit temperature fits in 6 columns.
 struct NarrowGlyph {
@@ -104,6 +92,14 @@ static const AnimatedIcon ICON_RAIN = {150, 4, RAIN_FRAMES};
 static const AnimatedIcon ICON_SNOW = {350, 4, SNOW_FRAMES};
 static const AnimatedIcon ICON_STORM = {150, 6, STORM_FRAMES};
 
+// Shown in turn with the weather icon when rain is on its way.
+static const uint16_t UMBRELLA_FRAMES[][7] = {
+    {0x3000, 0x7800, 0xFC00, 0x1000, 0x1000, 0x5000, 0x2000},
+    {0x3000, 0x7800, 0xFC00, 0x9000, 0x1400, 0x5000, 0x2000},
+    {0x3000, 0x7800, 0xFC00, 0x1400, 0x9000, 0x5400, 0x2000},
+};
+static const AnimatedIcon ICON_UMBRELLA = {300, 3, UMBRELLA_FRAMES};
+
 // WMO weather code -> icon (https://open-meteo.com/en/docs).
 static const AnimatedIcon &iconFor(int code, bool isDay) {
   if (code == 0) return isDay ? ICON_SUN : ICON_MOON;
@@ -170,16 +166,17 @@ void ClockMode::update(uint32_t now) {
     waiting_.update(now, SCROLL_DELAY_MS);
     return;
   }
-  updateWeather();  // no-op unless stale; refreshes every 15 min
-
   if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
 
+  const Weather weather = weatherNow();
   display.clear();
   if (weather.valid) {
     drawSmallNumber(1, 1, t.tm_hour);
     drawSmallNumber(1, 8, t.tm_min);
-    const AnimatedIcon &icon = iconFor(weather.code, weather.isDay);
+    // Rain within 2 hours: the icon alternates with an umbrella every 2 s.
+    const bool umbrella = rainSoon(weather) && (now / 2000) % 2;
+    const AnimatedIcon &icon = umbrella ? ICON_UMBRELLA : iconFor(weather.code, weather.isDay);
     const uint8_t frame = (now / icon.frameMs) % icon.frameCount;
     display.drawBitmap(9, 1, icon.frames[frame], 6, 7);
     drawTemperature(9, weather.temperature);
@@ -200,7 +197,4 @@ void ClockMode::update(uint32_t now) {
   display.render();
 }
 
-void ClockMode::action() {
-  updateWeather(true);
-  lastDraw_ = 0;
-}
+void ClockMode::action() { requestWeatherUpdate(); }

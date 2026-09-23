@@ -1,12 +1,21 @@
 #include "web.h"
 
 #include <WebServer.h>
+#include <mbedtls/base64.h>
 
 #include "animation.h"
 #include "display.h"
 #include "modes.h"
 #include "modes/ambient_mode.h"
+#include "gallery.h"
+#include "modes/countdown_mode.h"
+#include "modes/forecast_mode.h"
+#include "modes/gallery_mode.h"
+#include "modes/pomodoro_mode.h"
 #include "modes/quotes_mode.h"
+#include "modes/sunrise_mode.h"
+#include "moon.h"
+#include "webinfo.h"
 #include "settings.h"
 #include "timekeeping.h"
 #include "weather.h"
@@ -66,6 +75,24 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   .pad button { padding: 18px 0; font-size: 22px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
   .pad button:active { background: var(--accent); color: var(--bg); }
   .pad .wide { grid-column: 1 / -1; font-size: 18px; }
+  .fc { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; align-items: end; height: 110px; margin-bottom: 8px; }
+  .fc div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font-size: 10px; color: var(--muted); }
+  .fc .bar { width: 100%; background: var(--line); border-radius: 3px 3px 0 0; }
+  .fc .t { color: var(--fg); font-size: 11px; }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .days label { display: flex; align-items: center; gap: 4px; margin: 0; color: var(--fg); }
+  #canvas { width: 100%; max-width: 320px; aspect-ratio: 1; display: block; margin: 0 auto; border-radius: 8px; touch-action: none; background: #000; }
+  .swatches { display: flex; gap: 6px; margin: 10px 0; }
+  .swatches button { flex: 1; height: 36px; border-radius: 8px; border: 2px solid var(--line); }
+  .swatches button.on { border-color: var(--accent); outline: 2px solid var(--accent); }
+  .tools { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+  .tools button { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; font-size: 14px; }
+  .gallery { display: grid; gap: 8px; margin-top: 8px; }
+  .item { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 10px; }
+  .item.on { border-color: var(--accent); }
+  .item canvas { width: 40px; height: 40px; border-radius: 4px; background: #000; image-rendering: pixelated; }
+  .item .name { flex: 1 1 120px; min-width: 0; font-size: 14px; }
+  .item button { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; font-size: 13px; }
   [hidden] { display: none !important; }
   #status { min-height: 1.4em; font-size: 14px; color: var(--muted); text-align: center; }
 </style>
@@ -135,6 +162,93 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <button class="link" id="openPlace">Cambia città o fuso orario</button>
   </section>
 
+  <section data-mode="forecast" hidden>
+    <h2>Previsioni</h2>
+    <div class="fc" id="fcChart"></div>
+    <p class="hint" id="fcInfo"></p>
+  </section>
+
+  <section data-mode="web" hidden>
+    <h2>Dal web</h2>
+    <label class="check"><input type="checkbox" id="infoWord"> Parola del giorno</label>
+    <label class="check"><input type="checkbox" id="infoHistory"> Accadde oggi (Wikipedia)</label>
+    <p class="hint" id="historyStatus"></p>
+    <label class="check"><input type="checkbox" id="infoCalendar"> Prossimo evento del calendario</label>
+    <input type="text" id="icalUrl" placeholder="Link iCal del calendario (.ics)" autocomplete="off">
+    <p class="hint">Google Calendar: Impostazioni → il tuo calendario → «Indirizzo segreto in formato iCal». Gli eventi ricorrenti non sono supportati. <span id="calendarStatus"></span></p>
+    <label for="webPos">Altezza</label>
+    <select id="webPos">
+      <option value="random">Variabile (cambia a ogni passaggio)</option>
+      <option value="top">In alto</option>
+      <option value="middle">Al centro</option>
+      <option value="bottom">In basso</option>
+    </select>
+    <button class="save" id="saveWeb">Salva</button>
+    <p class="hint" id="webPreview"></p>
+  </section>
+
+  <section data-mode="gallery" hidden>
+    <h2>Disegni</h2>
+    <canvas id="canvas" width="320" height="320"></canvas>
+    <div class="swatches" id="swatches"></div>
+    <div class="tools">
+      <button id="toolFill">Riempi</button><button id="toolClear">Pulisci</button><button id="toolInvert">Inverti</button>
+    </div>
+    <div class="row">
+      <button class="x" id="framePrev">◀</button>
+      <span id="frameInfo" style="text-align:center"></span>
+      <button class="x" id="frameNext">▶</button>
+    </div>
+    <div class="tools">
+      <button id="frameAdd">+ Fotogramma</button><button id="frameDup">Duplica</button><button id="frameDel">Elimina fotogramma</button><button id="framePlay">▶ Anteprima</button>
+    </div>
+    <label for="fps">Velocità dell'animazione</label>
+    <select id="fps">
+      <option value="500">2 fotogrammi al secondo</option><option value="250">4 al secondo</option>
+      <option value="166">6 al secondo</option><option value="125">8 al secondo</option>
+      <option value="100">10 al secondo</option><option value="66">15 al secondo</option>
+    </select>
+    <label for="drawName">Nome</label>
+    <div class="row">
+      <input type="text" id="drawName" maxlength="40" placeholder="Il mio disegno">
+      <button class="save narrow" id="saveDrawing" style="margin-top:0">Salva</button>
+    </div>
+    <div class="tools"><button id="newDrawing">Nuovo disegno</button></div>
+    <label for="importFile">Importa un'immagine o una GIF</label>
+    <input type="file" id="importFile" accept="image/*">
+    <label class="check" style="margin-top:6px"><input type="checkbox" id="importInvert"> Inverti chiari e scuri</label>
+    <label class="check"><input type="checkbox" id="importContrast" checked> Contrasto automatico</label>
+    <h2 style="margin-top:16px">Galleria</h2>
+    <div class="tools"><button id="showAll">Mostra tutti a rotazione</button></div>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section data-mode="pomodoro" hidden>
+    <h2>Pomodoro</h2>
+    <p id="pomInfo"></p>
+    <div class="row">
+      <button class="save" id="pomStart" style="margin-top:0">Avvia</button>
+      <button class="link" id="pomReset" style="margin-top:0">Azzera</button>
+    </div>
+    <div class="row">
+      <div><label for="pomWork">Lavoro (minuti)</label><input type="number" id="pomWork" min="1" max="120"></div>
+      <div><label for="pomBreak">Pausa (minuti)</label><input type="number" id="pomBreak" min="1" max="60"></div>
+    </div>
+    <button class="save" id="savePom">Salva le durate</button>
+  </section>
+
+  <section data-mode="countdown" hidden>
+    <h2>Conto alla rovescia</h2>
+    <label for="cdLabel">Evento</label>
+    <input type="text" id="cdLabel" maxlength="40">
+    <div class="row">
+      <div><label for="cdDate">Data</label><input type="date" id="cdDate"></div>
+      <div><label for="cdTime">Ora</label><input type="time" id="cdTime"></div>
+    </div>
+    <button class="save" id="saveCd">Salva</button>
+    <p class="hint" id="cdInfo"></p>
+  </section>
+
   <section data-mode="ambient" hidden>
     <h2>Animazioni</h2>
     <select id="ambient"></select>
@@ -153,9 +267,28 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <p class="hint">Scegliere una modalità a mano ferma la playlist.</p>
   </details>
 
+  <details id="alarmBox">
+    <summary>Sveglia con l'alba</summary>
+    <label class="check"><input type="checkbox" id="alarmOn"> Attiva</label>
+    <label for="alarmTime">Ora della sveglia</label>
+    <input type="time" id="alarmTime">
+    <label>Giorni</label>
+    <div class="days" id="alarmDays"></div>
+    <div class="row">
+      <div><label for="alarmRamp">Alba (minuti prima)</label><input type="number" id="alarmRamp" min="5" max="60"></div>
+      <div><label for="alarmHold">Accesa dopo (minuti)</label><input type="number" id="alarmHold" min="1" max="120"></div>
+    </div>
+    <div class="row">
+      <button class="save" id="saveAlarm">Salva</button>
+      <button class="link" id="testAlarm">Prova l'alba (1 minuto)</button>
+    </div>
+    <p class="hint">Il sole sorge sul pannello e la luminosità sale piano fino all'ora della sveglia. Ha la precedenza su tutto, anche sulla notte.</p>
+  </details>
+
   <details id="nightBox">
     <summary>Giorno e notte</summary>
     <label class="check"><input type="checkbox" id="nightOn"> Di notte cambia comportamento</label>
+    <label class="check"><input type="checkbox" id="nightSun"> Dal tramonto all'alba <small id="sunTimes"></small></label>
     <div class="row">
       <div><label for="nightStart">Dalle</label><input type="time" id="nightStart"></div>
       <div><label for="nightEnd">Alle</label><input type="time" id="nightEnd"></div>
@@ -184,6 +317,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <p class="hint" id="placeInfo"></p>
     <label for="tz">Fuso orario</label>
     <select id="tz"></select>
+    <p class="hint" id="skyInfo"></p>
   </details>
 
   <details id="displayBox">
@@ -272,13 +406,14 @@ function render() {
     b.onclick = () => post('/api/mode', { id: m.id }).then(() => status(m.name)).catch(fail);
     box.appendChild(b);
   }
-  const active = s.modes.find((m) => m.id === s.active);
+  const active = s.activeMode;  // may be a hidden mode (the alarm's sunrise)
   $('action').hidden = !active.action;
   $('action').textContent = active.action || '';
   $('speedBox').hidden = !active.hasSpeed;
   if (!editing('speed')) $('speed').value = active.speed;
 
   renderGame();
+  renderExtras();
 
   // Only the active mode's own settings.
   for (const sec of document.querySelectorAll('section[data-mode]')) sec.hidden = sec.dataset.mode !== s.active;
@@ -332,6 +467,11 @@ const PADS = {
   mario: { keys: ['A'], labels: { A: 'Salta' }, hint: 'Tastiera: barra spaziatrice o freccia su per saltare.' },
   tetris: { keys: ['L', 'R', 'U', 'D'], labels: { U: '↻', D: '⤓' }, hint: 'Tastiera: ← → per spostare, ↑ per ruotare, ↓ o spazio per far cadere.' },
   snake: { keys: ['L', 'R', 'U', 'D'], labels: { U: '↑', D: '↓' }, hint: 'Tastiera: le frecce.' },
+  pong: { keys: ['U', 'D'], labels: {}, repeat: true, hint: 'Racchetta di sinistra. Tastiera: ↑ ↓ (tieni premuto).' },
+  breakout: { keys: ['L', 'R'], labels: {}, repeat: true, hint: 'Tastiera: ← → (tieni premuto).' },
+  flappy: { keys: ['A'], labels: { A: 'Vola' }, hint: 'Tastiera: spazio o ↑.' },
+  invaders: { keys: ['L', 'R', 'A'], labels: { A: 'Spara' }, repeat: true, hint: 'Tastiera: ← → per muoverti, spazio o ↑ per sparare.' },
+  '2048': { keys: ['L', 'R', 'U', 'D'], labels: { U: '↑', D: '↓' }, hint: 'Tastiera: le frecce.' },
 };
 function playable() { return state && state.game && !state.game.demo; }
 function renderGame() {
@@ -358,14 +498,305 @@ function renderGame() {
 // Controls go out on touch/press, not on release, and don't wait for an
 // answer: every millisecond counts over WiFi.
 function sendKey(key) { fetch('/api/input', { method: 'POST', body: new URLSearchParams({ key }), keepalive: true }).catch(() => {}); }
+// Paddle games repeat the arrow while it is held down.
+let repeatTimer = null;
+function stopRepeat() { clearInterval(repeatTimer); repeatTimer = null; }
 for (const b of $('pad').querySelectorAll('button')) {
-  b.addEventListener('pointerdown', (e) => { e.preventDefault(); sendKey(b.dataset.key); });
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    sendKey(b.dataset.key);
+    const pad = state.game && PADS[state.game.id];
+    stopRepeat();
+    if (pad && pad.repeat && b.dataset.key !== 'A') repeatTimer = setInterval(() => sendKey(b.dataset.key), 110);
+  });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, stopRepeat);
 }
 $('demo').onchange = (e) => (e.target.blur(), post('/api/demo', { id: state.game.id, on: e.target.checked ? 1 : 0 }))
   .then(() => {
     status(e.target.checked ? 'Modalità demo' : 'Tocca a te!');
     if (!e.target.checked) $('gameBox').scrollIntoView({ behavior: 'smooth', block: 'start' });  // pad in view
   }).catch(fail);
+
+// ---------------------------------------------------------------------------
+// Sections of the newer modes, and the general alarm/night extras.
+const DAY_NAMES = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+function clock(minutes) { return minutes < 0 ? '?' : Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0'); }
+function renderExtras() {
+  const s = state;
+  // Forecast: 12 columns, bar = rain probability, label = temperature.
+  const fc = $('fcChart');
+  fc.innerHTML = '';
+  const hours = s.weather ? s.weather.hours : [];
+  for (const [h, t, rain] of hours) {
+    const col = document.createElement('div');
+    col.innerHTML = '<span class="t">' + Math.round(t) + '°</span><div class="bar" style="height:' + Math.max(2, rain * 0.7) +
+      'px" title="' + rain + '%"></div><span>' + h + '</span>';
+    fc.appendChild(col);
+  }
+  $('fcInfo').textContent = s.forecast || 'Previsioni in arrivo...';
+
+  if (!dirty.web) {
+    $('infoWord').checked = s.web.word; $('infoHistory').checked = s.web.history; $('infoCalendar').checked = s.web.calendar;
+    $('icalUrl').value = s.web.url; $('webPos').value = s.web.pos;
+  }
+  $('historyStatus').textContent = s.web.history ? 'Wikipedia: ' + (s.web.historyStatus || 'in attesa') : '';
+  $('calendarStatus').textContent = s.web.calendar ? 'Stato: ' + (s.web.calendarStatus || 'in attesa') : '';
+  $('webPreview').textContent = [s.web.wordText, s.web.event].filter(Boolean).join(' · ');
+
+  const pom = s.pomodoro;
+  const left = Math.ceil(pom.remaining / 1000);
+  $('pomInfo').textContent = (pom.onBreak ? 'Pausa' : 'Lavoro') + ': ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') +
+    (pom.running ? '' : ' (fermo)');
+  $('pomStart').textContent = pom.running ? 'Pausa' : 'Avvia';
+  if (!dirty.pom) { $('pomWork').value = pom.work; $('pomBreak').value = pom.break; }
+
+  if (!dirty.cd) { $('cdLabel').value = s.countdown.label; $('cdDate').value = s.countdown.date; $('cdTime').value = s.countdown.time; }
+  $('cdInfo').textContent = s.countdown.sentence;
+
+  const days = $('alarmDays');
+  if (!days.children.length) {
+    DAY_NAMES.forEach((d, i) => {
+      const l = document.createElement('label');
+      l.innerHTML = '<input type="checkbox" data-day="' + i + '"> ' + d;
+      l.querySelector('input').oninput = () => { dirty.alarm = true; };
+      days.appendChild(l);
+    });
+  }
+  if (!dirty.alarm) {
+    $('alarmOn').checked = s.alarm.on; $('alarmTime').value = hhmm(s.alarm.time);
+    $('alarmRamp').value = s.alarm.ramp; $('alarmHold').value = s.alarm.hold;
+    for (const c of days.querySelectorAll('input')) c.checked = !!(s.alarm.days & (1 << c.dataset.day));
+  }
+
+  if (!dirty.night) $('nightSun').checked = s.nightSun;
+  const sun = s.weather && s.weather.sunset >= 0 ? '(oggi ' + clock(s.weather.sunset) + ' - ' + clock(s.weather.sunrise) + ')' : '';
+  $('sunTimes').textContent = sun;
+  for (const id of ['nightStart', 'nightEnd']) $(id).disabled = $('nightSun').checked;
+  $('skyInfo').textContent = (s.weather && s.weather.sunrise >= 0 ? 'Oggi alba ' + clock(s.weather.sunrise) + ', tramonto ' + clock(s.weather.sunset) + ' · ' : '') +
+    s.moon.name + ' (illuminata al ' + s.moon.lit + '%)';
+
+  if (s.active === 'gallery' && !galleryLoaded) loadGallery();
+  highlightGallery();
+}
+
+for (const id of ['infoWord', 'infoHistory', 'infoCalendar', 'icalUrl', 'webPos']) $(id).addEventListener('input', () => { dirty.web = true; });
+$('saveWeb').onclick = () => post('/api/web', {
+  word: $('infoWord').checked ? 1 : 0, history: $('infoHistory').checked ? 1 : 0, calendar: $('infoCalendar').checked ? 1 : 0,
+  url: $('icalUrl').value.trim(), pos: $('webPos').value,
+}).then(() => { dirty.web = false; render(); status('Salvato: i dati arrivano in qualche secondo'); }).catch(fail);
+
+$('pomStart').onclick = () => post('/api/pomodoro', { cmd: state.pomodoro.running ? 'pause' : 'start' }).catch(fail);
+$('pomReset').onclick = () => post('/api/pomodoro', { cmd: 'reset' }).catch(fail);
+for (const id of ['pomWork', 'pomBreak']) $(id).addEventListener('input', () => { dirty.pom = true; });
+$('savePom').onclick = () => post('/api/pomodoro', { work: $('pomWork').value, break: $('pomBreak').value })
+  .then(() => { dirty.pom = false; render(); status('Durate salvate'); }).catch(fail);
+
+for (const id of ['cdLabel', 'cdDate', 'cdTime']) $(id).addEventListener('input', () => { dirty.cd = true; });
+$('saveCd').onclick = () => post('/api/countdown', { label: $('cdLabel').value, date: $('cdDate').value, time: $('cdTime').value || '00:00' })
+  .then(() => { dirty.cd = false; render(); status('Conto alla rovescia salvato'); }).catch(fail);
+
+for (const id of ['alarmOn', 'alarmTime', 'alarmRamp', 'alarmHold']) $(id).addEventListener('input', () => { dirty.alarm = true; });
+$('saveAlarm').onclick = () => {
+  let days = 0;
+  for (const c of $('alarmDays').querySelectorAll('input')) if (c.checked) days |= 1 << c.dataset.day;
+  post('/api/alarm', { on: $('alarmOn').checked ? 1 : 0, time: minutesOf($('alarmTime').value || '07:00'), days,
+    ramp: $('alarmRamp').value, hold: $('alarmHold').value })
+    .then(() => { dirty.alarm = false; render(); status('Sveglia salvata'); }).catch(fail);
+};
+$('testAlarm').onclick = () => post('/api/alarm', { cmd: 'test' }).then(() => status('Alba di prova: 1 minuto')).catch(fail);
+$('nightSun').addEventListener('input', () => {
+  dirty.night = true;
+  for (const id of ['nightStart', 'nightEnd']) $(id).disabled = $('nightSun').checked;
+});
+
+// ---------------------------------------------------------------------------
+// Pixel editor. Frames are 256 levels (0-255) row by row, like the panel.
+const LEVELS = [255, 170, 100, 50, 20, 0];
+const ed = { frames: [new Uint8Array(256)], cur: 0, level: 255, id: '', frameMs: 250 };
+const cv = $('canvas'), cx = cv.getContext('2d');
+let galleryLoaded = false, galleryItems = [];
+function b64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 4096) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 4096)); return btoa(s); }
+function unb64(s) { return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); }
+function allFrames() { const out = new Uint8Array(ed.frames.length * 256); ed.frames.forEach((f, i) => out.set(f, i * 256)); return out; }
+function gray(v) { return 'rgb(' + v + ',' + v + ',' + v + ')'; }
+
+function drawCanvas() {
+  const f = ed.frames[ed.cur], size = cv.width / 16;
+  for (let i = 0; i < 256; i++) {
+    cx.fillStyle = gray(f[i]);
+    cx.fillRect((i % 16) * size, Math.floor(i / 16) * size, size, size);
+  }
+  cx.strokeStyle = 'rgba(128,128,128,0.25)';
+  for (let k = 1; k < 16; k++) {
+    cx.beginPath(); cx.moveTo(k * size, 0); cx.lineTo(k * size, cv.height); cx.stroke();
+    cx.beginPath(); cx.moveTo(0, k * size); cx.lineTo(cv.width, k * size); cx.stroke();
+  }
+  $('frameInfo').textContent = 'Fotogramma ' + (ed.cur + 1) + ' di ' + ed.frames.length;
+}
+
+// Live preview on the lamp while drawing (throttled).
+let draftTimer = null;
+function sendDraft(all) {
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(() => {
+    const data = all ? allFrames() : ed.frames[ed.cur];
+    fetch('/api/draw', { method: 'POST', body: new URLSearchParams({ data: b64(data), frameMs: ed.frameMs }) }).catch(() => {});
+  }, all ? 0 : 120);
+}
+
+const swatches = $('swatches');
+for (const level of LEVELS) {
+  const b = document.createElement('button');
+  b.style.background = gray(level);
+  b.title = level ? 'Luminosità ' + Math.round(level / 2.55) + '%' : 'Gomma';
+  b.onclick = () => { ed.level = level; for (const x of swatches.children) x.classList.toggle('on', x === b); };
+  if (level === 255) b.classList.add('on');
+  swatches.appendChild(b);
+}
+let painting = false;
+function paint(e) {
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((e.clientX - r.left) / r.width * 16), y = Math.floor((e.clientY - r.top) / r.height * 16);
+  if (x < 0 || x > 15 || y < 0 || y > 15) return;
+  const f = ed.frames[ed.cur];
+  if (f[y * 16 + x] === ed.level) return;
+  f[y * 16 + x] = ed.level;
+  drawCanvas();
+  sendDraft(false);
+}
+cv.addEventListener('pointerdown', (e) => { painting = true; cv.setPointerCapture(e.pointerId); paint(e); });
+cv.addEventListener('pointermove', (e) => { if (painting) paint(e); });
+for (const ev of ['pointerup', 'pointercancel']) cv.addEventListener(ev, () => { painting = false; });
+
+function edit(fn) { fn(ed.frames[ed.cur]); drawCanvas(); sendDraft(false); }
+$('toolFill').onclick = () => edit((f) => f.fill(ed.level));
+$('toolClear').onclick = () => edit((f) => f.fill(0));
+$('toolInvert').onclick = () => edit((f) => { for (let i = 0; i < 256; i++) f[i] = 255 - f[i]; });
+$('framePrev').onclick = () => { ed.cur = (ed.cur + ed.frames.length - 1) % ed.frames.length; drawCanvas(); sendDraft(false); };
+$('frameNext').onclick = () => { ed.cur = (ed.cur + 1) % ed.frames.length; drawCanvas(); sendDraft(false); };
+$('frameAdd').onclick = () => { if (ed.frames.length >= 32) return status('Al massimo 32 fotogrammi'); ed.frames.splice(ed.cur + 1, 0, new Uint8Array(256)); ed.cur++; drawCanvas(); sendDraft(false); };
+$('frameDup').onclick = () => { if (ed.frames.length >= 32) return status('Al massimo 32 fotogrammi'); ed.frames.splice(ed.cur + 1, 0, ed.frames[ed.cur].slice()); ed.cur++; drawCanvas(); sendDraft(false); };
+$('frameDel').onclick = () => { if (ed.frames.length === 1) return edit((f) => f.fill(0)); ed.frames.splice(ed.cur, 1); ed.cur = Math.min(ed.cur, ed.frames.length - 1); drawCanvas(); sendDraft(false); };
+$('framePlay').onclick = () => { sendDraft(true); status('Anteprima sulla lampada'); };
+$('fps').onchange = (e) => { ed.frameMs = +e.target.value; if (ed.frames.length > 1) sendDraft(true); };
+$('newDrawing').onclick = () => { ed.frames = [new Uint8Array(256)]; ed.cur = 0; ed.id = ''; $('drawName').value = ''; drawCanvas(); sendDraft(false); };
+
+$('saveDrawing').onclick = async () => {
+  try {
+    const res = await fetch('/api/gallery/save', { method: 'POST', body: new URLSearchParams({
+      id: ed.id, name: $('drawName').value.trim() || 'Disegno', frameMs: ed.frameMs, data: b64(allFrames()) }) });
+    if (!res.ok) throw new Error(await res.text());
+    ed.id = (await res.json()).id;
+    status('Salvato nella galleria');
+    loadGallery();
+  } catch (e) { fail(e); }
+};
+
+async function loadGallery() {
+  galleryLoaded = true;
+  try { galleryItems = await (await fetch('/api/gallery')).json(); } catch (e) { return; }
+  const box = $('gallery');
+  box.innerHTML = galleryItems.length ? '' : '<p class="hint">Ancora nessun disegno salvato.</p>';
+  for (const d of galleryItems) {
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.dataset.id = d.id;
+    const thumb = document.createElement('canvas');
+    thumb.width = thumb.height = 16;
+    const img = thumb.getContext('2d').createImageData(16, 16), px = unb64(d.thumb);
+    for (let i = 0; i < 256; i++) { img.data.set([px[i], px[i], px[i], 255], i * 4); }
+    thumb.getContext('2d').putImageData(img, 0, 0);
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = d.name + (d.frames > 1 ? ' (' + d.frames + ' fotogrammi)' : '');
+    const show = document.createElement('button'); show.textContent = 'Mostra';
+    show.onclick = () => post('/api/gallery/show', { id: d.id }).then(() => status('Mostro «' + d.name + '»')).catch(fail);
+    const open = document.createElement('button'); open.textContent = 'Modifica';
+    open.onclick = async () => {
+      const it = await (await fetch('/api/gallery/item?id=' + d.id)).json();
+      const all = unb64(it.data);
+      ed.frames = []; for (let i = 0; i < all.length; i += 256) ed.frames.push(all.slice(i, i + 256));
+      ed.cur = 0; ed.id = it.id; ed.frameMs = it.frameMs; $('drawName').value = it.name;
+      $('fps').value = [...$('fps').options].reduce((a, o) => Math.abs(o.value - it.frameMs) < Math.abs(a - it.frameMs) ? +o.value : a, 250);
+      drawCanvas(); sendDraft(true); cv.scrollIntoView({ behavior: 'smooth' });
+    };
+    const del = document.createElement('button'); del.textContent = '✕';
+    del.onclick = async () => {
+      if (!confirm('Eliminare «' + d.name + '»?')) return;
+      await fetch('/api/gallery/delete', { method: 'POST', body: new URLSearchParams({ id: d.id }) });
+      if (ed.id === d.id) ed.id = '';
+      loadGallery(); refresh();
+    };
+    row.append(thumb, name, show, open, del);
+    box.appendChild(row);
+  }
+  highlightGallery();
+}
+function highlightGallery() {
+  for (const row of $('gallery').children) row.classList && row.classList.toggle('on', row.dataset.id === state.galleryShow);
+  $('showAll').classList.toggle('on', state.galleryShow === 'all');
+}
+$('showAll').onclick = () => post('/api/gallery/show', { id: 'all' }).then(() => status('Tutti i disegni a rotazione')).catch(fail);
+
+// Image / GIF import: centre-crop to a square, scale to 16x16, brightness
+// from luminance; animated GIFs frame by frame where the browser can
+// decode them (ImageDecoder), otherwise just the first frame.
+function toFrame(src, w, h) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 16;
+  const g = c.getContext('2d');
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  const side = Math.min(w, h);
+  g.drawImage(src, (w - side) / 2, (h - side) / 2, side, side, 0, 0, 16, 16);
+  const d = g.getImageData(0, 0, 16, 16).data, out = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) out[i] = Math.round((0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]) * d[i * 4 + 3] / 255);
+  return out;
+}
+$('importFile').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  status('Converto ' + file.name + '...');
+  try {
+    const frames = [];
+    let duration = 0;
+    if (window.ImageDecoder && file.type === 'image/gif') {
+      const dec = new ImageDecoder({ data: await file.arrayBuffer(), type: file.type });
+      await dec.tracks.ready;
+      const n = Math.min(dec.tracks.selectedTrack.frameCount, 32);
+      for (let i = 0; i < n; i++) {
+        const { image } = await dec.decode({ frameIndex: i });
+        frames.push(toFrame(image, image.displayWidth, image.displayHeight));
+        duration += (image.duration || 100000) / 1000;
+        image.close();
+      }
+    } else {
+      const bmp = await createImageBitmap(file);
+      frames.push(toFrame(bmp, bmp.width, bmp.height));
+    }
+    // Stretch the contrast over all frames, and/or invert.
+    let lo = 255, hi = 0;
+    for (const f of frames) for (const v of f) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    for (const f of frames) {
+      for (let i = 0; i < 256; i++) {
+        let v = f[i];
+        if ($('importContrast').checked && hi > lo) v = Math.round((v - lo) * 255 / (hi - lo));
+        if ($('importInvert').checked) v = 255 - v;
+        f[i] = v;
+      }
+    }
+    ed.frames = frames; ed.cur = 0; ed.id = '';
+    if (frames.length > 1) {
+      ed.frameMs = Math.max(40, Math.min(1000, Math.round(duration / frames.length)));
+      $('fps').value = [...$('fps').options].reduce((a, o) => Math.abs(o.value - ed.frameMs) < Math.abs(a - ed.frameMs) ? +o.value : a, 250);
+    }
+    $('drawName').value = file.name.replace(/\.[^.]+$/, '').slice(0, 40);
+    drawCanvas();
+    sendDraft(frames.length > 1);
+    status(frames.length > 1 ? frames.length + ' fotogrammi importati: premi Salva per tenerli' : 'Immagine importata: premi Salva per tenerla');
+  } catch (err) { status('Impossibile leggere questa immagine'); }
+  e.target.value = '';
+};
+drawCanvas();
 
 // Playlist editor rows: [mode] [minutes] [x]
 function renderPlaylist(items) {
@@ -439,7 +870,8 @@ for (const id of ['nightOn', 'nightStart', 'nightEnd', 'nightMode', 'nightBright
   $(id).addEventListener('input', () => { dirty.night = true; $('nightDimBox').hidden = $('nightMode').value !== 'dim'; });
 }
 $('saveNight').onclick = () => post('/api/night', {
-  on: $('nightOn').checked ? 1 : 0, start: minutesOf($('nightStart').value), end: minutesOf($('nightEnd').value),
+  on: $('nightOn').checked ? 1 : 0, sun: $('nightSun').checked ? 1 : 0,
+  start: minutesOf($('nightStart').value), end: minutesOf($('nightEnd').value),
   mode: $('nightMode').value, brightness: $('nightBrightness').value,
 }).then(() => { dirty.night = false; render(); status('Impostazioni della notte salvate'); }).catch(fail);
 
@@ -528,15 +960,20 @@ static void sendState() {
   json = "{\"mode\":" + jsonString(settings.mode) + ",\"active\":" + jsonString(currentMode()->id());
   json += ",\"night\":" + jsonBool(isNight()) + ",\"playlistPos\":" + String(playlistPosition());
 
+  auto modeJson = [](const Mode *m) {
+    String j = "{\"id\":" + jsonString(m->id()) + ",\"name\":" + jsonString(m->name());
+    j += ",\"action\":" + (m->actionName() ? jsonString(m->actionName()) : String("null"));
+    return j + ",\"hasSpeed\":" + jsonBool(m->hasSpeed()) + ",\"speed\":" + String(speedLevel(m->id())) + "}";
+  };
   json += ",\"modes\":[";
+  bool first = true;
   for (uint8_t i = 0; i < MODE_COUNT; i++) {
-    const Mode *m = MODES[i];
-    if (i) json += ',';
-    json += "{\"id\":" + jsonString(m->id()) + ",\"name\":" + jsonString(m->name());
-    json += ",\"action\":" + (m->actionName() ? jsonString(m->actionName()) : String("null"));
-    json += ",\"hasSpeed\":" + jsonBool(m->hasSpeed()) + ",\"speed\":" + String(speedLevel(m->id())) + "}";
+    if (MODES[i]->hidden()) continue;
+    if (!first) json += ',';
+    first = false;
+    json += modeJson(MODES[i]);
   }
-  json += "]";
+  json += "],\"activeMode\":" + modeJson(currentMode());
 
   json += ",\"text\":" + jsonString(settings.text);
   json += ",\"textPos\":" + jsonString(settings.textPosition) + ",\"quotesPos\":" + jsonString(settings.quotesPosition);
@@ -571,6 +1008,28 @@ static void sendState() {
     json += ",\"game\":null";
   }
 
+  json += ",\"forecast\":" + jsonString(ForecastMode::summary());
+  const WebInfo info = webInfoNow();
+  json += ",\"web\":{\"word\":" + jsonBool(settings.infoWord) + ",\"history\":" + jsonBool(settings.infoHistory) +
+          ",\"calendar\":" + jsonBool(settings.infoCalendar) + ",\"url\":" + jsonString(settings.icalUrl) +
+          ",\"pos\":" + jsonString(settings.webPosition) + ",\"wordText\":" + jsonString(info.word) +
+          ",\"event\":" + jsonString(info.event) + ",\"historyStatus\":" + jsonString(info.historyStatus) +
+          ",\"calendarStatus\":" + jsonString(info.calendarStatus) + "}";
+  const PomodoroMode &pom = pomodoroMode();
+  json += ",\"pomodoro\":{\"running\":" + jsonBool(pom.running()) + ",\"onBreak\":" + jsonBool(pom.onBreak()) +
+          ",\"remaining\":" + String(pom.remainingMs()) + ",\"work\":" + String(settings.pomodoroWork) +
+          ",\"break\":" + String(settings.pomodoroBreak) + "}";
+  json += ",\"countdown\":{\"label\":" + jsonString(settings.countdownLabel) + ",\"date\":" +
+          jsonString(settings.countdownDate) + ",\"time\":" + jsonString(settings.countdownTime) +
+          ",\"sentence\":" + jsonString(CountdownMode::sentence()) + "}";
+  json += ",\"alarm\":{\"on\":" + jsonBool(settings.alarmOn) + ",\"time\":" + String(settings.alarmTime) +
+          ",\"days\":" + String(settings.alarmDays) + ",\"ramp\":" + String(settings.alarmRamp) +
+          ",\"hold\":" + String(settings.alarmHold) + "}";
+  const float phase = moonPhase(time(nullptr));
+  json += ",\"moon\":{\"name\":" + jsonString(moonPhaseName(phase)) + ",\"lit\":" +
+          String((int)lroundf(moonIllumination(phase) * 100)) + "}";
+  json += ",\"galleryShow\":" + jsonString(settings.galleryShow) + ",\"nightSun\":" + jsonBool(settings.nightSun);
+
   json += ",\"playlistOn\":" + jsonBool(settings.playlistOn) + ",\"playlist\":" + jsonString(settings.playlist);
   json += ",\"nightOn\":" + jsonBool(settings.nightOn) + ",\"nightStart\":" + String(settings.nightStart);
   json += ",\"nightEnd\":" + String(settings.nightEnd) + ",\"nightMode\":" + jsonString(settings.nightMode);
@@ -584,8 +1043,17 @@ static void sendState() {
   } else {
     json += ",\"time\":null";
   }
+  const Weather weather = weatherNow();
   if (weather.valid) {
-    json += ",\"weather\":{\"temp\":" + String(weather.temperature, 1) + ",\"code\":" + String(weather.code) + "}";
+    json += ",\"weather\":{\"temp\":" + String(weather.temperature, 1) + ",\"code\":" + String(weather.code);
+    json += ",\"rainSoon\":" + jsonBool(rainSoon(weather));
+    json += ",\"sunrise\":" + String(weather.sunrise) + ",\"sunset\":" + String(weather.sunset) + ",\"hours\":[";
+    for (int i = 0; i < weather.hours; i++) {
+      if (i) json += ',';
+      json += "[" + String((weather.firstHour + i) % 24) + "," + String(weather.hourlyTemp[i], 1) + "," +
+              String(weather.hourlyRain[i]) + "]";
+    }
+    json += "]}";
   } else {
     json += ",\"weather\":null";
   }
@@ -618,7 +1086,8 @@ static void handleInput() {
 
 static void handleDemo() {
   const String id = server.arg("id");
-  if (id != "mario" && id != "tetris" && id != "snake") return badRequest("Gioco sconosciuto");
+  const Animation *a = findAnimation(id);
+  if (id != "mario" && !(a && a->isGame())) return badRequest("Gioco sconosciuto");
   setDemoMode(id.c_str(), server.arg("on") == "1");
   saveSettings();
   sendState();
@@ -692,7 +1161,7 @@ static void handleLocation() {
   city.trim();
   settings.city = city.length() ? city.substring(0, 60) : String("?");
   saveSettings();
-  updateWeather(true);
+  requestWeatherUpdate();
   sendState();
 }
 
@@ -736,6 +1205,7 @@ static void handleNight() {
   const String mode = server.arg("mode");
   if (mode != "off" && mode != "stars" && mode != "dim") return badRequest("Modalità notte sconosciuta");
   settings.nightOn = server.arg("on") == "1";
+  settings.nightSun = server.arg("sun") == "1";
   settings.nightStart = constrain(server.arg("start").toInt(), 0, 1439);
   settings.nightEnd = constrain(server.arg("end").toInt(), 0, 1439);
   settings.nightMode = mode;
@@ -743,6 +1213,155 @@ static void handleNight() {
   saveSettings();
   refreshModes();
   sendState();
+}
+
+static void handleWeb() {
+  const String pos = server.arg("pos"), url = server.arg("url");
+  if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom") return badRequest("Altezza non valida");
+  if (url.length() > 500) return badRequest("Link troppo lungo");
+  settings.infoWord = server.arg("word") == "1";
+  settings.infoHistory = server.arg("history") == "1";
+  settings.infoCalendar = server.arg("calendar") == "1";
+  settings.icalUrl = url;
+  settings.webPosition = pos;
+  saveSettings();
+  requestWebInfoUpdate();
+  if (strcmp(currentMode()->id(), "web") == 0) restartMode();
+  sendState();
+}
+
+static void handlePomodoro() {
+  PomodoroMode &pom = pomodoroMode();
+  const String cmd = server.arg("cmd");
+  if (cmd == "start") pom.resume();
+  if (cmd == "pause") pom.pause();
+  if (cmd == "reset") pom.reset();
+  if (server.hasArg("work")) {
+    settings.pomodoroWork = constrain(server.arg("work").toInt(), 1, 120);
+    settings.pomodoroBreak = constrain(server.arg("break").toInt(), 1, 60);
+    saveSettings();
+  }
+  sendState();
+}
+
+static void handleCountdown() {
+  const String date = server.arg("date"), time = server.arg("time");
+  if (date.length() && date.length() != 10) return badRequest("Data non valida");
+  if (time.length() != 5) return badRequest("Ora non valida");
+  String label = server.arg("label");
+  label.trim();
+  settings.countdownLabel = label.length() ? label.substring(0, 40) : String("L'evento");
+  settings.countdownDate = date;
+  settings.countdownTime = time;
+  saveSettings();
+  if (strcmp(currentMode()->id(), "countdown") == 0) restartMode();
+  sendState();
+}
+
+static void handleAlarm() {
+  const String cmd = server.arg("cmd");
+  if (cmd == "stop") {
+    SunriseMode::dismiss();
+  } else if (cmd == "test") {
+    SunriseMode::test();
+  } else {
+    settings.alarmOn = server.arg("on") == "1";
+    settings.alarmTime = constrain(server.arg("time").toInt(), 0, 1439);
+    settings.alarmDays = server.arg("days").toInt() & 0x7F;
+    settings.alarmRamp = constrain(server.arg("ramp").toInt(), 5, 60);
+    settings.alarmHold = constrain(server.arg("hold").toInt(), 1, 120);
+    saveSettings();
+  }
+  refreshModes();
+  sendState();
+}
+
+// --- Gallery ---------------------------------------------------------------
+
+static String base64(const uint8_t *data, size_t length) {
+  size_t outLength = 0;
+  mbedtls_base64_encode(nullptr, 0, &outLength, data, length);
+  String out;
+  out.reserve(outLength);
+  std::vector<unsigned char> buf(outLength + 1);
+  mbedtls_base64_encode(buf.data(), buf.size(), &outLength, data, length);
+  buf[outLength] = 0;
+  out = (const char *)buf.data();
+  return out;
+}
+
+static bool unbase64(const String &text, std::vector<uint8_t> &out) {
+  size_t length = 0;
+  mbedtls_base64_decode(nullptr, 0, &length, (const unsigned char *)text.c_str(), text.length());
+  out.resize(length);
+  return mbedtls_base64_decode(out.data(), out.size(), &length, (const unsigned char *)text.c_str(), text.length()) == 0 &&
+         (out.resize(length), true);
+}
+
+static void handleGalleryList() {
+  String json = "[";
+  bool first = true;
+  for (const Drawing &d : galleryList()) {
+    if (!first) json += ',';
+    first = false;
+    json += "{\"id\":" + jsonString(d.id) + ",\"name\":" + jsonString(d.name) + ",\"frames\":" + String(d.frameCount()) +
+            ",\"frameMs\":" + String(d.frameMs) + ",\"thumb\":\"" + base64(d.frames.data(), 256) + "\"}";
+  }
+  server.send(200, "application/json", json + "]");
+}
+
+static void handleGalleryItem() {
+  Drawing d;
+  if (!galleryLoad(server.arg("id"), d)) return badRequest("Disegno non trovato");
+  server.send(200, "application/json",
+              "{\"id\":" + jsonString(d.id) + ",\"name\":" + jsonString(d.name) + ",\"frameMs\":" + String(d.frameMs) +
+                  ",\"data\":\"" + base64(d.frames.data(), d.frames.size()) + "\"}");
+}
+
+static bool readFrames(std::vector<uint8_t> &frames, uint16_t &frameMs) {
+  if (!unbase64(server.arg("data"), frames) || frames.empty() || frames.size() % 256 ||
+      frames.size() / 256 > GALLERY_MAX_FRAMES) {
+    return false;
+  }
+  frameMs = constrain(server.arg("frameMs").toInt(), 30, 2000);
+  return true;
+}
+
+static void handleGallerySave() {
+  Drawing d;
+  if (!readFrames(d.frames, d.frameMs)) return badRequest("Disegno non valido");
+  d.id = server.arg("id");
+  d.name = server.arg("name");
+  if (!gallerySave(d)) return badRequest("Impossibile salvare (galleria piena?)");
+  server.send(200, "application/json", "{\"id\":" + jsonString(d.id) + "}");
+}
+
+static void handleGalleryDelete() {
+  const String id = server.arg("id");
+  galleryDelete(id);
+  if (settings.galleryShow == id) {
+    settings.galleryShow = "all";
+    saveSettings();
+  }
+  if (strcmp(currentMode()->id(), "gallery") == 0) restartMode();
+  server.send(204);
+}
+
+static void handleGalleryShow() {
+  settings.galleryShow = server.arg("id") == "all" ? String("all") : server.arg("id");
+  setMode("gallery");
+  saveSettings();
+  sendState();
+}
+
+// The editor's drawing in progress, shown live.
+static void handleDraw() {
+  std::vector<uint8_t> frames;
+  uint16_t frameMs;
+  if (!readFrames(frames, frameMs)) return badRequest("Disegno non valido");
+  if (strcmp(currentMode()->id(), "gallery") != 0) setMode("gallery");
+  galleryMode().showDraft(frames.data(), frames.size() / 256, frameMs);
+  server.send(204);
 }
 
 void webBegin() {
@@ -760,6 +1379,16 @@ void webBegin() {
   server.on("/api/timezone", HTTP_POST, handleTimezone);
   server.on("/api/playlist", HTTP_POST, handlePlaylist);
   server.on("/api/night", HTTP_POST, handleNight);
+  server.on("/api/web", HTTP_POST, handleWeb);
+  server.on("/api/pomodoro", HTTP_POST, handlePomodoro);
+  server.on("/api/countdown", HTTP_POST, handleCountdown);
+  server.on("/api/alarm", HTTP_POST, handleAlarm);
+  server.on("/api/gallery", HTTP_GET, handleGalleryList);
+  server.on("/api/gallery/item", HTTP_GET, handleGalleryItem);
+  server.on("/api/gallery/save", HTTP_POST, handleGallerySave);
+  server.on("/api/gallery/delete", HTTP_POST, handleGalleryDelete);
+  server.on("/api/gallery/show", HTTP_POST, handleGalleryShow);
+  server.on("/api/draw", HTTP_POST, handleDraw);
   server.onNotFound([] { server.send(404, "text/plain", "Not found"); });
   server.begin();
 }

@@ -21,7 +21,15 @@ struct Settings {
   String timezoneName;  // IANA name (e.g. "Europe/Rome"), for the page
 
   String ambient;       // animation for the ambient mode, or "auto"
+
+  // "Dal web" mode: which sources to show, the iCal link, and the height.
+  bool infoWord;
+  bool infoHistory;
+  bool infoCalendar;
+  String icalUrl;
+  String webPosition;
   String quotes;        // one quote per line; empty = built-in list
+  String galleryShow;   // drawing shown by the "Disegni" mode, or "all"
 
   // Playlist: modes shown in turn, "id:minutes,id:minutes,...".
   bool playlistOn;
@@ -33,7 +41,20 @@ struct Settings {
   // player controls the game from the page instead of the computer.
   String demoOff;
 
+  // Timers: Pomodoro lengths (minutes), countdown target, sunrise alarm.
+  uint8_t pomodoroWork;
+  uint8_t pomodoroBreak;
+  String countdownLabel;
+  String countdownDate;  // "YYYY-MM-DD"
+  String countdownTime;  // "HH:MM"
+  bool alarmOn;
+  uint16_t alarmTime;    // minutes after midnight
+  uint8_t alarmDays;     // bit 0 = Monday ... bit 6 = Sunday
+  uint8_t alarmRamp;     // minutes of sunrise before the alarm
+  uint8_t alarmHold;     // minutes it stays bright after
+
   bool nightOn;
+  bool nightSun;        // from sunset to sunrise instead of nightStart/End
   uint16_t nightStart;
   uint16_t nightEnd;
   String nightMode;
