@@ -24,9 +24,9 @@
 
 // Clockwise rotation (0, 90, 180, 270) applied to the image so text reads
 // correctly for how the lamp is mounted. The panel's native "up" is
-// vertical; 90 turns it for a lamp hung horizontally. If the text comes out
-// upside down, use 270 instead.
-#define ROTATION 90
+// vertical; 90 or 270 turns it for a lamp hung horizontally (which one
+// depends on which side the lamp was turned to).
+#define ROTATION 270
 
 // Flip the image if your panels ended up wired mirrored/upside down.
 // Flips are applied before ROTATION.

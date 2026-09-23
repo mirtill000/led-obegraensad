@@ -86,8 +86,8 @@ platformio.ini
 
 To change the message or scroll speed, edit `MESSAGE` / `SCROLL_DELAY_MS` in
 `include/constants.h`. `ROTATION` (0/90/180/270, clockwise) sets which way
-the text reads: the default `90` is for a lamp mounted horizontally; use `0`
-if yours stands vertically, and `270` if the text comes out upside down. If
+the text reads: the default `270` is for a lamp mounted horizontally; use `0`
+if yours stands vertically, and `90` if the text comes out upside down. If
 it's mirrored (some panels get reassembled with the connector on a different
 edge), flip `FLIP_HORIZONTAL` / `FLIP_VERTICAL` in the same file.
 
