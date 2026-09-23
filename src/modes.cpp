@@ -3,6 +3,7 @@
 #include "modes/ambient_mode.h"
 #include "modes/clock_mode.h"
 #include "modes/life_mode.h"
+#include "modes/mario_mode.h"
 #include "modes/off_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/text_mode.h"
@@ -12,10 +13,11 @@ static TextMode textMode;
 static QuotesMode quotesMode;
 static ClockMode clockMode;
 static LifeMode lifeMode;
+static MarioMode marioMode;
 static AmbientMode ambientMode;
 static OffMode offMode;
 
-Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &lifeMode, &ambientMode, &offMode};
+Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &lifeMode, &marioMode, &ambientMode, &offMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 
 static uint8_t current = 0;

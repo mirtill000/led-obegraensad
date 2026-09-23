@@ -3,7 +3,7 @@
 #include "modes.h"
 #include "scroller.h"
 
-// A different motivational quote every hour, scrolling on two lines. The
+// A different motivational quote every hour, scrolling on one line. The
 // quote only changes at the end of a pass, so it is never cut off.
 class QuotesMode : public Mode {
  public:

@@ -3,9 +3,9 @@
 #include "modes.h"
 #include "scroller.h"
 
-// Clock (hours on top, minutes below, a dot running round the border for
-// the seconds), alternating with the current weather: an icon and the
-// temperature.
+// Clock and weather on one screen: hours and minutes on the left, an
+// animated weather icon and the temperature on the right, and a dot running
+// round the border for the seconds.
 class ClockMode : public Mode {
  public:
   const char *id() const override { return "clock"; }
@@ -16,11 +16,6 @@ class ClockMode : public Mode {
   void action() override;
 
  private:
-  void drawClock(const struct tm &t);
-  void drawWeather();
-
   Scroller waiting_;  // shown until the clock has synced
-  bool showWeather_ = false;
-  uint32_t phaseStart_ = 0;
   uint32_t lastDraw_ = 0;
 };

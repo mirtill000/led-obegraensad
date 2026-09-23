@@ -3,8 +3,8 @@
 Standalone firmware that drives the salvaged IKEA OBEGRÄNSAD 16x16 LED
 matrix from a **Sparkle IoT XH-S3E** board (ESP32-S3-WROOM-1-N16R8, 16MB
 flash / 8MB octal PSRAM, WiFi+BT). A small web page over WiFi switches
-between modes: scrolling text (by default **dare mighty things**), a quote of the hour, clock + weather, Conway's Game of Life, ambient
-animations, or off. (Inspired by
+between modes: scrolling text (by default **dare mighty things**), a quote of the hour, clock + weather, Conway's Game of Life, a Super
+Mario-style platformer, ambient animations, or off. (Inspired by
 [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
 which this reuses the panel's shift-register wiring table from.)
 
@@ -130,13 +130,21 @@ The page has no password: anyone on the same network can use it.
 Current modes:
 
 - **Testo scorrevole** - scrolls the text set on the page
-- **Frase dell'ora** - a different motivational quote every hour (list in
-  `src/modes/quotes_mode.cpp`); button: next quote
-- **Orologio e meteo** - hours on top, minutes below, a dot running round
-  the border for the seconds; every 20 s it shows the weather for 6 s (icon
-  and temperature, refreshed every 15 min); button: refresh weather
-- **Gioco della vita** - Conway's Game of Life with wrap-around edges;
-  reseeds itself when the pattern dies, freezes or loops; button: restart
+- **Frase dell'ora** - a different motivational quote every hour, scrolling
+  on one line (list in `src/modes/quotes_mode.cpp`); button: next quote
+- **Orologio e meteo** - one screen: hours and minutes on the left, an
+  animated weather icon (falling rain or snow, flashing lightning, drifting
+  clouds, ...) and the temperature on the right, and a dot running round the
+  border for the seconds. Weather is refreshed every 15 min; until the first
+  reading arrives the clock uses big digits. Button: refresh weather
+- **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
+  generations a second; reseeds itself when the pattern dies, freezes or
+  loops; button: restart
+- **Super Mario** - side-scrolling platformer with pipes, pits, goombas
+  (stomp them) and coins. It plays by itself: an autopilot simulates the
+  next moves and jumps at the best moment. The **Salta** button on the page
+  (or the space bar) takes over; after 20 s without jumps the autopilot is
+  back. At game over it shows the score and starts again
 - **Animazioni** - digital rain, fire, stars, waves or a "breathing" circle;
   "automatic" changes animation every 5 minutes and shows only stars from
   22:00 to 07:00; button: next animation

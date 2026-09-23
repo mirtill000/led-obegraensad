@@ -2,7 +2,7 @@
 
 #include "display.h"
 
-static const uint32_t STEP_MS = 150;
+static const uint32_t STEP_MS = 250;
 static const uint16_t MAX_GENERATIONS = 1000;
 
 void LifeMode::start() {

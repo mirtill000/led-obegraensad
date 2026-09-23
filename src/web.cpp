@@ -168,6 +168,13 @@ $('saveText').onclick = () => {
     .then(() => status('Testo aggiornato')).catch((e) => status(e.message));
 };
 $('action').onclick = () => post('/api/action', {}).catch((e) => status(e.message));
+// Space bar = the mode's button (e.g. jump in Super Mario), unless typing.
+document.addEventListener('keydown', (e) => {
+  if (e.code !== 'Space' || e.repeat || !state || !state.action) return;
+  if (['INPUT', 'SELECT', 'BUTTON'].includes(document.activeElement.tagName)) return;
+  e.preventDefault();
+  $('action').click();
+});
 $('saveLocation').onclick = () => {
   const lat = parseFloat($('lat').value.replace(',', '.'));
   const lon = parseFloat($('lon').value.replace(',', '.'));

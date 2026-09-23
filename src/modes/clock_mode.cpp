@@ -5,10 +5,17 @@
 #include "timekeeping.h"
 #include "weather.h"
 
-static const uint32_t CLOCK_MS = 20000;    // how long the clock stays up
-static const uint32_t WEATHER_MS = 6000;   // how long the weather stays up
+// Layout (the outer border is the seconds track):
+//
+//   +----------------+
+//   |HH      icon    |   hours      x1-7,  rows 1-6   weather icon x9-14, rows 1-7
+//   |MM      temp    |   minutes    x1-7,  rows 8-13  temperature  x9-14, rows 8-13
+//   +----------------+
+//
+// Until there is weather data the clock uses big digits over the whole
+// inner area instead.
 
-// 5x6 digits for the clock (bit 15 = leftmost column).
+// 5x6 digits for the big clock (bit 15 = leftmost column).
 static const uint16_t BIG_DIGITS[10][6] = {
     {0x7000, 0x8800, 0x8800, 0x8800, 0x8800, 0x7000},  // 0
     {0x2000, 0x6000, 0x2000, 0x2000, 0x2000, 0x7000},  // 1
@@ -22,25 +29,84 @@ static const uint16_t BIG_DIGITS[10][6] = {
     {0x7000, 0x8800, 0x8800, 0x7800, 0x0800, 0x7000},  // 9
 };
 
-// 9-row weather icons, drawn centred at the top of the panel.
-struct Icon {
-  uint8_t width;
-  uint16_t rows[9];
+// 2-pixel-wide tens digits so a two-digit temperature fits in 6 columns.
+struct NarrowGlyph {
+  char c;
+  uint16_t rows[6];
+};
+static const NarrowGlyph NARROW_TENS[] = {
+    {'1', {0x4000, 0xC000, 0x4000, 0x4000, 0x4000, 0x4000}},
+    {'2', {0xC000, 0x4000, 0xC000, 0x8000, 0x8000, 0xC000}},
+    {'3', {0xC000, 0x4000, 0xC000, 0x4000, 0x4000, 0xC000}},
+    {'-', {0x0000, 0x0000, 0x0000, 0xC000, 0x0000, 0x0000}},
 };
 
-static const Icon ICON_SUN = {9, {0x0800, 0x4100, 0x1C00, 0x3E00, 0xBE80, 0x3E00, 0x1C00, 0x4100, 0x0800}};
-static const Icon ICON_MOON = {10, {0x3800, 0x6080, 0xC000, 0xC280, 0xC000, 0xC000, 0xC000, 0x6000, 0x3800}};
-static const Icon ICON_PARTLY = {12, {0x2000, 0xA800, 0x7000, 0xF700, 0x5880, 0x2060, 0x2010, 0x2010, 0x1FE0}};
-static const Icon ICON_CLOUD = {11, {0x0000, 0x0000, 0x0E00, 0x3100, 0x40C0, 0x8020, 0x8020, 0x7FC0, 0x0000}};
-static const Icon ICON_FOG = {11, {0x0000, 0xFFC0, 0x0000, 0x7FE0, 0x0000, 0xFFC0, 0x0000, 0x7FE0, 0x0000}};
-static const Icon ICON_RAIN = {11, {0x0E00, 0x3100, 0x40C0, 0x8020, 0x7FC0, 0x0000, 0x2480, 0x4900, 0x9200}};
-static const Icon ICON_SNOW = {11, {0x0E00, 0x3100, 0x40C0, 0x8020, 0x7FC0, 0x0000, 0x4440, 0x1100, 0x4440}};
-static const Icon ICON_STORM = {11, {0x0E00, 0x3100, 0x40C0, 0x8020, 0x73C0, 0x0C00, 0x1E00, 0x0400, 0x0800}};
+// Animated weather icons, 6x7 pixels per frame.
+struct AnimatedIcon {
+  uint16_t frameMs;
+  uint8_t frameCount;
+  const uint16_t (*frames)[7];
+};
+
+static const uint16_t SUN_FRAMES[][7] = {
+    {0x0000, 0x3000, 0x7800, 0x7800, 0x3000, 0x0000, 0x0000},
+    {0x8400, 0x3000, 0x7800, 0x7800, 0x3000, 0x8400, 0x0000},
+    {0x4800, 0xB400, 0x7800, 0x7800, 0xB400, 0x4800, 0x0000},
+    {0x8400, 0x3000, 0x7800, 0x7800, 0x3000, 0x8400, 0x0000},
+};
+static const uint16_t MOON_FRAMES[][7] = {
+    {0x3000, 0x4000, 0x8000, 0x8000, 0x4000, 0x3000, 0x0000},
+    {0x3400, 0x4000, 0x8000, 0x8800, 0x4000, 0x3000, 0x0000},
+    {0x3000, 0x4800, 0x8000, 0x8000, 0x4400, 0x3000, 0x0000},
+};
+static const uint16_t PARTLY_FRAMES[][7] = {
+    {0xA000, 0x4000, 0xB000, 0x3C00, 0x7C00, 0x0000, 0x0000},
+    {0x4000, 0xE000, 0x7000, 0x3C00, 0x7C00, 0x0000, 0x0000},
+};
+static const uint16_t CLOUD_FRAMES[][7] = {
+    {0x0000, 0x3000, 0x7800, 0xFC00, 0x7800, 0x0000, 0x0000},
+    {0x0000, 0x1800, 0x3C00, 0x7C00, 0x3C00, 0x0000, 0x0000},
+    {0x0000, 0x3000, 0x7800, 0xFC00, 0x7800, 0x0000, 0x0000},
+    {0x0000, 0x6000, 0xF000, 0xF800, 0xF000, 0x0000, 0x0000},
+};
+static const uint16_t FOG_FRAMES[][7] = {
+    {0x0000, 0xF800, 0x0000, 0x7C00, 0x0000, 0xF800, 0x0000},
+    {0x0000, 0x7C00, 0x0000, 0xF800, 0x0000, 0x7C00, 0x0000},
+};
+static const uint16_t RAIN_FRAMES[][7] = {
+    {0x3000, 0x7800, 0xFC00, 0x0000, 0x8800, 0x2000, 0x0800},
+    {0x3000, 0x7800, 0xFC00, 0x8800, 0x2000, 0x0800, 0x8000},
+    {0x3000, 0x7800, 0xFC00, 0x2000, 0x0800, 0x8000, 0x2000},
+    {0x3000, 0x7800, 0xFC00, 0x0800, 0x8000, 0x2000, 0x8800},
+};
+static const uint16_t SNOW_FRAMES[][7] = {
+    {0x3000, 0x7800, 0xFC00, 0x0000, 0x4800, 0x0000, 0x1000},
+    {0x3000, 0x7800, 0xFC00, 0x4000, 0x0800, 0x2000, 0x0000},
+    {0x3000, 0x7800, 0xFC00, 0x0800, 0x0000, 0x4800, 0x0000},
+    {0x3000, 0x7800, 0xFC00, 0x0000, 0x1000, 0x0000, 0x4800},
+};
+static const uint16_t STORM_FRAMES[][7] = {
+    {0x3000, 0x7800, 0xFC00, 0x1000, 0x2000, 0x1000, 0x2000},
+    {0x3000, 0x7800, 0xFC00, 0x0000, 0x0000, 0x0000, 0x0000},
+    {0x3000, 0x7800, 0xFC00, 0x1000, 0x2000, 0x1000, 0x2000},
+    {0x3000, 0x7800, 0xFC00, 0x0000, 0x0000, 0x0000, 0x0000},
+    {0x3000, 0x7800, 0xFC00, 0x0000, 0x0000, 0x0000, 0x0000},
+    {0x3000, 0x7800, 0xFC00, 0x0000, 0x0000, 0x0000, 0x0000},
+};
+
+static const AnimatedIcon ICON_SUN = {400, 4, SUN_FRAMES};
+static const AnimatedIcon ICON_MOON = {700, 3, MOON_FRAMES};
+static const AnimatedIcon ICON_PARTLY = {600, 2, PARTLY_FRAMES};
+static const AnimatedIcon ICON_CLOUD = {700, 4, CLOUD_FRAMES};
+static const AnimatedIcon ICON_FOG = {800, 2, FOG_FRAMES};
+static const AnimatedIcon ICON_RAIN = {150, 4, RAIN_FRAMES};
+static const AnimatedIcon ICON_SNOW = {350, 4, SNOW_FRAMES};
+static const AnimatedIcon ICON_STORM = {150, 6, STORM_FRAMES};
 
 // WMO weather code -> icon (https://open-meteo.com/en/docs).
-static const Icon &iconFor(int code, bool isDay) {
+static const AnimatedIcon &iconFor(int code, bool isDay) {
   if (code == 0) return isDay ? ICON_SUN : ICON_MOON;
-  if (code <= 2) return ICON_PARTLY;
+  if (code <= 2) return isDay ? ICON_PARTLY : ICON_CLOUD;
   if (code == 3) return ICON_CLOUD;
   if (code == 45 || code == 48) return ICON_FOG;
   if ((code >= 71 && code <= 77) || code == 85 || code == 86) return ICON_SNOW;
@@ -64,10 +130,36 @@ static void borderPixel(int s, int &x, int &y) {
   y = 0;
 }
 
+// Two-digit number in the small font with its left edge at x.
+static void drawSmallNumber(int x, int y, int value) {
+  char buf[3] = {(char)('0' + value / 10), (char)('0' + value % 10), 0};
+  display.drawText(x, y, buf, 0, 2);
+}
+
+// Temperature right-aligned to column 14, clamped to -9..99.
+static void drawTemperature(int y, float celsius) {
+  int t = (int)lroundf(celsius);
+  if (t < -9) t = -9;
+  if (t > 99) t = 99;
+  const String s(t);
+  const NarrowGlyph *narrow = nullptr;
+  if (s.length() == 2) {
+    for (const NarrowGlyph &g : NARROW_TENS) {
+      if (g.c == s[0]) narrow = &g;
+    }
+  }
+  if (narrow) {
+    // 2-wide tens, 1 gap, 3-wide units: 6 columns, x9-14.
+    display.drawBitmap(9, y, narrow->rows, 2, 6);
+    display.drawChar(12, y, s[1]);
+  } else {
+    const int w = Display::textWidth(s.c_str(), 0, s.length()) - 1;
+    display.drawText(15 - w, y, s.c_str(), 0, s.length());
+  }
+}
+
 void ClockMode::start() {
-  waiting_.start("in attesa|dell'ora");
-  showWeather_ = false;
-  phaseStart_ = millis();
+  waiting_.start("in attesa dell'ora");
   lastDraw_ = 0;
 }
 
@@ -77,39 +169,24 @@ void ClockMode::update(uint32_t now) {
     waiting_.update(now, settings.speedMs);
     return;
   }
+  updateWeather();  // no-op unless stale; refreshes every 15 min
 
-  if (!weather.valid) updateWeather();  // retries at most once a minute
-
-  // Alternate clock / weather; skip the weather until there is some.
-  if (now - phaseStart_ >= (showWeather_ ? WEATHER_MS : CLOCK_MS)) {
-    phaseStart_ = now;
-    showWeather_ = !showWeather_ && weather.valid;
-    if (!showWeather_) updateWeather();  // refreshes at most every 15 min
-  }
-
-  if (now - lastDraw_ < 100) return;
+  if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
-  if (showWeather_) {
-    drawWeather();
-  } else {
-    drawClock(t);
-  }
-}
 
-void ClockMode::action() {
-  updateWeather(true);
-  showWeather_ = weather.valid;
-  phaseStart_ = millis();
-  lastDraw_ = 0;
-}
-
-void ClockMode::drawClock(const struct tm &t) {
   display.clear();
-  const int values[2] = {t.tm_hour, t.tm_min};
-  for (int line = 0; line < 2; line++) {
-    const int y = line == 0 ? 1 : 9;
-    display.drawBitmap(2, y, BIG_DIGITS[values[line] / 10], 5, 6);
-    display.drawBitmap(8, y, BIG_DIGITS[values[line] % 10], 5, 6);
+  if (weather.valid) {
+    drawSmallNumber(1, 1, t.tm_hour);
+    drawSmallNumber(1, 8, t.tm_min);
+    const AnimatedIcon &icon = iconFor(weather.code, weather.isDay);
+    const uint8_t frame = (now / icon.frameMs) % icon.frameCount;
+    display.drawBitmap(9, 1, icon.frames[frame], 6, 7);
+    drawTemperature(8, weather.temperature);
+  } else {
+    display.drawBitmap(2, 1, BIG_DIGITS[t.tm_hour / 10], 5, 6);
+    display.drawBitmap(8, 1, BIG_DIGITS[t.tm_hour % 10], 5, 6);
+    display.drawBitmap(2, 9, BIG_DIGITS[t.tm_min / 10], 5, 6);
+    display.drawBitmap(8, 9, BIG_DIGITS[t.tm_min % 10], 5, 6);
   }
   int x, y;
   borderPixel(t.tm_sec % 60, x, y);
@@ -117,18 +194,7 @@ void ClockMode::drawClock(const struct tm &t) {
   display.render();
 }
 
-void ClockMode::drawWeather() {
-  display.clear();
-  const Icon &icon = iconFor(weather.code, weather.isDay);
-  display.drawBitmap((COLS - icon.width) / 2, 0, icon.rows, icon.width, 9);
-
-  // Temperature on the bottom rows, with a 2x2 degree sign.
-  const String temp = String((int)lroundf(weather.temperature));
-  const int textW = Display::textWidth(temp.c_str(), 0, temp.length());
-  const int x = (COLS - (textW + 2) + 1) / 2;
-  display.drawText(x, ROWS - 6, temp.c_str(), 0, temp.length());
-  for (int dy = 0; dy < 2; dy++) {
-    for (int dx = 0; dx < 2; dx++) display.setPixel(x + textW + dx, ROWS - 6 + dy, true);
-  }
-  display.render();
+void ClockMode::action() {
+  updateWeather(true);
+  lastDraw_ = 0;
 }
