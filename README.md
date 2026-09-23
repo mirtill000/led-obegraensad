@@ -144,12 +144,14 @@ Current modes:
   on one line (list in `src/modes/quotes_mode.cpp`); button: next quote
 - **Orologio e meteo** - one screen: hours and minutes on the left, an
   animated weather icon (falling rain or snow, flashing lightning, drifting
-  clouds, ...) and the temperature on the right, and a dot running round the
-  border for the seconds. Weather is refreshed every 15 min; until the first
+  clouds, ...) and the temperature with a one-pixel degree sign on the
+  right, and a dot running round the border for the seconds. Weather is refreshed every 15 min; until the first
   reading arrives the clock uses big digits. Button: refresh weather
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
-  generations a second; reseeds itself when the pattern dies, freezes or
-  loops; button: restart
+  generations a second. Each game starts from an empty board with a small
+  pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
+  40-150 generations; when the board dies, freezes or loops a new game
+  starts; button: restart
 - **Super Mario** - side-scrolling platformer with pipes, pits, goombas
   (stomp them) and coins. It plays by itself: an autopilot simulates the
   next moves and jumps at the best moment. The **Salta** button on the page

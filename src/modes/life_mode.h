@@ -3,9 +3,10 @@
 #include "constants.h"
 #include "modes.h"
 
-// Conway's Game of Life on a 16x16 torus (edges wrap around). Starts from a
-// random soup and reseeds when the pattern dies out, freezes or falls into
-// a short loop.
+// Conway's Game of Life on a 16x16 torus (edges wrap around). Each game
+// starts from an empty board with just a handful of cells in the middle - a
+// small "methuselah" pattern that grows into a lot of activity - and starts
+// over with another one when the board dies out, freezes or loops.
 class LifeMode : public Mode {
  public:
   const char *id() const override { return "life"; }

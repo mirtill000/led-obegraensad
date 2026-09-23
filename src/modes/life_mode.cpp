@@ -3,16 +3,32 @@
 #include "display.h"
 
 static const uint32_t STEP_MS = 250;
+static const uint32_t SEED_PAUSE_MS = 1000;  // show the starting cells before evolving
+
+// Small starting patterns that take a long time to settle. On this 16x16
+// torus they live for about 40-150 generations.
+struct Seed {
+  uint8_t width, height;
+  const char *rows;  // '#' = alive, row after row
+};
+static const Seed SEEDS[] = {
+    {3, 3, ".##" "##." ".#."},                      // R-pentomino
+    {7, 3, ".#....." "...#..." "##..###"},          // acorn
+    {4, 3, "#.##" "###." ".#.."},                   // B-heptomino
+    {3, 3, "###" "#.#" "#.#"},                      // pi-heptomino
+    {8, 3, "......#." "##......" ".#...###"},       // diehard
+    {3, 5, "###" "..." ".#." ".#." ".#."},          // thunderbird
+};
 static const uint16_t MAX_GENERATIONS = 1000;
 
 void LifeMode::start() {
   seed();
   draw();
-  lastStep_ = millis();
+  lastStep_ = millis() + SEED_PAUSE_MS;
 }
 
 void LifeMode::update(uint32_t now) {
-  if (now - lastStep_ < STEP_MS) return;
+  if ((int32_t)(now - lastStep_) < (int32_t)STEP_MS) return;
   lastStep_ = now;
 
   step();
@@ -21,6 +37,7 @@ void LifeMode::update(uint32_t now) {
   for (uint32_t past : history_) stuck |= (past == h);
   if (stuck) {
     seed();
+    lastStep_ = now + SEED_PAUSE_MS;
   } else {
     memmove(history_ + 1, history_, sizeof(history_) - sizeof(history_[0]));
     history_[0] = h;
@@ -28,10 +45,25 @@ void LifeMode::update(uint32_t now) {
   draw();
 }
 
+// Empty board plus one random seed pattern, randomly rotated and mirrored,
+// in the middle.
 void LifeMode::seed() {
-  for (int y = 0; y < ROWS; y++) {
-    for (int x = 0; x < COLS; x++) {
-      cells_[y][x] = (esp_random() % 100) < 35;
+  memset(cells_, 0, sizeof(cells_));
+  const Seed &s = SEEDS[esp_random() % (sizeof(SEEDS) / sizeof(SEEDS[0]))];
+  const int turns = esp_random() % 4;
+  const bool mirror = esp_random() & 1;
+  const int w = (turns % 2) ? s.height : s.width;
+  const int h = (turns % 2) ? s.width : s.height;
+  for (int y = 0; y < s.height; y++) {
+    for (int x = 0; x < s.width; x++) {
+      if (s.rows[y * s.width + x] != '#') continue;
+      int rx = mirror ? s.width - 1 - x : x, ry = y;
+      for (int t = 0; t < turns; t++) {  // rotate 90 degrees clockwise
+        const int nx = (t % 2 ? s.width : s.height) - 1 - ry;
+        ry = rx;
+        rx = nx;
+      }
+      cells_[(ROWS - h) / 2 + ry][(COLS - w) / 2 + rx] = true;
     }
   }
   memset(previous_, 0, sizeof(previous_));
