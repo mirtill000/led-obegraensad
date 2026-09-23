@@ -20,10 +20,8 @@
 
 // Default text and delay (ms) between scroll steps, used on first boot;
 // afterwards both are set from the web page and kept in flash.
-// A '|' splits the message into two lines stacked on top of each other that
-// scroll together (top line first); without '|' a single line scrolls
-// through the middle of the panel.
-#define MESSAGE "dare|mighty things"
+// The text scrolls on one line through the middle of the panel.
+#define MESSAGE "dare mighty things"
 #define SCROLL_DELAY_MS 80
 
 // Clockwise rotation (0, 90, 180, 270) applied to the image so text reads

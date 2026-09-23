@@ -64,10 +64,8 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
 
   <section>
     <h2>Testo scorrevole</h2>
-    <label for="top">Riga sopra</label>
-    <input type="text" id="top" maxlength="100" autocomplete="off">
-    <label for="bottom">Riga sotto (vuota = una riga sola al centro)</label>
-    <input type="text" id="bottom" maxlength="100" autocomplete="off">
+    <label for="text">Testo</label>
+    <input type="text" id="text" maxlength="200" autocomplete="off">
     <button class="save" id="saveText">Mostra</button>
     <p class="hint">Minuscole, cifre e . , ! ? ' - (le maiuscole diventano minuscole).</p>
   </section>
@@ -140,11 +138,7 @@ function render() {
     b.onclick = () => post('/api/mode', { id: m.id }).then(() => status(m.name + ' attivato')).catch((e) => status(e.message));
     box.appendChild(b);
   }
-  if (!editing('top', 'bottom')) {
-    const [top, ...rest] = state.text.split('|');
-    $('top').value = top;
-    $('bottom').value = rest.join(' ');
-  }
+  if (!editing('text')) $('text').value = state.text.replace(/\|/g, ' ');
   if (!editing('lat', 'lon')) {
     $('lat').value = state.lat;
     $('lon').value = state.lon;
@@ -160,9 +154,7 @@ function render() {
 }
 
 $('saveText').onclick = () => {
-  const top = $('top').value.replace(/\|/g, ' ');
-  const bottom = $('bottom').value.replace(/\|/g, ' ');
-  post('/api/text', { text: bottom.trim() ? top + '|' + bottom : top })
+  post('/api/text', { text: $('text').value })
     .then(() => status('Testo aggiornato')).catch((e) => status(e.message));
 };
 $('action').onclick = () => post('/api/action', {}).catch((e) => status(e.message));
@@ -253,9 +245,11 @@ static void handleMode() {
 }
 
 static void handleText() {
+  // One line only: '|' would split the text in two.
   String text = server.arg("text");
+  text.replace('|', ' ');
   text.trim();
-  if (text.length() > 201) text = text.substring(0, 201);
+  if (text.length() > 200) text = text.substring(0, 200);
   settings.text = text;
   saveSettings();
   // Show the new text straight away, even if another mode was active.

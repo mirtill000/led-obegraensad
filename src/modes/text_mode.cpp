@@ -2,6 +2,12 @@
 
 #include "settings.h"
 
-void TextMode::start() { scroller_.start(settings.text); }
+void TextMode::start() {
+  // Always one line through the middle; texts saved by older versions may
+  // still contain the two-line '|' separator.
+  String text = settings.text;
+  text.replace('|', ' ');
+  scroller_.start(text);
+}
 
 void TextMode::update(uint32_t now) { scroller_.update(now, settings.speedMs); }

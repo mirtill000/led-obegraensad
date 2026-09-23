@@ -3,8 +3,7 @@
 Standalone firmware that drives the salvaged IKEA OBEGRÄNSAD 16x16 LED
 matrix from a **Sparkle IoT XH-S3E** board (ESP32-S3-WROOM-1-N16R8, 16MB
 flash / 8MB octal PSRAM, WiFi+BT). A small web page over WiFi switches
-between modes: scrolling text (by default **dare mighty things** on two
-lines), a quote of the hour, clock + weather, Conway's Game of Life, ambient
+between modes: scrolling text (by default **dare mighty things**), a quote of the hour, clock + weather, Conway's Game of Life, ambient
 animations, or off. (Inspired by
 [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
 which this reuses the panel's shift-register wiring table from.)
@@ -111,8 +110,7 @@ If `secrets.h` is missing or the lamp can't join the network within 15 s,
 it opens its own WiFi network **OBEGRANSAD** (password `obegransad`)
 instead; join it and open `http://192.168.4.1`.
 
-From the page you can pick the active mode, change the scrolling text (top
-and bottom line), set the weather location, pick an animation, and set
+From the page you can pick the active mode, change the scrolling text, set the weather location, pick an animation, and set
 brightness and scroll speed. Modes that have a command of their own ("next
 quote", "restart", ...) show it as a button under the mode list. Everything
 is saved in flash, so the lamp comes back in the same state after a power
@@ -147,11 +145,11 @@ page automatically.
 
 ### Scrolling text
 
-A `|` in the text splits it into two lines stacked on top of each other
-that scroll together, top line first (e.g. `"dare|mighty things"`); without
-`|` a single line scrolls through the middle of the panel. The page's two
-text fields build this for you. `MESSAGE` in `constants.h` is only the
-default used on first boot.
+The text from the page scrolls on one line through the middle of the panel.
+`MESSAGE` in `constants.h` is only the default used on first boot.
+
+(The display code can also scroll two lines stacked on top of each other,
+split by a `|` - the hourly quotes use that.)
 
 The font is lowercase only (uppercase letters are drawn as lowercase), plus
 digits and a few punctuation marks; anything else is shown as a space. To
