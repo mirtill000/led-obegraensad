@@ -37,9 +37,11 @@ static const uint8_t positions[TOTAL_PIXELS] = {
 
 void Display::begin() {
   pinMode(PIN_LATCH, OUTPUT);
-  pinMode(PIN_ENABLE, OUTPUT);
   digitalWrite(PIN_LATCH, LOW);
-  digitalWrite(PIN_ENABLE, LOW);  // active-low: LOW = outputs enabled
+  // EN is active low, so PWM on it dims the whole panel: the larger the duty
+  // cycle, the longer the outputs are off.
+  ledcAttach(PIN_ENABLE, 20000, 8);
+  setBrightness(255);
 
   SPI.begin(PIN_CLOCK, -1 /* MISO unused */, PIN_DATA, -1 /* SS unused */);
   SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
@@ -48,10 +50,15 @@ void Display::begin() {
   render();
 }
 
+void Display::setBrightness(uint8_t brightness) {
+  if (brightness == 0) brightness = 1;
+  ledcWrite(PIN_ENABLE, 255 - brightness);
+}
+
 void Display::clear() { memset(frame_, 0, sizeof(frame_)); }
 
-void Display::setPixel(int x, int y, bool on) {
-  if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+int Display::frameIndex(int x, int y) {
+  if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return -1;
   if (FLIP_HORIZONTAL) x = COLS - 1 - x;
   if (FLIP_VERTICAL) y = ROWS - 1 - y;
 
@@ -67,7 +74,17 @@ void Display::setPixel(int x, int y, bool on) {
     px = y;
     py = ROWS - 1 - x;
   }
-  frame_[py * COLS + px] = on ? 1 : 0;
+  return py * COLS + px;
+}
+
+void Display::setPixel(int x, int y, bool on) {
+  int i = frameIndex(x, y);
+  if (i >= 0) frame_[i] = on ? 1 : 0;
+}
+
+bool Display::getPixel(int x, int y) const {
+  int i = frameIndex(x, y);
+  return i >= 0 && frame_[i];
 }
 
 int Display::drawChar(int x, int y, char c) {
@@ -109,34 +126,35 @@ void Display::render() {
   digitalWrite(PIN_LATCH, HIGH);
 }
 
-void Display::scrollTextOnce(const char *text, uint16_t frameDelayMs) {
+int Display::scrollWidth(const char *text) {
+  const int len = strlen(text);
+  const char *split = strchr(text, '|');
+  if (split == nullptr) return textWidth(text, 0, len);
+  const int mid = split - text;
+  return max(textWidth(text, 0, mid), textWidth(text, mid + 1, len));
+}
+
+void Display::drawScrollFrame(const char *text, int offset) {
   const int len = strlen(text);
   const char *split = strchr(text, '|');
 
+  clear();
   if (split == nullptr) {
     // One line, vertically centred.
-    const int y = (ROWS - FONT_HEIGHT) / 2;
-    const int width = textWidth(text, 0, len);
-    for (int offset = -COLS; offset < width; offset++) {
-      clear();
-      drawText(-offset, y, text, 0, len);
-      render();
-      delay(frameDelayMs);
-    }
-    return;
+    drawText(-offset, (ROWS - FONT_HEIGHT) / 2, text, 0, len);
+  } else {
+    // Two lines at the top and bottom edges, both starting together.
+    const int mid = split - text;
+    drawText(-offset, 0, text, 0, mid);
+    drawText(-offset, ROWS - FONT_HEIGHT, text, mid + 1, len);
   }
+  render();
+}
 
-  // Two lines: top line at the top edge, bottom line at the bottom edge,
-  // both starting together; the scroll lasts until the longer one has left.
-  const int mid = split - text;
-  const int topY = 0;
-  const int bottomY = ROWS - FONT_HEIGHT;
-  const int width = max(textWidth(text, 0, mid), textWidth(text, mid + 1, len));
+void Display::scrollTextOnce(const char *text, uint16_t frameDelayMs) {
+  const int width = scrollWidth(text);
   for (int offset = -COLS; offset < width; offset++) {
-    clear();
-    drawText(-offset, topY, text, 0, mid);
-    drawText(-offset, bottomY, text, mid + 1, len);
-    render();
+    drawScrollFrame(text, offset);
     delay(frameDelayMs);
   }
 }

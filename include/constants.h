@@ -18,7 +18,8 @@
 #define ROWS 16
 #define TOTAL_PIXELS (ROWS * COLS)
 
-// Text to scroll across the matrix and the delay (ms) between scroll steps.
+// Default text and delay (ms) between scroll steps, used on first boot;
+// afterwards both are set from the web page and kept in flash.
 // A '|' splits the message into two lines stacked on top of each other that
 // scroll together (top line first); without '|' a single line scrolls
 // through the middle of the panel.
@@ -35,3 +36,10 @@
 // Flips are applied before ROTATION.
 #define FLIP_HORIZONTAL false
 #define FLIP_VERTICAL false
+
+// Network: hostname (reachable as http://obegransad.local on most systems)
+// and the fallback access point opened when the lamp can't join WiFi.
+#define HOSTNAME "obegransad"
+#define AP_SSID "OBEGRANSAD"
+#define AP_PASSWORD "obegransad"  // at least 8 characters
+#define WIFI_CONNECT_TIMEOUT_MS 15000

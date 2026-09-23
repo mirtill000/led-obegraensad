@@ -1,11 +1,11 @@
-# OBEGRÄNSAD "HELLO WORLD" on Sparkle IoT XH-S3E
+# OBEGRÄNSAD on Sparkle IoT XH-S3E
 
-Minimal standalone firmware that drives the salvaged IKEA OBEGRÄNSAD 16x16
-LED matrix from a **Sparkle IoT XH-S3E** board (ESP32-S3-WROOM-1-N16R8,
-16MB flash / 8MB octal PSRAM, WiFi+BT) and scrolls a message across it
-forever (by default **dare mighty things** on two lines). No WiFi/web UI -
-just the display driver, a small lowercase font and a
-scroll loop. (Inspired by [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
+Standalone firmware that drives the salvaged IKEA OBEGRÄNSAD 16x16 LED
+matrix from a **Sparkle IoT XH-S3E** board (ESP32-S3-WROOM-1-N16R8, 16MB
+flash / 8MB octal PSRAM, WiFi+BT). A small web page over WiFi switches
+between modes: scrolling text (by default **dare mighty things** on two
+lines), Conway's Game of Life, or off. (Inspired by
+[ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
 which this reuses the panel's shift-register wiring table from.)
 
 ## How the panel works
@@ -76,25 +76,63 @@ permanent) opening.
 
 ```
 include/
-  constants.h   - pin assignment, matrix size, message text
-  font_small.h  - 8px-tall proportional lowercase font (a-z, 0-9, . , ! ? ' -)
-  display.h
+  constants.h        - pins, matrix size, rotation, default text, WiFi names
+  secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
+  font_small.h       - 8px-tall proportional lowercase font (a-z, 0-9, . , ! ? ' -)
+  display.h, modes.h, settings.h, web.h
 src/
-  display.cpp   - shift-register driver + font renderer
-  main.cpp      - calls display.scrollTextOnce(MESSAGE) forever
+  display.cpp        - shift-register driver, font renderer, brightness
+  modes.cpp          - list of modes + switching between them
+  modes/             - one file per mode (text, Game of Life, off)
+  settings.cpp       - settings saved in flash (NVS)
+  web.cpp            - control page + JSON API
+  main.cpp           - WiFi, button, main loop
 platformio.ini
 ```
 
-To change the message or scroll speed, edit `MESSAGE` / `SCROLL_DELAY_MS` in
-`include/constants.h`. `ROTATION` (0/90/180/270, clockwise) sets which way
-the text reads: the default `270` is for a lamp mounted horizontally; use `0`
-if yours stands vertically, and `90` if the text comes out upside down. If
+`ROTATION` in `include/constants.h` (0/90/180/270, clockwise) sets which way
+the image reads: the default `270` is for a lamp mounted horizontally; use
+`0` if yours stands vertically, and `90` if it comes out upside down. If
 it's mirrored (some panels get reassembled with the connector on a different
 edge), flip `FLIP_HORIZONTAL` / `FLIP_VERTICAL` in the same file.
 
-A `|` in `MESSAGE` splits it into two lines stacked on top of each other
+## WiFi control page
+
+1. Copy `include/secrets.example.h` to `include/secrets.h` and put your WiFi
+   name and password in it (`secrets.h` is git-ignored).
+2. Build and flash. At startup the lamp scrolls its IP address once.
+3. Open that address in a browser on the same network, or
+   `http://obegransad.local`.
+
+If `secrets.h` is missing or the lamp can't join the network within 15 s,
+it opens its own WiFi network **OBEGRANSAD** (password `obegransad`)
+instead; join it and open `http://192.168.4.1`.
+
+From the page you can pick the active mode, change the scrolling text (top
+and bottom line), and set brightness and scroll speed. Everything is saved
+in flash, so the lamp comes back in the same state after a power cut. A
+push button on GPIO4 (to GND) cycles through the modes too.
+
+The page has no password: anyone on the same network can use it.
+
+Current modes:
+
+- **Testo scorrevole** - scrolls the text set on the page
+- **Gioco della vita** - Conway's Game of Life with wrap-around edges;
+  reseeds itself when the pattern dies, freezes or loops
+- **Spento** - all LEDs off
+
+To add a mode, implement the `Mode` class from `include/modes.h` in
+`src/modes/` and add it to `MODES` in `src/modes.cpp`; it shows up on the
+page automatically.
+
+### Scrolling text
+
+A `|` in the text splits it into two lines stacked on top of each other
 that scroll together, top line first (e.g. `"dare|mighty things"`); without
-`|` a single line scrolls through the middle of the panel.
+`|` a single line scrolls through the middle of the panel. The page's two
+text fields build this for you. `MESSAGE` in `constants.h` is only the
+default used on first boot.
 
 The font is lowercase only (uppercase letters are drawn as lowercase), plus
 digits and a few punctuation marks; anything else is shown as a space. To
