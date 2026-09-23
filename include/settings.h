@@ -8,6 +8,9 @@ struct Settings {
   String text;          // scrolling text; '|' splits it into two lines
   uint8_t brightness;   // 1-255
   uint16_t speedMs;     // delay between scroll steps
+  float latitude;       // weather location
+  float longitude;
+  String ambient;       // animation for the ambient mode, or "auto"
 };
 
 extern Settings settings;

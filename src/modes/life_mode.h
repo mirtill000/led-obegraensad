@@ -12,6 +12,8 @@ class LifeMode : public Mode {
   const char *name() const override { return "Gioco della vita"; }
   void start() override;
   void update(uint32_t now) override;
+  const char *actionName() const override { return "Ricomincia"; }
+  void action() override { start(); }
 
  private:
   void seed();

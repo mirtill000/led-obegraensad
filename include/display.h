@@ -32,11 +32,14 @@ class Display {
   // Blocking: scrolls `text` once from off-screen right to off-screen left.
   void scrollTextOnce(const char *text, uint16_t frameDelayMs);
 
- private:
-  // Width in pixels of text[start, end).
+  // Width in pixels of text[start, end) (including trailing spacing).
   static int textWidth(const char *text, int start, int end);
   // Draws text[start, end) with its left edge at x.
   void drawText(int x, int y, const char *text, int start, int end);
+  // Draws `rows` of a bitmap `width` pixels wide (bit 15 = leftmost).
+  void drawBitmap(int x, int y, const uint16_t *bitmap, int width, int rows);
+
+ private:
   // Maps logical (x, y) to an index into frame_, applying flips and
   // ROTATION; returns -1 when off-screen.
   static int frameIndex(int x, int y);

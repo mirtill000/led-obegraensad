@@ -6,6 +6,7 @@
 #include "display.h"
 #include "modes.h"
 #include "settings.h"
+#include "timekeeping.h"
 #include "web.h"
 
 #if __has_include("secrets.h")
@@ -31,6 +32,7 @@ static String startWifi() {
     Serial.println();
     if (WiFi.status() == WL_CONNECTED) {
       WiFi.setAutoReconnect(true);
+      startTimeSync();
       return WiFi.localIP().toString();
     }
     Serial.println("WiFi connection failed, starting access point");
@@ -41,7 +43,9 @@ static String startWifi() {
   return WiFi.softAPIP().toString();
 }
 
-// Push button to GND on PIN_BUTTON: each press switches to the next mode.
+// Optional push button to GND on PIN_BUTTON: each press switches to the
+// next mode. Without a button the pin just stays high (internal pull-up),
+// and everything is controlled from the web page.
 static void checkButton() {
   static bool lastState = HIGH;
   static uint32_t lastChange = 0;

@@ -4,7 +4,8 @@ Standalone firmware that drives the salvaged IKEA OBEGRÄNSAD 16x16 LED
 matrix from a **Sparkle IoT XH-S3E** board (ESP32-S3-WROOM-1-N16R8, 16MB
 flash / 8MB octal PSRAM, WiFi+BT). A small web page over WiFi switches
 between modes: scrolling text (by default **dare mighty things** on two
-lines), Conway's Game of Life, or off. (Inspired by
+lines), a quote of the hour, clock + weather, Conway's Game of Life, ambient
+animations, or off. (Inspired by
 [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
 which this reuses the panel's shift-register wiring table from.)
 
@@ -83,8 +84,10 @@ include/
 src/
   display.cpp        - shift-register driver, font renderer, brightness
   modes.cpp          - list of modes + switching between them
-  modes/             - one file per mode (text, Game of Life, off)
+  modes/             - one file per mode
   settings.cpp       - settings saved in flash (NVS)
+  timekeeping.cpp    - NTP time sync (time zone: TIMEZONE in constants.h)
+  weather.cpp        - current weather from Open-Meteo (free, no API key)
   web.cpp            - control page + JSON API
   main.cpp           - WiFi, button, main loop
 platformio.ini
@@ -109,17 +112,33 @@ it opens its own WiFi network **OBEGRANSAD** (password `obegransad`)
 instead; join it and open `http://192.168.4.1`.
 
 From the page you can pick the active mode, change the scrolling text (top
-and bottom line), and set brightness and scroll speed. Everything is saved
-in flash, so the lamp comes back in the same state after a power cut. A
-push button on GPIO4 (to GND) cycles through the modes too.
+and bottom line), set the weather location, pick an animation, and set
+brightness and scroll speed. Modes that have a command of their own ("next
+quote", "restart", ...) show it as a button under the mode list. Everything
+is saved in flash, so the lamp comes back in the same state after a power
+cut.
+
+No push button is needed: everything is on the page. If you do wire one to
+GPIO4 (other leg to GND), each press switches to the next mode.
+
+Clock, weather and the hourly quote need internet, so they only work when
+the lamp is on your WiFi (not in access-point mode).
 
 The page has no password: anyone on the same network can use it.
 
 Current modes:
 
 - **Testo scorrevole** - scrolls the text set on the page
+- **Frase dell'ora** - a different motivational quote every hour (list in
+  `src/modes/quotes_mode.cpp`); button: next quote
+- **Orologio e meteo** - hours on top, minutes below, a dot running round
+  the border for the seconds; every 20 s it shows the weather for 6 s (icon
+  and temperature, refreshed every 15 min); button: refresh weather
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges;
-  reseeds itself when the pattern dies, freezes or loops
+  reseeds itself when the pattern dies, freezes or loops; button: restart
+- **Animazioni** - digital rain, fire, stars, waves or a "breathing" circle;
+  "automatic" changes animation every 5 minutes and shows only stars from
+  22:00 to 07:00; button: next animation
 - **Spento** - all LEDs off
 
 To add a mode, implement the `Mode` class from `include/modes.h` in

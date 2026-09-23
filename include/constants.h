@@ -43,3 +43,12 @@
 #define AP_SSID "OBEGRANSAD"
 #define AP_PASSWORD "obegransad"  // at least 8 characters
 #define WIFI_CONNECT_TIMEOUT_MS 15000
+
+// Local time zone (POSIX TZ string) for the clock and the hourly quotes.
+// Default: Italy / Central Europe, with daylight saving time.
+#define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"
+
+// Default weather location (latitude, longitude): Milan. Can be changed from
+// the web page.
+#define DEFAULT_LATITUDE 45.4642f
+#define DEFAULT_LONGITUDE 9.1900f

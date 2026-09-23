@@ -12,6 +12,11 @@ class Mode {
   virtual const char *name() const = 0;  // shown on the web page
   virtual void start() {}                // called when the mode is selected
   virtual void update(uint32_t now) = 0;
+
+  // Optional command shown as a button on the web page while this mode is
+  // active (e.g. "next quote"); nullptr for none.
+  virtual const char *actionName() const { return nullptr; }
+  virtual void action() {}
 };
 
 // To add a mode: implement Mode in src/modes/, then list it in MODES in

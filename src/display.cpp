@@ -111,6 +111,14 @@ void Display::drawText(int x, int y, const char *text, int start, int end) {
   }
 }
 
+void Display::drawBitmap(int x, int y, const uint16_t *bitmap, int width, int rows) {
+  for (int row = 0; row < rows; row++) {
+    for (int col = 0; col < width; col++) {
+      if (bitmap[row] & (0x8000 >> col)) setPixel(x + col, y + row, true);
+    }
+  }
+}
+
 void Display::render() {
   static uint8_t bits[TOTAL_PIXELS / 8];
   memset(bits, 0, sizeof(bits));
