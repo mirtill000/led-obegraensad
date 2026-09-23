@@ -17,8 +17,11 @@ void loadSettings() {
   settings.latitude = prefs.getFloat("lat", DEFAULT_LATITUDE);
   settings.longitude = prefs.getFloat("lon", DEFAULT_LONGITUDE);
   settings.ambient = prefs.getString("ambient", "auto");
+  settings.vertical = prefs.getBool("vertical", false);
   prefs.end();
 }
+
+uint16_t rotationForSettings() { return settings.vertical ? ROTATION_VERTICAL : ROTATION_HORIZONTAL; }
 
 void saveSettings() {
   prefs.begin("obegransad", false);
@@ -29,5 +32,6 @@ void saveSettings() {
   prefs.putFloat("lat", settings.latitude);
   prefs.putFloat("lon", settings.longitude);
   prefs.putString("ambient", settings.ambient);
+  prefs.putBool("vertical", settings.vertical);
   prefs.end();
 }

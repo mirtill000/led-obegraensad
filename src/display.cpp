@@ -57,20 +57,20 @@ void Display::setBrightness(uint8_t brightness) {
 
 void Display::clear() { memset(frame_, 0, sizeof(frame_)); }
 
-int Display::frameIndex(int x, int y) {
+int Display::frameIndex(int x, int y) const {
   if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return -1;
   if (FLIP_HORIZONTAL) x = COLS - 1 - x;
   if (FLIP_VERTICAL) y = ROWS - 1 - y;
 
   // Rotate clockwise (panel is square, so COLS == ROWS).
   int px = x, py = y;
-  if (ROTATION == 90) {
+  if (rotation_ == 90) {
     px = COLS - 1 - y;
     py = x;
-  } else if (ROTATION == 180) {
+  } else if (rotation_ == 180) {
     px = COLS - 1 - x;
     py = ROWS - 1 - y;
-  } else if (ROTATION == 270) {
+  } else if (rotation_ == 270) {
     px = y;
     py = ROWS - 1 - x;
   }

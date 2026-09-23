@@ -19,6 +19,9 @@ class Display {
 
   // Global brightness 1-255, done by PWM on the panel's output-enable pin.
   void setBrightness(uint8_t brightness);
+  // Clockwise rotation of the image: 0, 90, 180 or 270. Takes effect from
+  // the next frame drawn.
+  void setRotation(uint16_t degrees) { rotation_ = degrees; }
 
   // A '|' in scrolling text splits it into two lines stacked on top of each
   // other that scroll together; without it one line scrolls through the
@@ -40,11 +43,12 @@ class Display {
   void drawBitmap(int x, int y, const uint16_t *bitmap, int width, int rows);
 
  private:
-  // Maps logical (x, y) to an index into frame_, applying flips and
-  // ROTATION; returns -1 when off-screen.
-  static int frameIndex(int x, int y);
+  // Maps logical (x, y) to an index into frame_, applying flips and the
+  // rotation; returns -1 when off-screen.
+  int frameIndex(int x, int y) const;
 
   uint8_t frame_[TOTAL_PIXELS] = {0};
+  uint16_t rotation_ = ROTATION_HORIZONTAL;
 };
 
 extern Display display;

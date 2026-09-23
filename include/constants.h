@@ -24,23 +24,23 @@
 #define MESSAGE "dare mighty things"
 #define SCROLL_DELAY_MS 80
 
-// Clockwise rotation (0, 90, 180, 270) applied to the image so text reads
-// correctly for how the lamp is mounted. The panel's native "up" is
-// vertical; 90 or 270 turns it for a lamp hung horizontally (which one
-// depends on which side the lamp was turned to).
-#define ROTATION 270
+// Clockwise rotation (0, 90, 180, 270) applied to the image for each way
+// the lamp can hang; the orientation itself is picked on the web page.
+// The panel's native "up" is vertical. If the text comes out upside down,
+// change the value by 180.
+#define ROTATION_HORIZONTAL 270
+#define ROTATION_VERTICAL 0
 
 // Flip the image if your panels ended up wired mirrored/upside down.
-// Flips are applied before ROTATION.
+// Flips are applied before the rotation.
 #define FLIP_HORIZONTAL false
 #define FLIP_VERTICAL false
 
-// Network: hostname (reachable as http://obegransad.local on most systems)
-// and the fallback access point opened when the lamp can't join WiFi.
+// Network: hostname (reachable as http://obegransad.local on most systems).
+// The lamp only joins the home network from secrets.h; while it can't, it
+// keeps retrying every WIFI_RETRY_MS.
 #define HOSTNAME "obegransad"
-#define AP_SSID "OBEGRANSAD"
-#define AP_PASSWORD "obegransad"  // at least 8 characters
-#define WIFI_CONNECT_TIMEOUT_MS 15000
+#define WIFI_RETRY_MS 20000
 
 // Local time zone (POSIX TZ string) for the clock and the hourly quotes.
 // Default: Italy / Central Europe, with daylight saving time.

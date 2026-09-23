@@ -11,7 +11,11 @@ struct Settings {
   float latitude;       // weather location
   float longitude;
   String ambient;       // animation for the ambient mode, or "auto"
+  bool vertical;        // how the lamp hangs: vertical or horizontal
 };
+
+// Display rotation for the current orientation setting.
+uint16_t rotationForSettings();
 
 extern Settings settings;
 

@@ -46,6 +46,10 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   .row > div { flex: 1; }
   select { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line);
            background: var(--bg); color: var(--fg); font: inherit; }
+  .segmented { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .segmented button { padding: 10px; border: 0; background: transparent; color: var(--fg); font: inherit; cursor: pointer; }
+  .segmented button + button { border-left: 1px solid var(--line); }
+  .segmented button.on { background: var(--accent); color: var(--bg); }
   .info { font-size: 14px; color: var(--muted); margin: 0 0 16px; }
   #status { min-height: 1.4em; font-size: 14px; color: var(--muted); text-align: center; }
 </style>
@@ -89,6 +93,11 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
 
   <section>
     <h2>Regolazioni</h2>
+    <label>Orientamento della lampada</label>
+    <div class="segmented" id="orientation">
+      <button data-vertical="0">Orizzontale</button>
+      <button data-vertical="1">Verticale</button>
+    </div>
     <label for="brightness">Luminosità</label>
     <input type="range" id="brightness" min="1" max="255">
     <label for="speed">Velocità del testo</label>
@@ -148,6 +157,7 @@ function render() {
     for (const a of [{ id: 'auto', name: 'Automatica' }, ...state.ambients]) sel.add(new Option(a.name, a.id));
   }
   sel.value = state.ambient;
+  for (const b of $('orientation').children) b.classList.toggle('on', b.dataset.vertical === (state.vertical ? '1' : '0'));
   $('brightness').value = state.brightness;
   // The slider goes slow -> fast, the setting is a delay (fast = small).
   $('speed').value = 320 - state.speed;
@@ -167,6 +177,10 @@ $('saveLocation').onclick = () => {
 };
 $('ambient').onchange = (e) => post('/api/settings', { ambient: e.target.value })
   .then(() => status('Animazione cambiata')).catch((e) => status(e.message));
+for (const b of $('orientation').children) {
+  b.onclick = () => post('/api/settings', { vertical: b.dataset.vertical })
+    .then(() => status('Orientamento: ' + b.textContent.toLowerCase())).catch((e) => status(e.message));
+}
 $('brightness').onchange = (e) => post('/api/settings', { brightness: e.target.value }).catch((e) => status(e.message));
 $('speed').onchange = (e) => post('/api/settings', { speed: 320 - e.target.value }).catch((e) => status(e.message));
 
@@ -205,6 +219,7 @@ static void sendState() {
   json += "],\"text\":" + jsonString(settings.text);
   json += ",\"brightness\":" + String(settings.brightness);
   json += ",\"speed\":" + String(settings.speedMs);
+  json += ",\"vertical\":" + String(settings.vertical ? "true" : "false");
 
   const char *action = currentMode()->actionName();
   json += ",\"action\":" + (action ? jsonString(action) : String("null"));
@@ -279,6 +294,11 @@ static void handleSettings() {
   if (server.hasArg("brightness")) {
     settings.brightness = constrain(server.arg("brightness").toInt(), 1, 255);
     display.setBrightness(settings.brightness);
+  }
+  if (server.hasArg("vertical")) {
+    settings.vertical = server.arg("vertical") == "1";
+    display.setRotation(rotationForSettings());
+    restartMode();  // redraw straight away in the new orientation
   }
   if (server.hasArg("speed")) {
     settings.speedMs = constrain(server.arg("speed").toInt(), 20, 300);

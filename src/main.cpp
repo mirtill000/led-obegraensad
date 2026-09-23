@@ -12,35 +12,30 @@
 #if __has_include("secrets.h")
 #include "secrets.h"
 #else
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
+#error "Missing include/secrets.h: copy include/secrets.example.h and fill in your WiFi network"
 #endif
 
-// Joins the home network, or opens the lamp's own access point if that
-// fails. Returns the address the control page is reachable at.
+// Joins the home network, retrying until it succeeds; meanwhile the panel
+// shows that it is waiting for WiFi. Returns the lamp's IP address.
 static String startWifi() {
   WiFi.setHostname(HOSTNAME);
-  if (strlen(WIFI_SSID) > 0) {
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    Serial.printf("Connecting to %s", WIFI_SSID);
-    const uint32_t start = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - start < WIFI_CONNECT_TIMEOUT_MS) {
-      delay(250);
-      Serial.print('.');
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);  // also rejoins by itself if WiFi drops later
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.printf("Connecting to %s\n", WIFI_SSID);
+
+  uint32_t lastAttempt = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    display.scrollTextOnce("wifi...", 60);
+    if (WiFi.status() != WL_CONNECTED && millis() - lastAttempt >= WIFI_RETRY_MS) {
+      Serial.println("Still not connected, retrying");
+      WiFi.disconnect();
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+      lastAttempt = millis();
     }
-    Serial.println();
-    if (WiFi.status() == WL_CONNECTED) {
-      WiFi.setAutoReconnect(true);
-      startTimeSync();
-      return WiFi.localIP().toString();
-    }
-    Serial.println("WiFi connection failed, starting access point");
-    WiFi.disconnect(true);
   }
-  WiFi.mode(WIFI_AP);
-  WiFi.softAP(AP_SSID, AP_PASSWORD);
-  return WiFi.softAPIP().toString();
+  startTimeSync();
+  return WiFi.localIP().toString();
 }
 
 // Optional push button to GND on PIN_BUTTON: each press switches to the
@@ -67,6 +62,7 @@ void setup() {
   loadSettings();
   display.begin();
   display.setBrightness(settings.brightness);
+  display.setRotation(rotationForSettings());
 
   const String ip = startWifi();
   MDNS.begin(HOSTNAME);

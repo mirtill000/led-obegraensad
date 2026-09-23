@@ -92,26 +92,29 @@ src/
 platformio.ini
 ```
 
-`ROTATION` in `include/constants.h` (0/90/180/270, clockwise) sets which way
-the image reads: the default `270` is for a lamp mounted horizontally; use
-`0` if yours stands vertically, and `90` if it comes out upside down. If
-it's mirrored (some panels get reassembled with the connector on a different
+Whether the lamp hangs horizontally or vertically is picked on the web page
+(default: horizontal). The matching rotations are `ROTATION_HORIZONTAL`
+(`270`) and `ROTATION_VERTICAL` (`0`) in `include/constants.h`, clockwise; if
+the image comes out upside down in one orientation, change that value by
+180. If it's mirrored (some panels get reassembled with the connector on a different
 edge), flip `FLIP_HORIZONTAL` / `FLIP_VERTICAL` in the same file.
 
 ## WiFi control page
 
 1. Copy `include/secrets.example.h` to `include/secrets.h` and put your WiFi
-   name and password in it (`secrets.h` is git-ignored).
+   name and password in it (`secrets.h` is git-ignored). The firmware
+   doesn't build without it.
 2. Build and flash. At startup the lamp scrolls its IP address once.
 3. Open that address in a browser on the same network, or
    `http://obegransad.local`.
 
-If `secrets.h` is missing or the lamp can't join the network within 15 s,
-it opens its own WiFi network **OBEGRANSAD** (password `obegransad`)
-instead; join it and open `http://192.168.4.1`.
+The lamp only uses your home network; it never opens a WiFi network of its
+own. Until it manages to connect it scrolls `wifi...` and retries every
+20 s; if WiFi drops later it reconnects by itself.
 
-From the page you can pick the active mode, change the scrolling text, set the weather location, pick an animation, and set
-brightness and scroll speed. Modes that have a command of their own ("next
+From the page you can pick the active mode, change the scrolling text, set
+the weather location, pick an animation, switch between horizontal and
+vertical, and set brightness and scroll speed. Modes that have a command of their own ("next
 quote", "restart", ...) show it as a button under the mode list. Everything
 is saved in flash, so the lamp comes back in the same state after a power
 cut.
@@ -119,8 +122,8 @@ cut.
 No push button is needed: everything is on the page. If you do wire one to
 GPIO4 (other leg to GND), each press switches to the next mode.
 
-Clock, weather and the hourly quote need internet, so they only work when
-the lamp is on your WiFi (not in access-point mode).
+Clock, weather and the hourly quote need your network to have internet
+access.
 
 The page has no password: anyone on the same network can use it.
 
