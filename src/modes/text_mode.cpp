@@ -8,6 +8,14 @@ void TextMode::start() {
   String text = settings.text;
   text.replace('|', ' ');
   scroller_.start(text);
+  row_ = Scroller::rowFor(settings.textPosition, -1);
+  scroller_.setRow(row_);
 }
 
-void TextMode::update(uint32_t now) { scroller_.update(now, interval(SCROLL_DELAY_MS)); }
+void TextMode::update(uint32_t now) {
+  // A new height (if set to vary) every time the text has gone by.
+  if (scroller_.update(now, interval(SCROLL_DELAY_MS))) {
+    row_ = Scroller::rowFor(settings.textPosition, row_);
+    scroller_.setRow(row_);
+  }
+}

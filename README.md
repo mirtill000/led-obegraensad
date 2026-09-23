@@ -154,8 +154,11 @@ The page has no password: anyone on the same network can use it.
 
 Current modes:
 
-- **Testo scorrevole** - scrolls the text set on the page
-- **Frase dell'ora** - a different quote every hour, scrolling on one line.
+- **Testo scorrevole** - scrolls the text set on the page, at the height
+  chosen there: top, middle, bottom or variable (a different height at
+  every pass, the default)
+- **Frase dell'ora** - a different quote every hour, scrolling on one line
+  at the chosen height (top, middle, bottom or variable, like the text).
   The list is edited on the page (one per line); "restore" brings back the
   built-in one (in `src/modes/quotes_mode.cpp`). Button: next quote
 - **Orologio e meteo** - one screen: hours and minutes on the left, an
@@ -211,7 +214,8 @@ automatically.
 
 ### Scrolling text
 
-The text from the page scrolls on one line through the middle of the panel.
+The text from the page scrolls on one line, at the height picked on the
+page (variable by default).
 `MESSAGE` in `constants.h` is only the default used on first boot.
 
 (The display code can also scroll two lines stacked on top of each other,

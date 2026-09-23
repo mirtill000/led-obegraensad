@@ -22,8 +22,10 @@ class QuotesMode : public Mode {
  private:
   // Index of the quote for the current hour (plus any skips).
   uint16_t currentIndex(uint16_t count) const;
+  void nextRow();
 
   Scroller scroller_;
   uint16_t shown_ = 0;
   uint16_t skip_ = 0;  // "next quote" presses
+  int row_ = -1;       // current height
 };

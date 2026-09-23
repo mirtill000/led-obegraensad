@@ -103,12 +103,26 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <input type="text" id="text" maxlength="200" autocomplete="off">
     <button class="save" id="saveText">Mostra</button>
     <p class="hint">Maiuscole e minuscole, cifre, . , : ! ? ' - e à è é ì ò ù.</p>
+    <label for="textPos">Altezza</label>
+    <select id="textPos">
+      <option value="random">Variabile (cambia a ogni passaggio)</option>
+      <option value="top">In alto</option>
+      <option value="middle">Al centro</option>
+      <option value="bottom">In basso</option>
+    </select>
   </section>
 
   <section data-mode="quotes" hidden>
     <h2>Frasi</h2>
     <textarea id="quotes" spellcheck="false"></textarea>
     <p class="hint">Una frase per riga: ogni ora ne scorre una diversa.</p>
+    <label for="quotesPos">Altezza</label>
+    <select id="quotesPos">
+      <option value="random">Variabile (cambia a ogni passaggio)</option>
+      <option value="top">In alto</option>
+      <option value="middle">Al centro</option>
+      <option value="bottom">In basso</option>
+    </select>
     <div class="row">
       <button class="save" id="saveQuotes">Salva frasi</button>
       <button class="link" id="resetQuotes">Ripristina quelle predefinite</button>
@@ -270,6 +284,8 @@ function render() {
   for (const sec of document.querySelectorAll('section[data-mode]')) sec.hidden = sec.dataset.mode !== s.active;
 
   if (!editing('text')) $('text').value = s.text;
+  $('textPos').value = s.textPos;
+  $('quotesPos').value = s.quotesPos;
   if (!dirty.quotes) $('quotes').value = s.quotes || s.defaultQuotes;
   $('clockInfo').textContent = 'Meteo per ' + s.city + ' (' + s.lat.toFixed(2) + ', ' + s.lon.toFixed(2) + '), fuso ' + s.tzName + '.';
 
@@ -404,6 +420,9 @@ $('speed').onchange = (e) => post('/api/speed', { id: state.active, level: e.tar
 
 $('saveText').onclick = () => post('/api/text', { text: $('text').value }).then(() => status('Testo aggiornato')).catch(fail);
 $('quotes').oninput = () => { dirty.quotes = true; };
+for (const id of ['textPos', 'quotesPos']) {
+  $(id).onchange = (e) => post('/api/settings', { [id]: e.target.value }).then(() => status('Altezza cambiata')).catch(fail);
+}
 $('saveQuotes').onclick = () => post('/api/quotes', { quotes: $('quotes').value })
   .then(() => { dirty.quotes = false; render(); status('Frasi salvate'); }).catch(fail);
 $('resetQuotes').onclick = () => post('/api/quotes', { quotes: '' })
@@ -520,6 +539,7 @@ static void sendState() {
   json += "]";
 
   json += ",\"text\":" + jsonString(settings.text);
+  json += ",\"textPos\":" + jsonString(settings.textPosition) + ",\"quotesPos\":" + jsonString(settings.quotesPosition);
   json += ",\"quotes\":" + jsonString(settings.quotes);
   json += ",\"defaultQuotes\":" + jsonString(QuotesMode::defaultQuotes());
   json += ",\"brightness\":" + String(settings.brightness) + ",\"vertical\":" + jsonBool(settings.vertical);
@@ -641,6 +661,14 @@ static void handleSettings() {
     settings.vertical = server.arg("vertical") == "1";
     display.setRotation(rotationForSettings());
     restartMode();  // redraw straight away in the new orientation
+  }
+  for (const char *key : {"textPos", "quotesPos"}) {
+    if (!server.hasArg(key)) continue;
+    const String pos = server.arg(key);
+    if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom") return badRequest("Altezza non valida");
+    (strcmp(key, "textPos") == 0 ? settings.textPosition : settings.quotesPosition) = pos;
+    const char *mode = strcmp(key, "textPos") == 0 ? "text" : "quotes";
+    if (strcmp(currentMode()->id(), mode) == 0) restartMode();  // show it at the new height now
   }
   if (server.hasArg("ambient")) {
     const String id = server.arg("ambient");

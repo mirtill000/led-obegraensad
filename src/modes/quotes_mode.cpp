@@ -79,11 +79,22 @@ void QuotesMode::start() {
   String quote;
   quoteLine(list, shown_, &quote);
   scroller_.start(quote);
+  nextRow();
+}
+
+// New height for the next pass (if set to vary).
+void QuotesMode::nextRow() {
+  row_ = Scroller::rowFor(settings.quotesPosition, row_);
+  scroller_.setRow(row_);
 }
 
 void QuotesMode::update(uint32_t now) {
   if (!scroller_.update(now, interval(SCROLL_DELAY_MS))) return;
-  if (currentIndex(quoteLine(activeList(), 0xFFFF, nullptr)) != shown_) start();
+  if (currentIndex(quoteLine(activeList(), 0xFFFF, nullptr)) != shown_) {
+    start();
+  } else {
+    nextRow();
+  }
 }
 
 void QuotesMode::action() {

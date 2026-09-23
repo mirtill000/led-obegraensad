@@ -89,6 +89,8 @@ void loadSettings() {
   prefs.begin("obegransad", true);
   settings.mode = prefs.getString("mode", "text");
   settings.text = prefs.getString("text", MESSAGE);
+  settings.textPosition = prefs.getString("textPos", "random");
+  settings.quotesPosition = prefs.getString("quotesPos", "random");
   settings.brightness = prefs.getUChar("brightness", 255);
   settings.vertical = prefs.getBool("vertical", false);
   settings.latitude = prefs.getFloat("lat", DEFAULT_LATITUDE);
@@ -114,6 +116,8 @@ void saveSettings() {
   prefs.begin("obegransad", false);
   prefs.putString("mode", settings.mode);
   prefs.putString("text", settings.text);
+  prefs.putString("textPos", settings.textPosition);
+  prefs.putString("quotesPos", settings.quotesPosition);
   prefs.putUChar("brightness", settings.brightness);
   prefs.putBool("vertical", settings.vertical);
   prefs.putFloat("lat", settings.latitude);

@@ -38,8 +38,14 @@ class Display {
   // Scroll length in pixels: offsets -COLS .. scrollWidth(text) - 1 take the
   // text from off-screen right to off-screen left.
   static int scrollWidth(const char *text);
-  // Clears, draws `text` scrolled left by `offset` pixels and renders.
-  void drawScrollFrame(const char *text, int offset);
+  // Top row for one line of text at a position setting: "top", "middle",
+  // "bottom", or "random" - a different height from `previous` each time
+  // (at least 2 rows away).
+  static int textRow(const String &position, int previous);
+  // Clears, draws `text` scrolled left by `offset` pixels and renders. A
+  // single line has its top at row `y` (0 = top edge, ROWS - FONT_HEIGHT
+  // = bottom edge), or is centred when `y` is negative.
+  void drawScrollFrame(const char *text, int offset, int y = -1);
   // Blocking: scrolls `text` once from off-screen right to off-screen left.
   void scrollTextOnce(const char *text, uint16_t frameDelayMs);
 

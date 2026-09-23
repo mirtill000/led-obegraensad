@@ -251,6 +251,18 @@ String Display::fontText(const String &utf8) {
   return out;
 }
 
+int Display::textRow(const String &position, int previous) {
+  const int lowest = ROWS - FONT_HEIGHT;  // text touching the bottom edge
+  if (position == "top") return 0;
+  if (position == "bottom") return lowest;
+  if (position != "random") return lowest / 2;
+  int row;
+  do {
+    row = esp_random() % (lowest + 1);
+  } while (previous >= 0 && abs(row - previous) < 2);
+  return row;
+}
+
 int Display::scrollWidth(const char *text) {
   const int len = strlen(text);
   const char *split = strchr(text, '|');
@@ -259,14 +271,14 @@ int Display::scrollWidth(const char *text) {
   return max(textWidth(text, 0, mid), textWidth(text, mid + 1, len));
 }
 
-void Display::drawScrollFrame(const char *text, int offset) {
+void Display::drawScrollFrame(const char *text, int offset, int y) {
   const int len = strlen(text);
   const char *split = strchr(text, '|');
 
   clear();
   if (split == nullptr) {
-    // One line, vertically centred.
-    drawText(-offset, (ROWS - FONT_HEIGHT) / 2, text, 0, len);
+    // One line, at row y or vertically centred.
+    drawText(-offset, y >= 0 ? y : (ROWS - FONT_HEIGHT) / 2, text, 0, len);
   } else {
     // Two lines at the top and bottom edges, both starting together.
     const int mid = split - text;

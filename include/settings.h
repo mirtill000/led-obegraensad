@@ -6,6 +6,10 @@
 struct Settings {
   String mode;          // mode picked by the user, see modes.h
   String text;          // scrolling text (UTF-8)
+  // Height of the scrolling text and of the hourly quote: "top", "middle",
+  // "bottom" or "random" (a different height at every pass).
+  String textPosition;
+  String quotesPosition;
   uint8_t brightness;   // 1-255
   bool vertical;        // how the lamp hangs: vertical or horizontal
 
