@@ -77,7 +77,7 @@ permanent) opening.
 ```
 include/
   constants.h   - pin assignment, matrix size, message text
-  font_small.h  - 7px-tall proportional lowercase font (a-z, 0-9, . , ! ? ' -)
+  font_small.h  - 8px-tall proportional lowercase font (a-z, 0-9, . , ! ? ' -)
   display.h
 src/
   display.cpp   - shift-register driver + font renderer
@@ -99,7 +99,7 @@ that scroll together, top line first (e.g. `"dare|mighty things"`); without
 The font is lowercase only (uppercase letters are drawn as lowercase), plus
 digits and a few punctuation marks; anything else is shown as a space. To
 add characters, add entries to `FONT_GLYPHS` in `include/font_small.h`
-(width in pixels + 7 rows, bit 7 = leftmost column).
+(width in pixels + 8 rows, bit 7 = leftmost column).
 
 ## Build & flash
 
