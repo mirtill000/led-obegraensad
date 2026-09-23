@@ -54,7 +54,20 @@ void Display::setPixel(uint8_t x, uint8_t y, bool on) {
   if (x >= COLS || y >= ROWS) return;
   if (FLIP_HORIZONTAL) x = COLS - 1 - x;
   if (FLIP_VERTICAL) y = ROWS - 1 - y;
-  frame_[y * COLS + x] = on ? 1 : 0;
+
+  // Rotate clockwise (panel is square, so COLS == ROWS).
+  uint8_t px = x, py = y;
+  if (ROTATION == 90) {
+    px = COLS - 1 - y;
+    py = x;
+  } else if (ROTATION == 180) {
+    px = COLS - 1 - x;
+    py = ROWS - 1 - y;
+  } else if (ROTATION == 270) {
+    px = y;
+    py = ROWS - 1 - x;
+  }
+  frame_[py * COLS + px] = on ? 1 : 0;
 }
 
 void Display::drawChar(int x, int y, char c) {

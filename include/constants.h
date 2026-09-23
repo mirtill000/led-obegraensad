@@ -22,6 +22,13 @@
 #define MESSAGE "HELLO WORLD   "
 #define SCROLL_DELAY_MS 80
 
+// Clockwise rotation (0, 90, 180, 270) applied to the image so text reads
+// correctly for how the lamp is mounted. The panel's native "up" is
+// vertical; 90 turns it for a lamp hung horizontally. If the text comes out
+// upside down, use 270 instead.
+#define ROTATION 90
+
 // Flip the image if your panels ended up wired mirrored/upside down.
+// Flips are applied before ROTATION.
 #define FLIP_HORIZONTAL false
 #define FLIP_VERTICAL false
