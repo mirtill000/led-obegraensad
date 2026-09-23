@@ -19,7 +19,10 @@
 #define TOTAL_PIXELS (ROWS * COLS)
 
 // Text to scroll across the matrix and the delay (ms) between scroll steps.
-#define MESSAGE "HELLO WORLD   "
+// A '|' splits the message into two lines stacked on top of each other that
+// scroll together (top line first); without '|' a single line scrolls
+// through the middle of the panel.
+#define MESSAGE "dare|mighty things"
 #define SCROLL_DELAY_MS 80
 
 // Clockwise rotation (0, 90, 180, 270) applied to the image so text reads

@@ -2,8 +2,9 @@
 
 Minimal standalone firmware that drives the salvaged IKEA OBEGRÄNSAD 16x16
 LED matrix from a **Sparkle IoT XH-S3E** board (ESP32-S3-WROOM-1-N16R8,
-16MB flash / 8MB octal PSRAM, WiFi+BT) and scrolls **HELLO WORLD** across it
-forever. No WiFi/web UI - just the display driver, a tiny 5x8 font and a
+16MB flash / 8MB octal PSRAM, WiFi+BT) and scrolls a message across it
+forever (by default **dare mighty things** on two lines). No WiFi/web UI -
+just the display driver, a small lowercase font and a
 scroll loop. (Inspired by [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
 which this reuses the panel's shift-register wiring table from.)
 
@@ -76,11 +77,11 @@ permanent) opening.
 ```
 include/
   constants.h   - pin assignment, matrix size, message text
-  font5x8.h     - 5x8 pixel font (H E L O W R D + space)
+  font_small.h  - 7px-tall proportional lowercase font (a-z, 0-9, . , ! ? ' -)
   display.h
 src/
   display.cpp   - shift-register driver + font renderer
-  main.cpp      - calls display.scrollTextOnce("HELLO WORLD") forever
+  main.cpp      - calls display.scrollTextOnce(MESSAGE) forever
 platformio.ini
 ```
 
@@ -91,9 +92,14 @@ if yours stands vertically, and `90` if the text comes out upside down. If
 it's mirrored (some panels get reassembled with the connector on a different
 edge), flip `FLIP_HORIZONTAL` / `FLIP_VERTICAL` in the same file.
 
-The font currently only defines the letters used by "HELLO WORLD" plus a
-blank space; add more entries to `FONT_GLYPHS` in `include/font5x8.h` (same
-8-byte-per-glyph, MSB-first format) if you want to display other text.
+A `|` in `MESSAGE` splits it into two lines stacked on top of each other
+that scroll together, top line first (e.g. `"dare|mighty things"`); without
+`|` a single line scrolls through the middle of the panel.
+
+The font is lowercase only (uppercase letters are drawn as lowercase), plus
+digits and a few punctuation marks; anything else is shown as a space. To
+add characters, add entries to `FONT_GLYPHS` in `include/font_small.h`
+(width in pixels + 7 rows, bit 7 = leftmost column).
 
 ## Build & flash
 

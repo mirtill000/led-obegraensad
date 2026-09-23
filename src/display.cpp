@@ -3,7 +3,7 @@
 #include <SPI.h>
 #include <string.h>
 
-#include "font5x8.h"
+#include "font_small.h"
 
 Display display;
 
@@ -50,13 +50,13 @@ void Display::begin() {
 
 void Display::clear() { memset(frame_, 0, sizeof(frame_)); }
 
-void Display::setPixel(uint8_t x, uint8_t y, bool on) {
-  if (x >= COLS || y >= ROWS) return;
+void Display::setPixel(int x, int y, bool on) {
+  if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
   if (FLIP_HORIZONTAL) x = COLS - 1 - x;
   if (FLIP_VERTICAL) y = ROWS - 1 - y;
 
   // Rotate clockwise (panel is square, so COLS == ROWS).
-  uint8_t px = x, py = y;
+  int px = x, py = y;
   if (ROTATION == 90) {
     px = COLS - 1 - y;
     py = x;
@@ -70,13 +70,27 @@ void Display::setPixel(uint8_t x, uint8_t y, bool on) {
   frame_[py * COLS + px] = on ? 1 : 0;
 }
 
-void Display::drawChar(int x, int y, char c) {
+int Display::drawChar(int x, int y, char c) {
   const Glyph *g = findGlyph(c);
   for (int row = 0; row < FONT_HEIGHT; row++) {
-    for (int col = 0; col < FONT_WIDTH; col++) {
-      bool on = g->rows[row] & (0x80 >> col);
-      setPixel(x + col, y + row, on);
+    for (int col = 0; col < g->width; col++) {
+      if (g->rows[row] & (0x80 >> col)) setPixel(x + col, y + row, true);
     }
+  }
+  return g->width;
+}
+
+int Display::textWidth(const char *text, int start, int end) {
+  int width = 0;
+  for (int i = start; i < end; i++) {
+    width += findGlyph(text[i])->width + FONT_SPACING;
+  }
+  return width;
+}
+
+void Display::drawText(int x, int y, const char *text, int start, int end) {
+  for (int i = start; i < end && x < COLS; i++) {
+    x += drawChar(x, y, text[i]) + FONT_SPACING;
   }
 }
 
@@ -97,18 +111,31 @@ void Display::render() {
 
 void Display::scrollTextOnce(const char *text, uint16_t frameDelayMs) {
   const int len = strlen(text);
-  const int step = FONT_WIDTH + 1;  // glyph width + 1px gap
-  const int textWidth = len * step;
-  const int yOffset = (ROWS - FONT_HEIGHT) / 2;
+  const char *split = strchr(text, '|');
 
-  for (int offset = -COLS; offset < textWidth; offset++) {
-    clear();
-    for (int i = 0; i < len; i++) {
-      int x = i * step - offset;
-      if (x > -FONT_WIDTH && x < COLS) {
-        drawChar(x, yOffset, text[i]);
-      }
+  if (split == nullptr) {
+    // One line, vertically centred.
+    const int y = (ROWS - FONT_HEIGHT) / 2;
+    const int width = textWidth(text, 0, len);
+    for (int offset = -COLS; offset < width; offset++) {
+      clear();
+      drawText(-offset, y, text, 0, len);
+      render();
+      delay(frameDelayMs);
     }
+    return;
+  }
+
+  // Two lines: top line at the top edge, bottom line at the bottom edge,
+  // both starting together; the scroll lasts until the longer one has left.
+  const int mid = split - text;
+  const int topY = 0;
+  const int bottomY = ROWS - FONT_HEIGHT;
+  const int width = max(textWidth(text, 0, mid), textWidth(text, mid + 1, len));
+  for (int offset = -COLS; offset < width; offset++) {
+    clear();
+    drawText(-offset, topY, text, 0, mid);
+    drawText(-offset, bottomY, text, mid + 1, len);
     render();
     delay(frameDelayMs);
   }
