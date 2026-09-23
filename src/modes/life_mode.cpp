@@ -28,7 +28,7 @@ void LifeMode::start() {
 }
 
 void LifeMode::update(uint32_t now) {
-  if ((int32_t)(now - lastStep_) < (int32_t)STEP_MS) return;
+  if ((int32_t)(now - lastStep_) < (int32_t)interval(STEP_MS)) return;
   lastStep_ = now;
 
   step();

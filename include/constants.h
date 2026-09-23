@@ -18,8 +18,9 @@
 #define ROWS 16
 #define TOTAL_PIXELS (ROWS * COLS)
 
-// Default text and delay (ms) between scroll steps, used on first boot;
-// afterwards both are set from the web page and kept in flash.
+// Default text, used on first boot; afterwards it is set from the web page
+// and kept in flash. SCROLL_DELAY_MS is the scroll step at the default
+// speed (each mode's speed is set on the page).
 // The text scrolls on one line through the middle of the panel.
 #define MESSAGE "dare mighty things"
 #define SCROLL_DELAY_MS 80
@@ -48,11 +49,12 @@
 #define HOSTNAME "obegransad"
 #define WIFI_RETRY_MS 20000
 
-// Local time zone (POSIX TZ string) for the clock and the hourly quotes.
-// Default: Italy / Central Europe, with daylight saving time.
+// Default time zone (POSIX TZ string + its IANA name) until one is picked on
+// the web page: Italy / Central Europe, with daylight saving time.
 #define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"
+#define TIMEZONE_NAME "Europe/Rome"
 
-// Default weather location (latitude, longitude): Milan. Can be changed from
-// the web page.
+// Default weather location: Milan. Can be changed from the web page.
+#define DEFAULT_CITY "Milano"
 #define DEFAULT_LATITUDE 45.4642f
 #define DEFAULT_LONGITUDE 9.1900f

@@ -1,6 +1,7 @@
 #include "settings.h"
 
 #include <Preferences.h>
+#include <math.h>
 
 #include "constants.h"
 
@@ -8,30 +9,114 @@ Settings settings;
 
 static Preferences prefs;
 
+// Speed levels, kept parsed here and saved as "id:level,id:level".
+struct SpeedEntry {
+  char id[16];
+  uint8_t level;
+};
+static SpeedEntry speeds[12];
+static uint8_t speedCount = 0;
+
+static void parseSpeeds(const String &s) {
+  speedCount = 0;
+  int start = 0;
+  while (start < (int)s.length() && speedCount < 12) {
+    int end = s.indexOf(',', start);
+    if (end < 0) end = s.length();
+    const String item = s.substring(start, end);
+    const int colon = item.indexOf(':');
+    if (colon > 0 && colon < 16) {
+      SpeedEntry &e = speeds[speedCount++];
+      strlcpy(e.id, item.substring(0, colon).c_str(), sizeof(e.id));
+      e.level = constrain(item.substring(colon + 1).toInt(), 1, 9);
+    }
+    start = end + 1;
+  }
+}
+
+static String formatSpeeds() {
+  String s;
+  for (uint8_t i = 0; i < speedCount; i++) {
+    if (i) s += ',';
+    s += String(speeds[i].id) + ':' + speeds[i].level;
+  }
+  return s;
+}
+
+uint8_t speedLevel(const char *modeId) {
+  for (uint8_t i = 0; i < speedCount; i++) {
+    if (strcmp(speeds[i].id, modeId) == 0) return speeds[i].level;
+  }
+  return SPEED_DEFAULT;
+}
+
+void setSpeedLevel(const char *modeId, uint8_t level) {
+  level = constrain(level, 1, 9);
+  for (uint8_t i = 0; i < speedCount; i++) {
+    if (strcmp(speeds[i].id, modeId) == 0) {
+      speeds[i].level = level;
+      return;
+    }
+  }
+  if (speedCount < 12) {
+    strlcpy(speeds[speedCount].id, modeId, sizeof(speeds[speedCount].id));
+    speeds[speedCount++].level = level;
+  }
+}
+
+uint32_t scaledInterval(const char *modeId, uint32_t baseMs) {
+  // Each level step is a factor of sqrt(2): level 1 = x4 slower, 9 = x4 faster.
+  static const float FACTORS[10] = {0, 4.0f, 2.83f, 2.0f, 1.41f, 1.0f, 0.71f, 0.5f, 0.35f, 0.25f};
+  const uint32_t ms = lroundf(baseMs * FACTORS[speedLevel(modeId)]);
+  return ms > 0 ? ms : 1;
+}
+
 void loadSettings() {
   prefs.begin("obegransad", true);
   settings.mode = prefs.getString("mode", "text");
   settings.text = prefs.getString("text", MESSAGE);
   settings.brightness = prefs.getUChar("brightness", 255);
-  settings.speedMs = prefs.getUShort("speed", SCROLL_DELAY_MS);
+  settings.vertical = prefs.getBool("vertical", false);
   settings.latitude = prefs.getFloat("lat", DEFAULT_LATITUDE);
   settings.longitude = prefs.getFloat("lon", DEFAULT_LONGITUDE);
+  settings.city = prefs.getString("city", DEFAULT_CITY);
+  settings.timezone = prefs.getString("tz", TIMEZONE);
+  settings.timezoneName = prefs.getString("tzName", TIMEZONE_NAME);
   settings.ambient = prefs.getString("ambient", "auto");
-  settings.vertical = prefs.getBool("vertical", false);
+  settings.quotes = prefs.getString("quotes", "");
+  settings.playlistOn = prefs.getBool("plOn", false);
+  settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5");
+  settings.nightOn = prefs.getBool("nightOn", false);
+  settings.nightStart = prefs.getUShort("nightStart", 23 * 60);
+  settings.nightEnd = prefs.getUShort("nightEnd", 7 * 60);
+  settings.nightMode = prefs.getString("nightMode", "stars");
+  settings.nightBrightness = prefs.getUChar("nightBright", 20);
+  parseSpeeds(prefs.getString("speeds", ""));
   prefs.end();
 }
-
-uint16_t rotationForSettings() { return settings.vertical ? ROTATION_VERTICAL : ROTATION_HORIZONTAL; }
 
 void saveSettings() {
   prefs.begin("obegransad", false);
   prefs.putString("mode", settings.mode);
   prefs.putString("text", settings.text);
   prefs.putUChar("brightness", settings.brightness);
-  prefs.putUShort("speed", settings.speedMs);
+  prefs.putBool("vertical", settings.vertical);
   prefs.putFloat("lat", settings.latitude);
   prefs.putFloat("lon", settings.longitude);
+  prefs.putString("city", settings.city);
+  prefs.putString("tz", settings.timezone);
+  prefs.putString("tzName", settings.timezoneName);
   prefs.putString("ambient", settings.ambient);
-  prefs.putBool("vertical", settings.vertical);
+  prefs.putString("quotes", settings.quotes);
+  prefs.putBool("plOn", settings.playlistOn);
+  prefs.putString("playlist", settings.playlist);
+  prefs.putBool("nightOn", settings.nightOn);
+  prefs.putUShort("nightStart", settings.nightStart);
+  prefs.putUShort("nightEnd", settings.nightEnd);
+  prefs.putString("nightMode", settings.nightMode);
+  prefs.putUChar("nightBright", settings.nightBrightness);
+  prefs.putString("speeds", formatSpeeds());
   prefs.end();
 }
+
+uint16_t rotationForSettings() { return settings.vertical ? ROTATION_VERTICAL : ROTATION_HORIZONTAL; }

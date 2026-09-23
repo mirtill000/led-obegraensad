@@ -88,12 +88,13 @@ permanent) opening.
 include/
   constants.h        - pins, matrix size, rotation, default text, WiFi names
   secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
-  font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ! ? ' -)
+  font_small.h       - 8px-tall proportional font (a-z, A-Z, à-ù, 0-9, . , : ! ? ' -)
   display.h, modes.h, settings.h, web.h
 src/
   display.cpp        - shift-register driver, font renderer, brightness
   modes.cpp          - list of modes + switching between them
   modes/             - one file per mode
+  animations/        - the animations of the "Animazioni" mode
   settings.cpp       - settings saved in flash (NVS)
   timekeeping.cpp    - NTP time sync (time zone: TIMEZONE in constants.h)
   weather.cpp        - current weather from Open-Meteo (free, no API key)
@@ -122,31 +123,47 @@ The lamp only uses your home network; it never opens a WiFi network of its
 own. Until it manages to connect it scrolls `wifi...` and retries every
 20 s; if WiFi drops later it reconnects by itself.
 
-From the page you can pick the active mode, change the scrolling text, set
-the weather location, pick an animation, switch between horizontal and
-vertical, and set brightness and scroll speed. Modes that have a command of their own ("next
-quote", "restart", ...) show it as a button under the mode list. Everything
-is saved in flash, so the lamp comes back in the same state after a power
-cut.
+The page shows the modes at the top; the one on the panel is highlighted,
+with its own command button ("next quote", "jump", ...; the space bar
+works too) and a **speed** slider (1-9, per mode). Below that only the
+settings of the mode being shown appear (the text, the quotes list, the
+animation menu, ...). General settings are in collapsible sections:
+
+- **Playlist** - modes shown in turn, each for the minutes you choose
+  (e.g. clock 10 min, quote 3 min, animations 5 min). Picking a mode by
+  hand stops the playlist.
+- **Giorno e notte** - between two times (e.g. 23:00-07:00) the lamp is off,
+  shows only stars, or keeps going at a lower brightness. The night wins
+  over the playlist and over the mode picked by hand.
+- **Luogo e ora** - search a city by name (the browser asks Open-Meteo's
+  free geocoding service and sends the lamp just the coordinates) and pick
+  the time zone; picking a city also picks its time zone when it's in the
+  list.
+- **Display** - horizontal/vertical and brightness.
+
+Everything is saved in flash, so the lamp comes back in the same state
+after a power cut.
 
 No push button is needed: everything is on the page. If you do wire one to
 GPIO4 (other leg to GND), each press switches to the next mode.
 
-Clock, weather and the hourly quote need your network to have internet
-access.
+Clock, weather, the hourly quote and the night schedule need your network
+to have internet access (for the time and the weather).
 
 The page has no password: anyone on the same network can use it.
 
 Current modes:
 
 - **Testo scorrevole** - scrolls the text set on the page
-- **Frase dell'ora** - a different motivational quote every hour, scrolling
-  on one line (list in `src/modes/quotes_mode.cpp`); button: next quote
+- **Frase dell'ora** - a different quote every hour, scrolling on one line.
+  The list is edited on the page (one per line); "restore" brings back the
+  built-in one (in `src/modes/quotes_mode.cpp`). Button: next quote
 - **Orologio e meteo** - one screen: hours and minutes on the left, an
   animated weather icon (falling rain or snow, flashing lightning, drifting
   clouds, ...) and the temperature with a one-pixel degree sign on the
-  right, and a dot running round the border for the seconds. Weather is refreshed every 15 min; until the first
-  reading arrives the clock uses big digits. Button: refresh weather
+  right, and a dot running round the border for the seconds. Weather is
+  refreshed every 15 min; until the first reading arrives the clock uses
+  big digits. Button: refresh weather
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
@@ -157,14 +174,26 @@ Current modes:
   next moves and jumps at the best moment. The **Salta** button on the page
   (or the space bar) takes over; after 20 s without jumps the autopilot is
   back. At game over it shows the score and starts again
-- **Animazioni** - digital rain, fire, stars, waves or a "breathing" circle;
-  "automatic" changes animation every 5 minutes and shows only stars from
-  22:00 to 07:00; button: next animation
+- **Animazioni** - one animation, or "automatic" (a different one every 5
+  minutes); button: next animation. The animations, in
+  `src/animations/`:
+  - *Atmosfere*: digital rain, fire, stars, waves, breathing circle
+  - *Giochi* (they play themselves): **Tetris** - for each piece the
+    computer tries every rotation and column and picks the best by stack
+    height, holes and surface; **Snake** - takes the shortest way to the
+    food only if it can still reach its tail afterwards
+  - *Orologi*: analog (antialiased hands, smooth seconds), binary (one
+    column of bits per digit of HH:MM, a bar filling with the seconds), in
+    words ("sono le tre e un quarto", "è l'una meno cinque"...)
+  - *3D e demo*: rotating wireframe cube, checkered tunnel, plasma,
+    metaballs, endless zoom into the Mandelbrot set
 - **Spento** - all LEDs off
 
 To add a mode, implement the `Mode` class from `include/modes.h` in
-`src/modes/` and add it to `MODES` in `src/modes.cpp`; it shows up on the
-page automatically.
+`src/modes/` and add it to `MODES` in `src/modes.cpp`; to add an animation,
+implement `Animation` from `include/animation.h` in `src/animations/` and
+list it in `src/animations/animations.cpp`. Both show up on the page
+automatically.
 
 ### Scrolling text
 
@@ -175,9 +204,9 @@ The text from the page scrolls on one line through the middle of the panel.
 split by a `|`.)
 
 The text is case sensitive: the font has lowercase and capital letters
-(capitals are one pixel taller), digits and a few punctuation marks.
-Accented letters typed on the page are shown without the accent (è -> e);
-anything else is shown as a space. To
+(capitals are one pixel taller), digits, a few punctuation marks and the
+Italian accented lowercase letters (à è é ì ò ù). Accented capitals are
+shown without the accent; anything else is shown as a space. To
 add characters, add entries to `FONT_GLYPHS` in `include/font_small.h`
 (width in pixels + 8 rows, bit 7 = leftmost column).
 

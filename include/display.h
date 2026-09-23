@@ -43,6 +43,12 @@ class Display {
   // Blocking: scrolls `text` once from off-screen right to off-screen left.
   void scrollTextOnce(const char *text, uint16_t frameDelayMs);
 
+  // Converts UTF-8 text (as typed on the web page) to the font's
+  // single-byte characters: Italian accented lowercase letters keep their
+  // accent, accented capitals lose it, curly quotes become ', anything
+  // else outside ASCII becomes a space.
+  static String fontText(const String &utf8);
+
   // Width in pixels of text[start, end) (including trailing spacing).
   static int textWidth(const char *text, int start, int end);
   // Draws text[start, end) with its left edge at x.

@@ -8,8 +8,9 @@
 // its own copy of the text; '|' splits it into two lines (see Display).
 class Scroller {
  public:
+  // `text` is UTF-8; accented letters are converted for the font.
   void start(const String &text) {
-    text_ = text;
+    text_ = Display::fontText(text);
     width_ = Display::scrollWidth(text_.c_str());
     offset_ = -COLS;
     lastStep_ = 0;

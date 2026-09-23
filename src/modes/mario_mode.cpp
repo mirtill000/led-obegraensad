@@ -241,10 +241,10 @@ void MarioMode::action() {
 
 void MarioMode::update(uint32_t now) {
   if (phase_ == SCORE) {
-    if (score_.update(now, settings.speedMs)) start();
+    if (score_.update(now, SCROLL_DELAY_MS)) start();
     return;
   }
-  if (now - lastFrame_ < FRAME_MS) return;
+  if (now - lastFrame_ < interval(FRAME_MS)) return;
   lastFrame_ = now;
   frame_++;
 

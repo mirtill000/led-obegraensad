@@ -4,20 +4,46 @@
 
 // User settings, kept in flash (NVS) so they survive a power cycle.
 struct Settings {
-  String mode;          // id of the active mode, see modes.h
-  String text;          // scrolling text; '|' splits it into two lines
+  String mode;          // mode picked by the user, see modes.h
+  String text;          // scrolling text (UTF-8)
   uint8_t brightness;   // 1-255
-  uint16_t speedMs;     // delay between scroll steps
-  float latitude;       // weather location
-  float longitude;
-  String ambient;       // animation for the ambient mode, or "auto"
   bool vertical;        // how the lamp hangs: vertical or horizontal
-};
 
-// Display rotation for the current orientation setting.
-uint16_t rotationForSettings();
+  // Weather location and time zone.
+  float latitude;
+  float longitude;
+  String city;          // label only, e.g. "Milano"
+  String timezone;      // POSIX TZ string used by the clock
+  String timezoneName;  // IANA name (e.g. "Europe/Rome"), for the page
+
+  String ambient;       // animation for the ambient mode, or "auto"
+  String quotes;        // one quote per line; empty = built-in list
+
+  // Playlist: modes shown in turn, "id:minutes,id:minutes,...".
+  bool playlistOn;
+  String playlist;
+
+  // Night: from nightStart to nightEnd (minutes after midnight) the lamp is
+  // off ("off"), shows only stars ("stars") or is dimmed ("dim").
+  bool nightOn;
+  uint16_t nightStart;
+  uint16_t nightEnd;
+  String nightMode;
+  uint8_t nightBrightness;
+};
 
 extern Settings settings;
 
 void loadSettings();
 void saveSettings();
+
+// Display rotation for the current orientation setting.
+uint16_t rotationForSettings();
+
+// Per-mode speed, 1 (slowest) to 9 (fastest); 5 is each mode's default.
+static const uint8_t SPEED_DEFAULT = 5;
+uint8_t speedLevel(const char *modeId);
+void setSpeedLevel(const char *modeId, uint8_t level);
+// Scales a mode's base interval by its speed level: x4 slower at 1, x4
+// faster at 9.
+uint32_t scaledInterval(const char *modeId, uint32_t baseMs);

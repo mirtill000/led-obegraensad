@@ -3,8 +3,10 @@
 #include "modes.h"
 #include "scroller.h"
 
-// A different motivational quote every hour, scrolling on one line. The
-// quote only changes at the end of a pass, so it is never cut off.
+// A different quote every hour, scrolling on one line. The quote only
+// changes at the end of a pass, so it is never cut off. The list is edited
+// on the web page (settings.quotes, one per line); when that is empty the
+// built-in list is used.
 class QuotesMode : public Mode {
  public:
   const char *id() const override { return "quotes"; }
@@ -14,9 +16,12 @@ class QuotesMode : public Mode {
   const char *actionName() const override { return "Prossima frase"; }
   void action() override;
 
+  // The built-in list, one quote per line (UTF-8).
+  static const char *defaultQuotes();
+
  private:
   // Index of the quote for the current hour (plus any skips).
-  uint16_t currentIndex() const;
+  uint16_t currentIndex(uint16_t count) const;
 
   Scroller scroller_;
   uint16_t shown_ = 0;

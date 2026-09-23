@@ -215,6 +215,42 @@ void Display::render() {
   portEXIT_CRITICAL(&setLock);
 }
 
+String Display::fontText(const String &utf8) {
+  // Two-byte UTF-8 sequences starting with 0xC3, second byte -> font char.
+  static const struct {
+    uint8_t second;
+    char out;
+  } LATIN[] = {
+      {0xA0, '\xE0'}, {0xA1, '\xE0'}, {0xA8, '\xE8'}, {0xA9, '\xE9'}, {0xAC, '\xEC'}, {0xAD, '\xEC'},
+      {0xB2, '\xF2'}, {0xB3, '\xF2'}, {0xB9, '\xF9'}, {0xBA, '\xF9'},  // lowercase
+      {0x80, 'A'}, {0x81, 'A'}, {0x88, 'E'}, {0x89, 'E'}, {0x8C, 'I'}, {0x8D, 'I'},
+      {0x92, 'O'}, {0x93, 'O'}, {0x99, 'U'}, {0x9A, 'U'},  // capitals
+  };
+  String out;
+  out.reserve(utf8.length());
+  for (unsigned i = 0; i < utf8.length(); i++) {
+    const uint8_t c = utf8[i];
+    if (c < 0x80) {
+      out += (char)c;
+      continue;
+    }
+    // Length of this UTF-8 sequence, to skip it as a whole.
+    const int len = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : 2;
+    char mapped = ' ';
+    if (c == 0xC3 && i + 1 < utf8.length()) {
+      for (const auto &l : LATIN) {
+        if ((uint8_t)utf8[i + 1] == l.second) mapped = l.out;
+      }
+    } else if (c == 0xE2 && i + 2 < utf8.length() && (uint8_t)utf8[i + 1] == 0x80 &&
+               ((uint8_t)utf8[i + 2] == 0x98 || (uint8_t)utf8[i + 2] == 0x99)) {
+      mapped = '\'';  // curly apostrophe
+    }
+    out += mapped;
+    i += len - 1;
+  }
+  return out;
+}
+
 int Display::scrollWidth(const char *text) {
   const int len = strlen(text);
   const char *split = strchr(text, '|');

@@ -14,6 +14,7 @@ class ClockMode : public Mode {
   void update(uint32_t now) override;
   const char *actionName() const override { return "Aggiorna meteo"; }
   void action() override;
+  bool hasSpeed() const override { return false; }
 
  private:
   Scroller waiting_;  // shown until the clock has synced

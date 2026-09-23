@@ -13,4 +13,5 @@ class OffMode : public Mode {
     display.render();
   }
   void update(uint32_t) override {}
+  bool hasSpeed() const override { return false; }
 };

@@ -63,6 +63,7 @@ void setup() {
   display.begin();
   display.setBrightness(settings.brightness);
   display.setRotation(rotationForSettings());
+  applyTimezone();
 
   const String ip = startWifi();
   MDNS.begin(HOSTNAME);
@@ -72,7 +73,7 @@ void setup() {
 
   // Show where to find the control page, then start the saved mode.
   display.scrollTextOnce(ip.c_str(), 60);
-  if (!setMode(settings.mode)) setMode(MODES[0]->id());
+  refreshModes();
 }
 
 void loop() {

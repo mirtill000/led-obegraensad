@@ -167,7 +167,7 @@ void ClockMode::start() {
 void ClockMode::update(uint32_t now) {
   struct tm t;
   if (!localTime(t)) {
-    waiting_.update(now, settings.speedMs);
+    waiting_.update(now, SCROLL_DELAY_MS);
     return;
   }
   updateWeather();  // no-op unless stale; refreshes every 15 min

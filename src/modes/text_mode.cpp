@@ -10,4 +10,4 @@ void TextMode::start() {
   scroller_.start(text);
 }
 
-void TextMode::update(uint32_t now) { scroller_.update(now, settings.speedMs); }
+void TextMode::update(uint32_t now) { scroller_.update(now, interval(SCROLL_DELAY_MS)); }
