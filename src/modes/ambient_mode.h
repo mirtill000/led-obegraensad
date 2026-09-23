@@ -21,6 +21,11 @@ class AmbientMode : public Mode {
   // The animation being shown, or nullptr.
   const Animation *playing() const { return animation_; }
 
+  bool input(char key) override;
+  const char *gameId() const override { return animation_ && animation_->isGame() ? animation_->id() : nullptr; }
+  // Games shown by "auto" or by the night schedule always run as demos.
+  bool demoForced() const;
+
  private:
   void play(Animation *animation);
   Animation *pickAuto();

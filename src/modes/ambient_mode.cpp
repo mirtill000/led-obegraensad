@@ -55,6 +55,14 @@ void AmbientMode::action() {
   play(next);
 }
 
+bool AmbientMode::demoForced() const { return override_ || !findAnimation(settings.ambient); }
+
+bool AmbientMode::input(char key) {
+  if (!animation_ || !animation_->isGame() || demoForced() || demoMode(animation_->id())) return false;
+  animation_->input(key);
+  return true;
+}
+
 void AmbientMode::update(uint32_t now) {
   if (!animation_) start();
   if (!override_ && !findAnimation(settings.ambient) && now - since_ >= AUTO_SWITCH_MS) {
@@ -63,6 +71,7 @@ void AmbientMode::update(uint32_t now) {
   }
   if (now - lastFrame_ < interval(animation_->frameMs())) return;
   lastFrame_ = now;
+  if (animation_->isGame()) animation_->setDemo(demoForced() || demoMode(animation_->id()));
   animation_->frame(now);
   display.render();
 }

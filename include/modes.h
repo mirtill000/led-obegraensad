@@ -23,6 +23,12 @@ class Mode {
   // Whether the page offers a speed slider for this mode.
   virtual bool hasSpeed() const { return true; }
 
+  // Game controls from the page: 'L', 'R', 'U', 'D' (arrows) or 'A' (the
+  // main button: jump / drop). Returns false if nothing is listening.
+  virtual bool input(char) { return false; }
+  // The game being shown and whether it is in demo mode, or nullptr.
+  virtual const char *gameId() const { return nullptr; }
+
  protected:
   // `baseMs` adjusted for this mode's speed setting.
   uint32_t interval(uint32_t baseMs) const { return scaledInterval(id(), baseMs); }

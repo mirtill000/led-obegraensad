@@ -170,24 +170,38 @@ Current modes:
   40-150 generations; when the board dies, freezes or loops a new game
   starts; button: restart
 - **Super Mario** - side-scrolling platformer with pipes, pits, goombas
-  (stomp them) and coins. It plays by itself: an autopilot simulates the
-  next moves and jumps at the best moment. The **Salta** button on the page
-  (or the space bar) takes over; after 20 s without jumps the autopilot is
-  back. At game over it shows the score and starts again
+  (stomp them) and coins. In demo mode an autopilot simulates the next
+  moves and jumps at the best moment; otherwise you jump. At game over it
+  shows the score and starts again; button: restart
 - **Animazioni** - one animation, or "automatic" (a different one every 5
   minutes); button: next animation. The animations, in
   `src/animations/`:
   - *Atmosfere*: digital rain, fire, stars, waves, breathing circle
-  - *Giochi* (they play themselves): **Tetris** - for each piece the
-    computer tries every rotation and column and picks the best by stack
-    height, holes and surface; **Snake** - takes the shortest way to the
-    food only if it can still reach its tail afterwards
+  - *Giochi*: **Tetris** - in demo mode, for each piece the computer tries
+    every rotation and column and picks the best by stack height, holes and
+    surface; **Snake** - in demo mode it takes the shortest way to the food
+    only if it can still reach its tail afterwards
   - *Orologi*: analog (antialiased hands, smooth seconds), binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
   - *3D e demo*: rotating wireframe cube, checkered tunnel, plasma,
     metaballs, endless zoom into the Mandelbrot set
 - **Spento** - all LEDs off
+
+### Games and demo mode
+
+Super Mario, Tetris and Snake have a **Modalità demo** checkbox (on by
+default), shown on the page while the game is on the panel:
+
+- **on** - the game plays by itself and ignores input;
+- **off** - you play, with the on-screen pad or the keyboard: Mario jumps
+  with *Salta*, space or up (a press just before landing still counts);
+  Tetris moves with left/right, rotates with up, drops with down or space;
+  Snake steers with the arrows.
+
+Games shown by the "automatic" animation rotation or by the night schedule
+always run as demos. Controls go to the lamp over WiFi, so expect a small
+delay; lower the game's speed if it's too hard.
 
 To add a mode, implement the `Mode` class from `include/modes.h` in
 `src/modes/` and add it to `MODES` in `src/modes.cpp`; to add an animation,

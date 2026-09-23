@@ -25,6 +25,10 @@ struct Settings {
 
   // Night: from nightStart to nightEnd (minutes after midnight) the lamp is
   // off ("off"), shows only stars ("stars") or is dimmed ("dim").
+  // Games whose demo mode is switched off (comma-separated ids): there the
+  // player controls the game from the page instead of the computer.
+  String demoOff;
+
   bool nightOn;
   uint16_t nightStart;
   uint16_t nightEnd;
@@ -39,6 +43,11 @@ void saveSettings();
 
 // Display rotation for the current orientation setting.
 uint16_t rotationForSettings();
+
+// Demo mode of a game ("mario", "tetris", "snake"): true (the default) =
+// it plays by itself and ignores input.
+bool demoMode(const char *gameId);
+void setDemoMode(const char *gameId, bool demo);
 
 // Per-mode speed, 1 (slowest) to 9 (fastest); 5 is each mode's default.
 static const uint8_t SPEED_DEFAULT = 5;

@@ -4,7 +4,7 @@
 #include "settings.h"
 
 static const uint32_t FRAME_MS = 75;
-static const uint32_t MANUAL_MS = 20000;  // manual control lasts this long after a jump
+static const uint32_t JUMP_BUFFER_MS = 200;  // jump pressed this long before landing still works
 
 static const int GROUND = 14;   // top row of the ground (rows 14-15)
 static const int NONE = ROWS;   // column with no ground: a pit
@@ -229,14 +229,17 @@ bool MarioMode::shouldJump() const {
   return now > 1 + bestFrom(later, 3, PLAN_FRAMES - 1);
 }
 
-void MarioMode::action() {
-  manualUntil_ = millis() + MANUAL_MS;
-  if (phase_ != PLAYING) {
-    start();  // a jump press also restarts after a game over
-  } else if (s_.onGround) {
+bool MarioMode::input(char key) {
+  if (demoMode("mario")) return false;  // the autopilot is playing
+  if (key != 'U' && key != 'A') return true;
+  if (phase_ != PLAYING) return true;
+  if (s_.onGround) {
     s_.vy = JUMP_SPEED;
     s_.onGround = false;
+  } else {
+    jumpQueuedUntil_ = millis() + JUMP_BUFFER_MS;
   }
+  return true;
 }
 
 void MarioMode::update(uint32_t now) {
@@ -260,10 +263,11 @@ void MarioMode::update(uint32_t now) {
     return;
   }
 
-  const bool manual = (int32_t)(manualUntil_ - now) > 0;
-  if (!manual && shouldJump()) {
+  const bool jump = demoMode("mario") ? shouldJump() : (s_.onGround && (int32_t)(jumpQueuedUntil_ - now) > 0);
+  if (jump) {
     s_.vy = JUMP_SPEED;
     s_.onGround = false;
+    jumpQueuedUntil_ = now;
   }
   if (!step(s_)) {
     phase_ = DYING;

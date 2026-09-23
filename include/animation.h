@@ -14,6 +14,12 @@ class Animation {
   virtual bool needsTime() const { return false; }  // skipped in "auto" until the clock syncs
   virtual void start() {}
   virtual void frame(uint32_t now) = 0;
+
+  // Games only: in demo mode they play by themselves; otherwise they take
+  // input() from the page ('L', 'R', 'U', 'D' arrows, 'A' main button).
+  virtual bool isGame() const { return false; }
+  virtual void setDemo(bool) {}
+  virtual void input(char) {}
 };
 
 // All animations, in menu order (src/animations/animations.cpp).

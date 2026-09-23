@@ -62,6 +62,10 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   .segmented button + button { border-left: 1px solid var(--line); }
   .segmented button.on { background: var(--accent); color: var(--bg); }
   .hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  .pad button { padding: 18px 0; font-size: 22px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
+  .pad button:active { background: var(--accent); color: var(--bg); }
+  .pad .wide { grid-column: 1 / -1; font-size: 18px; }
   [hidden] { display: none !important; }
   #status { min-height: 1.4em; font-size: 14px; color: var(--muted); text-align: center; }
 </style>
@@ -79,6 +83,18 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <label for="speed">Velocità</label>
       <input type="range" id="speed" min="1" max="9">
     </div>
+  </section>
+
+  <section id="gameBox" hidden>
+    <h2 id="gameTitle">Gioco</h2>
+    <label class="check"><input type="checkbox" id="demo"> Modalità demo: gioca da solo</label>
+    <p class="hint" id="demoHint"></p>
+    <div class="pad" id="pad" hidden>
+      <span></span><button data-key="U" id="keyU">↑</button><span></span>
+      <button data-key="L">←</button><button data-key="D" id="keyD">↓</button><button data-key="R">→</button>
+      <button data-key="A" class="wide" id="keyA">Salta</button>
+    </div>
+    <p class="hint" id="padHint"></p>
   </section>
 
   <!-- Settings of the mode being shown -->
@@ -248,6 +264,8 @@ function render() {
   $('speedBox').hidden = !active.hasSpeed;
   if (!editing('speed')) $('speed').value = active.speed;
 
+  renderGame();
+
   // Only the active mode's own settings.
   for (const sec of document.querySelectorAll('section[data-mode]')) sec.hidden = sec.dataset.mode !== s.active;
 
@@ -293,6 +311,46 @@ function render() {
   if (!editing('brightness')) $('brightness').value = s.brightness;
 }
 
+// Game box: demo checkbox and, when the player is in control, the pad.
+const PADS = {
+  mario: { keys: ['A'], labels: { A: 'Salta' }, hint: 'Tastiera: barra spaziatrice o freccia su per saltare.' },
+  tetris: { keys: ['L', 'R', 'U', 'D'], labels: { U: '↻', D: '⤓' }, hint: 'Tastiera: ← → per spostare, ↑ per ruotare, ↓ o spazio per far cadere.' },
+  snake: { keys: ['L', 'R', 'U', 'D'], labels: { U: '↑', D: '↓' }, hint: 'Tastiera: le frecce.' },
+};
+function playable() { return state && state.game && !state.game.demo; }
+function renderGame() {
+  const g = state.game;
+  $('gameBox').hidden = !g;
+  if (!g) return;
+  $('gameTitle').textContent = g.name;
+  $('demo').checked = g.demo;
+  $('demo').disabled = g.forced;
+  $('demoHint').textContent = g.forced
+    ? 'In «Automatica» e di notte i giochi vanno sempre in demo: sceglilo nel menu delle animazioni per giocare.'
+    : g.demo ? 'Togli la spunta per giocare tu.' : '';
+  const pad = PADS[g.id];
+  $('pad').hidden = g.demo || !pad;
+  $('padHint').textContent = g.demo || !pad ? '' : pad.hint;
+  if (!pad) return;
+  for (const b of $('pad').querySelectorAll('button')) {
+    b.hidden = !pad.keys.includes(b.dataset.key);
+    const label = pad.labels[b.dataset.key];
+    if (label) b.textContent = label;
+    else b.textContent = { L: '←', R: '→', U: '↑', D: '↓', A: 'Salta' }[b.dataset.key];
+  }
+}
+// Controls go out on touch/press, not on release, and don't wait for an
+// answer: every millisecond counts over WiFi.
+function sendKey(key) { fetch('/api/input', { method: 'POST', body: new URLSearchParams({ key }), keepalive: true }).catch(() => {}); }
+for (const b of $('pad').querySelectorAll('button')) {
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); sendKey(b.dataset.key); });
+}
+$('demo').onchange = (e) => (e.target.blur(), post('/api/demo', { id: state.game.id, on: e.target.checked ? 1 : 0 }))
+  .then(() => {
+    status(e.target.checked ? 'Modalità demo' : 'Tocca a te!');
+    if (!e.target.checked) $('gameBox').scrollIntoView({ behavior: 'smooth', block: 'start' });  // pad in view
+  }).catch(fail);
+
 // Playlist editor rows: [mode] [minutes] [x]
 function renderPlaylist(items) {
   const list = $('playlist');
@@ -323,11 +381,24 @@ function playlistValue() {
 }
 
 $('action').onclick = () => post('/api/action', {}).catch(fail);
-document.addEventListener('keydown', (e) => {  // space bar = the mode's button (e.g. next quote)
-  if (e.code !== 'Space' || e.repeat || !state || $('action').hidden) return;
-  if (['INPUT', 'SELECT', 'BUTTON', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
-  e.preventDefault();
-  $('action').click();
+const ARROWS = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'U', ArrowDown: 'D' };
+// True while the focus is in a field you type into (not a checkbox or slider).
+function typing() {
+  const el = document.activeElement;
+  if (!el) return false;
+  if (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return true;
+  return el.tagName === 'INPUT' && !['checkbox', 'range', 'button'].includes(el.type);
+}
+document.addEventListener('keydown', (e) => {
+  if (!state || typing()) return;
+  if (playable() && (ARROWS[e.code] || e.code === 'Space')) {
+    // Arrows and space drive the game (space: jump / drop).
+    e.preventDefault();
+    if (!e.repeat || e.code !== 'Space') sendKey(ARROWS[e.code] || 'A');
+  } else if (e.code === 'Space' && !e.repeat && !$('action').hidden && document.activeElement.tagName !== 'BUTTON') {
+    e.preventDefault();  // otherwise space = the mode's button (e.g. next quote)
+    $('action').click();
+  }
 });
 $('speed').onchange = (e) => post('/api/speed', { id: state.active, level: e.target.value }).catch(fail);
 
@@ -469,6 +540,17 @@ static void sendState() {
   const Animation *playing = ambient && currentMode() == ambient ? ambient->playing() : nullptr;
   json += ",\"animation\":" + (playing ? jsonString(playing->id()) : String("null"));
 
+  // The game on the panel (Super Mario, or a game animation) and its demo mode.
+  const char *game = currentMode()->gameId();
+  if (game) {
+    const bool forced = currentMode() == ambient && ambient->demoForced();
+    const char *gameName = currentMode() == ambient && playing ? playing->name() : currentMode()->name();
+    json += ",\"game\":{\"id\":" + jsonString(game) + ",\"name\":" + jsonString(gameName) +
+            ",\"demo\":" + jsonBool(forced || demoMode(game)) + ",\"forced\":" + jsonBool(forced) + "}";
+  } else {
+    json += ",\"game\":null";
+  }
+
   json += ",\"playlistOn\":" + jsonBool(settings.playlistOn) + ",\"playlist\":" + jsonString(settings.playlist);
   json += ",\"nightOn\":" + jsonBool(settings.nightOn) + ",\"nightStart\":" + String(settings.nightStart);
   json += ",\"nightEnd\":" + String(settings.nightEnd) + ",\"nightMode\":" + jsonString(settings.nightMode);
@@ -504,6 +586,21 @@ static void handleMode() {
 
 static void handleAction() {
   currentMode()->action();
+  sendState();
+}
+
+static void handleInput() {
+  const String key = server.arg("key");
+  if (key.length() != 1 || !strchr("LRUDA", key[0])) return badRequest("Tasto sconosciuto");
+  currentMode()->input(key[0]);
+  server.send(204);
+}
+
+static void handleDemo() {
+  const String id = server.arg("id");
+  if (id != "mario" && id != "tetris" && id != "snake") return badRequest("Gioco sconosciuto");
+  setDemoMode(id.c_str(), server.arg("on") == "1");
+  saveSettings();
   sendState();
 }
 
@@ -626,6 +723,8 @@ void webBegin() {
   server.on("/api/mode", HTTP_POST, handleMode);
   server.on("/api/action", HTTP_POST, handleAction);
   server.on("/api/speed", HTTP_POST, handleSpeed);
+  server.on("/api/input", HTTP_POST, handleInput);
+  server.on("/api/demo", HTTP_POST, handleDemo);
   server.on("/api/text", HTTP_POST, handleText);
   server.on("/api/quotes", HTTP_POST, handleQuotes);
   server.on("/api/settings", HTTP_POST, handleSettings);

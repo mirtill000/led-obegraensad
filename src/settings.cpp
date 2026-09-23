@@ -71,6 +71,20 @@ uint32_t scaledInterval(const char *modeId, uint32_t baseMs) {
   return ms > 0 ? ms : 1;
 }
 
+bool demoMode(const char *gameId) {
+  return (String(',') + settings.demoOff + ',').indexOf(String(',') + gameId + ',') < 0;
+}
+
+void setDemoMode(const char *gameId, bool demo) {
+  String list = String(',') + settings.demoOff + ',';
+  list.replace(String(',') + gameId + ',', ",");
+  if (!demo) list += String(gameId) + ',';
+  // Back to "a,b" without the surrounding commas.
+  while (list.startsWith(",")) list.remove(0, 1);
+  while (list.endsWith(",")) list.remove(list.length() - 1);
+  settings.demoOff = list;
+}
+
 void loadSettings() {
   prefs.begin("obegransad", true);
   settings.mode = prefs.getString("mode", "text");
@@ -86,6 +100,7 @@ void loadSettings() {
   settings.quotes = prefs.getString("quotes", "");
   settings.playlistOn = prefs.getBool("plOn", false);
   settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5");
+  settings.demoOff = prefs.getString("demoOff", "");
   settings.nightOn = prefs.getBool("nightOn", false);
   settings.nightStart = prefs.getUShort("nightStart", 23 * 60);
   settings.nightEnd = prefs.getUShort("nightEnd", 7 * 60);
@@ -110,6 +125,7 @@ void saveSettings() {
   prefs.putString("quotes", settings.quotes);
   prefs.putBool("plOn", settings.playlistOn);
   prefs.putString("playlist", settings.playlist);
+  prefs.putString("demoOff", settings.demoOff);
   prefs.putBool("nightOn", settings.nightOn);
   prefs.putUShort("nightStart", settings.nightStart);
   prefs.putUShort("nightEnd", settings.nightEnd);

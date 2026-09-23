@@ -5,17 +5,18 @@
 #include "scroller.h"
 
 // Side-scrolling platformer in the style of Super Mario: the level scrolls
-// by with pipes, pits, goombas and coins. Plays by itself (an autopilot
-// jumps when needed); the "Salta" button on the web page takes over for a
-// while, until nobody has pressed it for MANUAL_MS.
+// by with pipes, pits, goombas and coins. In demo mode (the default) an
+// autopilot plays; otherwise the player jumps with the page's controls.
 class MarioMode : public Mode {
  public:
   const char *id() const override { return "mario"; }
   const char *name() const override { return "Super Mario"; }
   void start() override;
   void update(uint32_t now) override;
-  const char *actionName() const override { return "Salta"; }
-  void action() override;
+  const char *actionName() const override { return "Ricomincia"; }
+  void action() override { start(); }
+  bool input(char key) override;
+  const char *gameId() const override { return "mario"; }
 
   // World column heights live in a ring buffer this long; it must cover
   // the screen plus the autopilot's look-ahead.
@@ -57,7 +58,7 @@ class MarioMode : public Mode {
   Phase phase_ = PLAYING;
   int flatLeft_ = 0;
   uint32_t lastFrame_ = 0;
-  uint32_t manualUntil_ = 0;
+  uint32_t jumpQueuedUntil_ = 0;  // a press just before landing still counts
   uint32_t frame_ = 0;
   float deathY_ = 0, deathVy_ = 0;
   Scroller score_;
