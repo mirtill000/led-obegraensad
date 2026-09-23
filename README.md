@@ -20,8 +20,18 @@ matrix. Four signals control it:
 - **EN** - output enable (active low)
 
 Because the registers hold their state, the MCU only needs to push a new
-256-bit frame when the image changes; there's no continuous refresh loop
-required.
+256-bit frame when the image changes. Each LED is just on or off, and EN
+(PWM) dims the whole panel at once.
+
+### Grayscale
+
+To get levels in between, the firmware uses binary code modulation: each
+pixel's brightness (0-255, gamma-corrected to 32 steps) is split into 5 bit
+planes, and a hardware timer keeps pushing them in a loop, holding plane
+*n* for 2^n x 120 us. A full cycle takes 3.7 ms (~270 Hz, no visible
+flicker) and costs a few percent of one CPU core. The animations use it for
+fading trails, fire, twinkling stars and soft edges. Set `GRAYSCALE` to
+`false` in `include/constants.h` to go back to plain on/off pixels.
 
 ## Wiring
 
@@ -78,7 +88,7 @@ permanent) opening.
 include/
   constants.h        - pins, matrix size, rotation, default text, WiFi names
   secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
-  font_small.h       - 8px-tall proportional lowercase font (a-z, 0-9, . , ! ? ' -)
+  font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ! ? ' -)
   display.h, modes.h, settings.h, web.h
 src/
   display.cpp        - shift-register driver, font renderer, brightness
@@ -160,10 +170,12 @@ The text from the page scrolls on one line through the middle of the panel.
 `MESSAGE` in `constants.h` is only the default used on first boot.
 
 (The display code can also scroll two lines stacked on top of each other,
-split by a `|` - the hourly quotes use that.)
+split by a `|`.)
 
-The font is lowercase only (uppercase letters are drawn as lowercase), plus
-digits and a few punctuation marks; anything else is shown as a space. To
+The text is case sensitive: the font has lowercase and capital letters
+(capitals are one pixel taller), digits and a few punctuation marks.
+Accented letters typed on the page are shown without the accent (è -> e);
+anything else is shown as a space. To
 add characters, add entries to `FONT_GLYPHS` in `include/font_small.h`
 (width in pixels + 8 rows, bit 7 = leftmost column).
 

@@ -43,5 +43,6 @@ class AmbientMode : public Mode {
     uint8_t length;
   } drops_[COLS];
   uint8_t heat_[ROWS][COLS];
-  uint8_t starLife_[ROWS][COLS];
+  uint8_t starLife_[ROWS][COLS];  // frames left
+  uint8_t starSpan_[ROWS][COLS];  // total frames, to fade in and out
 };

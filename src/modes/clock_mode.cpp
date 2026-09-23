@@ -188,9 +188,13 @@ void ClockMode::update(uint32_t now) {
     display.drawBitmap(2, 9, BIG_DIGITS[t.tm_min / 10], 5, 6);
     display.drawBitmap(8, 9, BIG_DIGITS[t.tm_min % 10], 5, 6);
   }
-  int x, y;
-  borderPixel(t.tm_sec % 60, x, y);
-  display.setPixel(x, y, true);
+  // Seconds dot with a short fading trail.
+  static const uint8_t TRAIL[3] = {255, 70, 20};
+  for (int i = 2; i >= 0; i--) {
+    int x, y;
+    borderPixel((t.tm_sec - i + 60) % 60, x, y);
+    display.setLevel(x, y, TRAIL[i]);
+  }
   display.render();
 }
 

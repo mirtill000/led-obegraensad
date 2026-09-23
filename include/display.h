@@ -4,15 +4,23 @@
 #include "constants.h"
 
 // Drives the OBEGRÄNSAD 16x16 panel: a single 256-bit shift-register chain
-// (no row/column multiplexing), pushed out over hardware SPI. Because the
-// registers hold their state, a frame only needs to be re-sent when it
-// changes - there is no continuous refresh loop.
+// (no row/column multiplexing), pushed out over hardware SPI.
+//
+// Drawing happens in a frame buffer of per-pixel levels (0 = off, 255 = full)
+// and render() publishes it. With GRAYSCALE a timer keeps re-sending the
+// frame as bit planes in the background to make the in-between levels; the
+// registers hold their state, so without it a frame is only sent when it
+// changes.
 class Display {
  public:
   void begin();
   void clear();
-  void setPixel(int x, int y, bool on);
-  bool getPixel(int x, int y) const;
+  void setPixel(int x, int y, bool on) { setLevel(x, y, on ? 255 : 0); }
+  bool getPixel(int x, int y) const { return getLevel(x, y) > 0; }
+  // Brightness of one pixel, 0-255 (perceptual: 128 looks about half as
+  // bright as 255). Without GRAYSCALE any level above 0 is fully on.
+  void setLevel(int x, int y, uint8_t level);
+  uint8_t getLevel(int x, int y) const;
   // Draws glyph `c` with its top-left corner at (x, y); returns its width.
   int drawChar(int x, int y, char c);
   void render();

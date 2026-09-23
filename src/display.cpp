@@ -1,6 +1,8 @@
 #include "display.h"
 
 #include <SPI.h>
+#include <esp_timer.h>
+#include <math.h>
 #include <string.h>
 
 #include "font_small.h"
@@ -35,19 +37,80 @@ static const uint8_t positions[TOTAL_PIXELS] = {
     0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff,
 };
 
+// ---------------------------------------------------------------------------
+// Grayscale refresh (binary code modulation).
+//
+// render() turns the frame into PLANES bit planes: plane p holds bit p of
+// every pixel's 5-bit level. A one-shot esp_timer pushes plane p to the
+// panel and re-arms itself for PLANE_US[p], so over one cycle each LED is
+// lit for a time proportional to its level. Three buffers let render()
+// hand over a new frame without ever touching the one being displayed.
+// ---------------------------------------------------------------------------
+static const int PLANES = 5;
+static const uint32_t PLANE_US[PLANES] = {120, 240, 480, 960, 1920};  // ~3.7 ms per cycle
+static const int FRAME_BYTES = TOTAL_PIXELS / 8;
+
+struct PlaneSet {
+  uint8_t bits[PLANES][FRAME_BYTES];
+};
+static PlaneSet planeSets[3];
+static volatile int8_t frontSet = 0;     // being displayed by the timer
+static volatile int8_t pendingSet = -1;  // next frame, picked up at cycle start
+static portMUX_TYPE setLock = portMUX_INITIALIZER_UNLOCKED;
+static esp_timer_handle_t refreshTimer;
+static uint8_t gammaTable[256];  // level 0-255 -> 0-31 on-time units
+
+static void pushBits(const uint8_t *bits) {
+  digitalWrite(PIN_LATCH, LOW);
+  SPI.writeBytes(bits, FRAME_BYTES);
+  digitalWrite(PIN_LATCH, HIGH);
+}
+
+static void refreshTick(void *) {
+  static uint8_t plane = 0;
+  if (plane == 0) {
+    portENTER_CRITICAL(&setLock);
+    if (pendingSet >= 0) {
+      frontSet = pendingSet;
+      pendingSet = -1;
+    }
+    portEXIT_CRITICAL(&setLock);
+  }
+  pushBits(planeSets[frontSet].bits[plane]);
+  esp_timer_start_once(refreshTimer, PLANE_US[plane]);
+  plane = (plane + 1) % PLANES;
+}
+
 void Display::begin() {
   pinMode(PIN_LATCH, OUTPUT);
   digitalWrite(PIN_LATCH, LOW);
   // EN is active low, so PWM on it dims the whole panel: the larger the duty
   // cycle, the longer the outputs are off.
-  ledcAttach(PIN_ENABLE, 20000, 8);
+  ledcAttach(PIN_ENABLE, 39000, 8);
   setBrightness(255);
 
   SPI.begin(PIN_CLOCK, -1 /* MISO unused */, PIN_DATA, -1 /* SS unused */);
   SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
 
+  for (int i = 0; i < 256; i++) {
+    const int units = (int)lroundf(31.0f * powf(i / 255.0f, 2.2f));
+    gammaTable[i] = (i > 0 && units == 0) ? 1 : units;  // any level > 0 stays visible
+  }
+
   clear();
   render();
+
+  if (GRAYSCALE) {
+    const esp_timer_create_args_t args = {
+        .callback = refreshTick,
+        .arg = nullptr,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "display",
+        .skip_unhandled_events = true,
+    };
+    esp_timer_create(&args, &refreshTimer);
+    esp_timer_start_once(refreshTimer, PLANE_US[0]);
+  }
 }
 
 void Display::setBrightness(uint8_t brightness) {
@@ -77,14 +140,14 @@ int Display::frameIndex(int x, int y) const {
   return py * COLS + px;
 }
 
-void Display::setPixel(int x, int y, bool on) {
+void Display::setLevel(int x, int y, uint8_t level) {
   int i = frameIndex(x, y);
-  if (i >= 0) frame_[i] = on ? 1 : 0;
+  if (i >= 0) frame_[i] = level;
 }
 
-bool Display::getPixel(int x, int y) const {
+uint8_t Display::getLevel(int x, int y) const {
   int i = frameIndex(x, y);
-  return i >= 0 && frame_[i];
+  return i >= 0 ? frame_[i] : 0;
 }
 
 int Display::drawChar(int x, int y, char c) {
@@ -120,18 +183,36 @@ void Display::drawBitmap(int x, int y, const uint16_t *bitmap, int width, int ro
 }
 
 void Display::render() {
-  static uint8_t bits[TOTAL_PIXELS / 8];
-  memset(bits, 0, sizeof(bits));
+  if (!GRAYSCALE) {
+    static uint8_t bits[FRAME_BYTES];
+    memset(bits, 0, sizeof(bits));
+    for (int chainIndex = 0; chainIndex < TOTAL_PIXELS; chainIndex++) {
+      if (frame_[positions[chainIndex]]) bits[chainIndex >> 3] |= (0x80 >> (chainIndex & 7));
+    }
+    pushBits(bits);
+    return;
+  }
 
+  // Build the planes in the buffer that is neither shown nor queued.
+  portENTER_CRITICAL(&setLock);
+  const int8_t front = frontSet, pending = pendingSet;
+  portEXIT_CRITICAL(&setLock);
+  int8_t target = 0;
+  while (target == front || target == pending) target++;
+
+  PlaneSet &set = planeSets[target];
+  memset(&set, 0, sizeof(set));
   for (int chainIndex = 0; chainIndex < TOTAL_PIXELS; chainIndex++) {
-    if (frame_[positions[chainIndex]]) {
-      bits[chainIndex >> 3] |= (0x80 >> (chainIndex & 7));
+    const uint8_t units = gammaTable[frame_[positions[chainIndex]]];
+    const uint8_t mask = 0x80 >> (chainIndex & 7);
+    for (int p = 0; p < PLANES; p++) {
+      if (units & (1 << p)) set.bits[p][chainIndex >> 3] |= mask;
     }
   }
 
-  digitalWrite(PIN_LATCH, LOW);
-  SPI.writeBytes(bits, sizeof(bits));
-  digitalWrite(PIN_LATCH, HIGH);
+  portENTER_CRITICAL(&setLock);
+  pendingSet = target;
+  portEXIT_CRITICAL(&setLock);
 }
 
 int Display::scrollWidth(const char *text) {

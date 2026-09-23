@@ -24,6 +24,12 @@
 #define MESSAGE "dare mighty things"
 #define SCROLL_DELAY_MS 80
 
+// Grayscale: each LED gets 32 brightness levels by showing 5 bit planes
+// for 1, 2, 4, 8 and 16 time units in a loop, ~270 times a second (binary
+// code modulation). Set to false for plain on/off pixels, pushed only when
+// the image changes.
+#define GRAYSCALE true
+
 // Clockwise rotation (0, 90, 180, 270) applied to the image for each way
 // the lamp can hang; the orientation itself is picked on the web page.
 // The panel's native "up" is vertical. If the text comes out upside down,

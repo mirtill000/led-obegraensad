@@ -34,6 +34,7 @@ void LifeMode::seed() {
       cells_[y][x] = (esp_random() % 100) < 35;
     }
   }
+  memset(previous_, 0, sizeof(previous_));
   memset(history_, 0, sizeof(history_));
   generation_ = 0;
 }
@@ -51,6 +52,7 @@ void LifeMode::step() {
       next[y][x] = n == 3 || (n == 2 && cells_[y][x]);
     }
   }
+  memcpy(previous_, cells_, sizeof(cells_));
   memcpy(cells_, next, sizeof(cells_));
   generation_++;
 }
@@ -59,7 +61,7 @@ void LifeMode::draw() {
   display.clear();
   for (int y = 0; y < ROWS; y++) {
     for (int x = 0; x < COLS; x++) {
-      display.setPixel(x, y, cells_[y][x]);
+      display.setLevel(x, y, cells_[y][x] ? 255 : previous_[y][x] ? 30 : 0);
     }
   }
   display.render();

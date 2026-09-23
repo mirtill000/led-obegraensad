@@ -276,19 +276,32 @@ void MarioMode::update(uint32_t now) {
 
 void MarioMode::draw(uint32_t now) {
   display.clear();
+  // Faint clouds in the background, drifting at half speed.
+  static const uint16_t CLOUD[2] = {0x6000, 0xF000};
+  for (int i = 0; i < 2; i++) {
+    const int period = 24;
+    const int x = ((i * 13 - s_.cam / 2) % period + period) % period - 4;
+    for (int row = 0; row < 2; row++) {
+      for (int col = 0; col < 4; col++) {
+        if (CLOUD[row] & (0x8000 >> col)) display.setLevel(x + col, 2 + i * 3 + row, 35);
+      }
+    }
+  }
   for (int sx = 0; sx < COLS; sx++) {
     const int32_t wx = s_.cam + sx;
     const int top = topAt(s_, wx);
     if (top == NONE) continue;
     display.setPixel(sx, GROUND, true);
-    display.setPixel(sx, GROUND + 1, wx % 4 != 3);  // brick pattern shows the scrolling
+    display.setLevel(sx, GROUND + 1, wx % 4 != 3 ? 110 : 0);  // bricks show the scrolling
     for (int y = top; y < GROUND; y++) display.setPixel(sx, y, true);
   }
   for (const Coin &c : s_.coins) {
     if (c.taken) continue;
     const int sx = c.x - s_.cam;
-    display.setPixel(sx, c.y, true);
-    if ((now / 150) % 4 != 0) display.setPixel(sx, c.y + 1, true);  // glint
+    // Spinning glint: the two halves swap brightness.
+    const bool phase = (now / 200) % 2;
+    display.setLevel(sx, c.y, phase ? 255 : 120);
+    display.setLevel(sx, c.y + 1, phase ? 120 : 255);
   }
   for (const Goomba &g : s_.goombas) {
     if (g.alive) display.drawBitmap((int)lroundf(g.x) - s_.cam, GROUND - 2, GOOMBA[(frame_ / 3) % 2], 3, 2);

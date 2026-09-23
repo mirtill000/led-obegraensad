@@ -71,7 +71,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <label for="text">Testo</label>
     <input type="text" id="text" maxlength="200" autocomplete="off">
     <button class="save" id="saveText">Mostra</button>
-    <p class="hint">Minuscole, cifre e . , ! ? ' - (le maiuscole diventano minuscole).</p>
+    <p class="hint">Lettere maiuscole e minuscole, cifre e . , : ! ? ' - (le lettere accentate si vedono senza accento).</p>
   </section>
 
   <section>
@@ -266,9 +266,21 @@ static void handleMode() {
   sendState();
 }
 
+// The font has no accented letters: show them as the plain letter rather
+// than as a blank.
+static void stripAccents(String &text) {
+  static const char *const MAP[][2] = {
+      {"à", "a"}, {"á", "a"}, {"è", "e"}, {"é", "e"}, {"ì", "i"}, {"í", "i"}, {"ò", "o"},
+      {"ó", "o"}, {"ù", "u"}, {"ú", "u"}, {"À", "A"}, {"È", "E"}, {"É", "E"}, {"Ì", "I"},
+      {"Ò", "O"}, {"Ù", "U"}, {"’", "'"}, {"‘", "'"},
+  };
+  for (const auto &m : MAP) text.replace(m[0], m[1]);
+}
+
 static void handleText() {
   // One line only: '|' would split the text in two.
   String text = server.arg("text");
+  stripAccents(text);
   text.replace('|', ' ');
   text.trim();
   if (text.length() > 200) text = text.substring(0, 200);

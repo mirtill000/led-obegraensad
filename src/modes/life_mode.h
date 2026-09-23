@@ -22,6 +22,7 @@ class LifeMode : public Mode {
   uint32_t hash() const;
 
   bool cells_[ROWS][COLS];
+  bool previous_[ROWS][COLS];  // last generation: cells that just died glow faintly
   uint32_t history_[4];  // hashes of recent generations, to spot loops
   uint16_t generation_ = 0;
   uint32_t lastStep_ = 0;
