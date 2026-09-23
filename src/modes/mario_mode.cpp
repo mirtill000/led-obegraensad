@@ -8,18 +8,42 @@ static const uint32_t JUMP_BUFFER_MS = 200;  // jump pressed this long before la
 
 static const int GROUND = 14;   // top row of the ground (rows 14-15)
 static const int NONE = ROWS;   // column with no ground: a pit
-static const int MARIO_X = 3;   // Mario's screen column (left edge)
+static const int MARIO_X = 2;   // Mario's screen column (left edge)
+static const int MARIO_W = 5, MARIO_H = 7;  // sprite size
 static const float GRAVITY = 0.3f;
-static const float JUMP_SPEED = -2.4f;  // ~9.5 px high, ~16 px long
+static const float JUMP_SPEED = -2.3f;  // ~9 px high, ~15 px long
 static const float MAX_FALL = 3.0f;
 static const float GOOMBA_SPEED = 0.25f;
 
 // Sprites: bit 15 = leftmost column.
-static const uint16_t MARIO_RUN[2][4] = {
-    {0x4000, 0xE000, 0x4000, 0xA000},
-    {0x4000, 0xE000, 0x4000, 0x4000},
+// Mario, 5x7, facing right, as brightness levels: cap and brim brightest,
+// face mid, hair/eye/moustache faint, overalls bright, shoes dim.
+static const char *const MARIO_RUN[2][MARIO_H] = {
+    {".CCC.", "CCCCC", "MSSMS", "SSMMM", ".OOO.", "OO.OO", "B...B"},
+    {".CCC.", "CCCCC", "MSSMS", "SSMMM", ".OOO.", ".OOO.", ".BB.."},
 };
-static const uint16_t MARIO_JUMP[4] = {0xA000, 0xE000, 0x4000, 0xA000};
+static const char *const MARIO_JUMP[MARIO_H] = {"SCCC.", "CCCCC", "MSSMS", "SSMMM", "OOOOS", "OO.OO", "B..B."};
+
+static uint8_t spriteLevel(char c) {
+  switch (c) {
+    case 'C': return 255;  // cap
+    case 'O': return 200;  // overalls
+    case 'S': return 120;  // skin
+    case 'B': return 90;   // shoes
+    case 'M': return 35;   // hair, eye, moustache
+    default: return 0;
+  }
+}
+
+static void drawMario(int x, int y, const char *const *rows) {
+  for (int r = 0; r < MARIO_H; r++) {
+    for (int c = 0; c < MARIO_W; c++) {
+      const uint8_t l = spriteLevel(rows[r][c]);
+      if (l) display.setLevel(x + c, y + r, l);
+    }
+  }
+}
+
 static const uint16_t GOOMBA[2][2] = {
     {0xE000, 0x8000},
     {0xE000, 0x2000},
@@ -50,19 +74,19 @@ static bool step(MarioMode::State &s) {
   }
 
   // Vertical movement, landing on the highest surface under Mario.
-  const float prevBottom = s.y + 4;
-  const int prevBottomRow = (int)floorf(s.y + 0.01f) + 3;
+  const float prevBottom = s.y + MARIO_H;
+  const int prevBottomRow = (int)floorf(s.y + 0.01f) + MARIO_H - 1;
   s.vy = fminf(s.vy + GRAVITY, MAX_FALL);
   s.y += s.vy;
   s.onGround = false;
   if (s.vy >= 0) {
     int landing = NONE;
-    for (int c = 0; c < 3; c++) {
+    for (int c = 0; c < MARIO_W; c++) {
       const int t = topAt(s, px + c);
-      if (t < NONE && s.y + 4 >= t && prevBottom <= t + 0.01f && t < landing) landing = t;
+      if (t < NONE && s.y + MARIO_H >= t && prevBottom <= t + 0.01f && t < landing) landing = t;
     }
     if (landing < NONE) {
-      s.y = landing - 4;
+      s.y = landing - MARIO_H;
       s.vy = 0;
       s.onGround = true;
     }
@@ -70,8 +94,8 @@ static bool step(MarioMode::State &s) {
   if (s.y > ROWS) return false;  // fell into a pit
 
   // Running into the side of a pipe.
-  const int bottomRow = (int)floorf(s.y + 0.01f) + 3;
-  for (int c = 0; c < 3; c++) {
+  const int bottomRow = (int)floorf(s.y + 0.01f) + MARIO_H - 1;
+  for (int c = 0; c < MARIO_W; c++) {
     if (bottomRow >= topAt(s, px + c)) return false;
   }
 
@@ -79,7 +103,7 @@ static bool step(MarioMode::State &s) {
   for (MarioMode::Goomba &g : s.goombas) {
     if (!g.alive) continue;
     const int32_t gx = (int32_t)lroundf(g.x);
-    if (px > gx + 2 || gx > px + 2 || bottomRow < GROUND - 2) continue;
+    if (px > gx + 2 || gx > px + MARIO_W - 1 || bottomRow < GROUND - 2) continue;
     if (s.vy > 0 && prevBottomRow < GROUND - 2) {  // feet were above it
       g.alive = false;
       s.vy = -1.8f;
@@ -93,7 +117,7 @@ static bool step(MarioMode::State &s) {
   const int topRow = (int)floorf(s.y);
   for (MarioMode::Coin &c : s.coins) {
     if (c.taken) continue;
-    if (c.x >= px && c.x <= px + 2 && c.y + 1 >= topRow && c.y <= bottomRow) {
+    if (c.x >= px && c.x <= px + MARIO_W - 1 && c.y + 1 >= topRow && c.y <= bottomRow) {
       c.taken = true;
       s.score++;
     }
@@ -149,7 +173,7 @@ static int bestFrom(const MarioMode::State &start, int jumps, int budget) {
 
 void MarioMode::start() {
   memset(&s_, 0, sizeof(s_));
-  s_.y = GROUND - 4;
+  s_.y = GROUND - MARIO_H;
   s_.onGround = true;
   flatLeft_ = 20;
   extendWorld();
@@ -193,7 +217,7 @@ void MarioMode::extendWorld() {
       }
       flatLeft_ = randomInt(9, 13);
     } else {
-      const int8_t heights[3] = {8, 7, 8};
+      const int8_t heights[3] = {3, 2, 3};  // above Mario's head: jump for them
       int placed = 0;
       for (Coin &c : s_.coins) {
         if (c.taken && placed < 3) {
@@ -215,7 +239,7 @@ bool MarioMode::shouldJump() const {
   const int32_t px = s_.cam + MARIO_X;
   bool coinAhead = false;
   for (const Coin &c : s_.coins) {
-    if (!c.taken && c.x > px + 2 && c.x <= px + 6) coinAhead = true;
+    if (!c.taken && c.x > px + MARIO_W - 1 && c.x <= px + MARIO_W + 3) coinAhead = true;
   }
   const bool obstacle = walkFrames(s_, 14) < 14;
   if (!obstacle && !coinAhead) return false;
@@ -312,10 +336,9 @@ void MarioMode::draw(uint32_t now) {
   }
 
   if (phase_ == DYING) {
-    display.drawBitmap(MARIO_X, (int)lroundf(deathY_), MARIO_JUMP, 3, 4);
+    drawMario(MARIO_X, (int)lroundf(deathY_), MARIO_JUMP);
   } else {
-    const uint16_t *sprite = s_.onGround ? MARIO_RUN[(frame_ / 2) % 2] : MARIO_JUMP;
-    display.drawBitmap(MARIO_X, (int)lroundf(s_.y), sprite, 3, 4);
+    drawMario(MARIO_X, (int)lroundf(s_.y), s_.onGround ? MARIO_RUN[(frame_ / 2) % 2] : MARIO_JUMP);
   }
   display.render();
 }

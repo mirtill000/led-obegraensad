@@ -6,8 +6,8 @@ flash / 8MB octal PSRAM, WiFi+BT). A small web page over WiFi switches
 between modes: scrolling text (by default **dare mighty things**), a quote
 of the hour, clock + weather, a 12-hour forecast, things from the web
 (word of the day, "on this day", your calendar), Conway's Game of Life,
-Super Mario and other games, animations, your own drawings, a Pomodoro
-timer, a countdown and a sunrise alarm. (Inspired by
+Super Mario and other games, animations, your own drawings, a countdown
+and a sunrise alarm. (Inspired by
 [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
 which this reuses the panel's shift-register wiring table from.)
 
@@ -193,15 +193,15 @@ Current modes:
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
   40-150 generations; when the board dies, freezes or loops a new game
   starts; button: restart
-- **Super Mario** - side-scrolling platformer with pipes, pits, goombas
+- **Super Mario** - side-scrolling platformer (Mario is a 5x7 sprite in
+  grayscale: cap, face and moustache, overalls, shoes) with pipes, pits, goombas
   (stomp them) and coins. In demo mode an autopilot simulates the next
   moves and jumps at the best moment; otherwise you jump. At game over it
   shows the score and starts again; button: restart
 - **Animazioni** - one animation, or "automatic" (a different one every 5
   minutes); button: next animation. The animations, in
   `src/animations/`:
-  - *Atmosfere*: digital rain, fire, stars, waves, breathing circle, and the
-    moon in tonight's real phase
+  - *Atmosfere*: digital rain, fire, stars, waves
   - *Giochi*: **Tetris** - in demo mode, for each piece the computer tries
     every rotation and column and picks the best by stack height, holes and
     surface; **Snake** - in demo mode it takes the shortest way to the food
@@ -212,17 +212,16 @@ Current modes:
   - *Orologi*: analog (antialiased hands, smooth seconds), binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
-  - *3D e demo*: rotating wireframe cube, checkered tunnel, plasma,
-    metaballs, endless zoom into the Mandelbrot set
-- **Disegni** - your drawings and animations, one or all in turn. On the
-  page there is a 16x16 pixel editor (6 brightness levels, fill, invert,
+  - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
+    into the Mandelbrot set
+- **Disegni** - your drawings and animations, one or all in turn; the
+  gallery starts with a few examples (a beating heart, the Super Mario
+  mushroom, a cat, a flower, Pac-Man, a space invader). On the page there
+  is a 16x16 pixel editor, which opens on the drawing the lamp is showing (6 brightness levels, fill, invert,
   up to 32 frames, 2-15 frames a second) that shows the drawing live on
   the lamp while you draw; you can also import a photo or an animated GIF
   (cropped to a square, turned into grayscale, contrast stretched). Up to
   60 drawings are saved in flash
-- **Pomodoro** - work and break periods (25/5 minutes by default): the panel
-  drains with the minutes left on top, flashes at the end of each period
-  and goes on to the next; start, pause and reset from the page
 - **Conto alla rovescia** - days left to a date in big digits (hours and
   minutes on the day), alternating with "Mancano 12 giorni a Vacanze"
 - **Spento** - all LEDs off

@@ -41,9 +41,7 @@ struct Settings {
   // player controls the game from the page instead of the computer.
   String demoOff;
 
-  // Timers: Pomodoro lengths (minutes), countdown target, sunrise alarm.
-  uint8_t pomodoroWork;
-  uint8_t pomodoroBreak;
+  // Timers: countdown target, sunrise alarm.
   String countdownLabel;
   String countdownDate;  // "YYYY-MM-DD"
   String countdownTime;  // "HH:MM"

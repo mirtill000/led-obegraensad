@@ -16,6 +16,9 @@ class GalleryMode : public Mode {
   void action() override { next(); }
   bool hasSpeed() const override { return false; }
 
+  // Id of the saved drawing on the panel ("" for a draft or none).
+  String currentId() const { return draft_ ? String("") : current_.id; }
+
   // The editor's current drawing (frames of 256 bytes), shown for a while.
   void showDraft(const uint8_t *frames, size_t count, uint16_t frameMs);
 

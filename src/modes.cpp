@@ -9,7 +9,6 @@
 #include "modes/life_mode.h"
 #include "modes/mario_mode.h"
 #include "modes/off_mode.h"
-#include "modes/pomodoro_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
 #include "modes/text_mode.h"
@@ -27,12 +26,11 @@ static LifeMode lifeMode;
 static MarioMode marioMode;
 static AmbientMode ambientMode;
 static GalleryMode galleryModeInstance;
-static PomodoroMode pomodoroInstance;
 static CountdownMode countdownMode;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
-Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &marioMode, &ambientMode, &galleryModeInstance, &pomodoroInstance,
+Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &marioMode, &ambientMode, &galleryModeInstance,
                         &countdownMode, &offMode, &sunriseMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 
@@ -55,7 +53,6 @@ bool validModeId(const String &id) { return indexOf(id) >= 0 && !MODES[indexOf(i
 
 Mode *currentMode() { return MODES[current]; }
 GalleryMode &galleryMode() { return galleryModeInstance; }
-PomodoroMode &pomodoroMode() { return pomodoroInstance; }
 bool isNight() { return night; }
 int playlistPosition() { return settings.playlistOn ? playlistPos : -1; }
 

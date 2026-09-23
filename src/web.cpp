@@ -11,7 +11,6 @@
 #include "modes/countdown_mode.h"
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
-#include "modes/pomodoro_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
 #include "moon.h"
@@ -221,20 +220,6 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <h2 style="margin-top:16px">Galleria</h2>
     <div class="tools"><button id="showAll">Mostra tutti a rotazione</button></div>
     <div class="gallery" id="gallery"></div>
-  </section>
-
-  <section data-mode="pomodoro" hidden>
-    <h2>Pomodoro</h2>
-    <p id="pomInfo"></p>
-    <div class="row">
-      <button class="save" id="pomStart" style="margin-top:0">Avvia</button>
-      <button class="link" id="pomReset" style="margin-top:0">Azzera</button>
-    </div>
-    <div class="row">
-      <div><label for="pomWork">Lavoro (minuti)</label><input type="number" id="pomWork" min="1" max="120"></div>
-      <div><label for="pomBreak">Pausa (minuti)</label><input type="number" id="pomBreak" min="1" max="60"></div>
-    </div>
-    <button class="save" id="savePom">Salva le durate</button>
   </section>
 
   <section data-mode="countdown" hidden>
@@ -543,13 +528,6 @@ function renderExtras() {
   $('calendarStatus').textContent = s.web.calendar ? 'Stato: ' + (s.web.calendarStatus || 'in attesa') : '';
   $('webPreview').textContent = [s.web.wordText, s.web.event].filter(Boolean).join(' · ');
 
-  const pom = s.pomodoro;
-  const left = Math.ceil(pom.remaining / 1000);
-  $('pomInfo').textContent = (pom.onBreak ? 'Pausa' : 'Lavoro') + ': ' + Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0') +
-    (pom.running ? '' : ' (fermo)');
-  $('pomStart').textContent = pom.running ? 'Pausa' : 'Avvia';
-  if (!dirty.pom) { $('pomWork').value = pom.work; $('pomBreak').value = pom.break; }
-
   if (!dirty.cd) { $('cdLabel').value = s.countdown.label; $('cdDate').value = s.countdown.date; $('cdTime').value = s.countdown.time; }
   $('cdInfo').textContent = s.countdown.sentence;
 
@@ -576,6 +554,11 @@ function renderExtras() {
     s.moon.name + ' (illuminata al ' + s.moon.lit + '%)';
 
   if (s.active === 'gallery' && !galleryLoaded) loadGallery();
+  // The editor opens on the drawing the lamp is showing, not a blank page.
+  if (s.active === 'gallery' && ed.pristine && s.galleryCurrent) {
+    ed.pristine = false;
+    openDrawing(s.galleryCurrent, false);
+  }
   highlightGallery();
 }
 
@@ -584,12 +567,6 @@ $('saveWeb').onclick = () => post('/api/web', {
   word: $('infoWord').checked ? 1 : 0, history: $('infoHistory').checked ? 1 : 0, calendar: $('infoCalendar').checked ? 1 : 0,
   url: $('icalUrl').value.trim(), pos: $('webPos').value,
 }).then(() => { dirty.web = false; render(); status('Salvato: i dati arrivano in qualche secondo'); }).catch(fail);
-
-$('pomStart').onclick = () => post('/api/pomodoro', { cmd: state.pomodoro.running ? 'pause' : 'start' }).catch(fail);
-$('pomReset').onclick = () => post('/api/pomodoro', { cmd: 'reset' }).catch(fail);
-for (const id of ['pomWork', 'pomBreak']) $(id).addEventListener('input', () => { dirty.pom = true; });
-$('savePom').onclick = () => post('/api/pomodoro', { work: $('pomWork').value, break: $('pomBreak').value })
-  .then(() => { dirty.pom = false; render(); status('Durate salvate'); }).catch(fail);
 
 for (const id of ['cdLabel', 'cdDate', 'cdTime']) $(id).addEventListener('input', () => { dirty.cd = true; });
 $('saveCd').onclick = () => post('/api/countdown', { label: $('cdLabel').value, date: $('cdDate').value, time: $('cdTime').value || '00:00' })
@@ -612,7 +589,7 @@ $('nightSun').addEventListener('input', () => {
 // ---------------------------------------------------------------------------
 // Pixel editor. Frames are 256 levels (0-255) row by row, like the panel.
 const LEVELS = [255, 170, 100, 50, 20, 0];
-const ed = { frames: [new Uint8Array(256)], cur: 0, level: 255, id: '', frameMs: 250 };
+const ed = { frames: [new Uint8Array(256)], cur: 0, level: 255, id: '', frameMs: 250, pristine: true };
 const cv = $('canvas'), cx = cv.getContext('2d');
 let galleryLoaded = false, galleryItems = [];
 function b64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 4096) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 4096)); return btoa(s); }
@@ -655,6 +632,7 @@ for (const level of LEVELS) {
 }
 let painting = false;
 function paint(e) {
+  ed.pristine = false;
   const r = cv.getBoundingClientRect();
   const x = Math.floor((e.clientX - r.left) / r.width * 16), y = Math.floor((e.clientY - r.top) / r.height * 16);
   if (x < 0 || x > 15 || y < 0 || y > 15) return;
@@ -679,7 +657,7 @@ $('frameDup').onclick = () => { if (ed.frames.length >= 32) return status('Al ma
 $('frameDel').onclick = () => { if (ed.frames.length === 1) return edit((f) => f.fill(0)); ed.frames.splice(ed.cur, 1); ed.cur = Math.min(ed.cur, ed.frames.length - 1); drawCanvas(); sendDraft(false); };
 $('framePlay').onclick = () => { sendDraft(true); status('Anteprima sulla lampada'); };
 $('fps').onchange = (e) => { ed.frameMs = +e.target.value; if (ed.frames.length > 1) sendDraft(true); };
-$('newDrawing').onclick = () => { ed.frames = [new Uint8Array(256)]; ed.cur = 0; ed.id = ''; $('drawName').value = ''; drawCanvas(); sendDraft(false); };
+$('newDrawing').onclick = () => { ed.pristine = false; ed.frames = [new Uint8Array(256)]; ed.cur = 0; ed.id = ''; $('drawName').value = ''; drawCanvas(); sendDraft(false); };
 
 $('saveDrawing').onclick = async () => {
   try {
@@ -691,6 +669,20 @@ $('saveDrawing').onclick = async () => {
     loadGallery();
   } catch (e) { fail(e); }
 };
+
+// Loads a saved drawing into the editor; `live` also shows it as a draft
+// on the lamp (not needed when it is already what the lamp shows).
+async function openDrawing(id, live) {
+  try {
+    const it = await (await fetch('/api/gallery/item?id=' + encodeURIComponent(id))).json();
+    const all = unb64(it.data);
+    ed.frames = []; for (let i = 0; i < all.length; i += 256) ed.frames.push(all.slice(i, i + 256));
+    ed.cur = 0; ed.id = it.id; ed.frameMs = it.frameMs; ed.pristine = false; $('drawName').value = it.name;
+    $('fps').value = [...$('fps').options].reduce((a, o) => Math.abs(o.value - it.frameMs) < Math.abs(a - it.frameMs) ? +o.value : a, 250);
+    drawCanvas();
+    if (live) { sendDraft(true); cv.scrollIntoView({ behavior: 'smooth' }); }
+  } catch (e) { /* keep what the editor has */ }
+}
 
 async function loadGallery() {
   galleryLoaded = true;
@@ -712,14 +704,7 @@ async function loadGallery() {
     const show = document.createElement('button'); show.textContent = 'Mostra';
     show.onclick = () => post('/api/gallery/show', { id: d.id }).then(() => status('Mostro «' + d.name + '»')).catch(fail);
     const open = document.createElement('button'); open.textContent = 'Modifica';
-    open.onclick = async () => {
-      const it = await (await fetch('/api/gallery/item?id=' + d.id)).json();
-      const all = unb64(it.data);
-      ed.frames = []; for (let i = 0; i < all.length; i += 256) ed.frames.push(all.slice(i, i + 256));
-      ed.cur = 0; ed.id = it.id; ed.frameMs = it.frameMs; $('drawName').value = it.name;
-      $('fps').value = [...$('fps').options].reduce((a, o) => Math.abs(o.value - it.frameMs) < Math.abs(a - it.frameMs) ? +o.value : a, 250);
-      drawCanvas(); sendDraft(true); cv.scrollIntoView({ behavior: 'smooth' });
-    };
+    open.onclick = () => openDrawing(d.id, true);
     const del = document.createElement('button'); del.textContent = '✕';
     del.onclick = async () => {
       if (!confirm('Eliminare «' + d.name + '»?')) return;
@@ -755,6 +740,7 @@ function toFrame(src, w, h) {
 $('importFile').onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  ed.pristine = false;
   status('Converto ' + file.name + '...');
   try {
     const frames = [];
@@ -1015,10 +1001,6 @@ static void sendState() {
           ",\"pos\":" + jsonString(settings.webPosition) + ",\"wordText\":" + jsonString(info.word) +
           ",\"event\":" + jsonString(info.event) + ",\"historyStatus\":" + jsonString(info.historyStatus) +
           ",\"calendarStatus\":" + jsonString(info.calendarStatus) + "}";
-  const PomodoroMode &pom = pomodoroMode();
-  json += ",\"pomodoro\":{\"running\":" + jsonBool(pom.running()) + ",\"onBreak\":" + jsonBool(pom.onBreak()) +
-          ",\"remaining\":" + String(pom.remainingMs()) + ",\"work\":" + String(settings.pomodoroWork) +
-          ",\"break\":" + String(settings.pomodoroBreak) + "}";
   json += ",\"countdown\":{\"label\":" + jsonString(settings.countdownLabel) + ",\"date\":" +
           jsonString(settings.countdownDate) + ",\"time\":" + jsonString(settings.countdownTime) +
           ",\"sentence\":" + jsonString(CountdownMode::sentence()) + "}";
@@ -1028,6 +1010,7 @@ static void sendState() {
   const float phase = moonPhase(time(nullptr));
   json += ",\"moon\":{\"name\":" + jsonString(moonPhaseName(phase)) + ",\"lit\":" +
           String((int)lroundf(moonIllumination(phase) * 100)) + "}";
+  json += ",\"galleryCurrent\":" + jsonString(galleryMode().currentId());
   json += ",\"galleryShow\":" + jsonString(settings.galleryShow) + ",\"nightSun\":" + jsonBool(settings.nightSun);
 
   json += ",\"playlistOn\":" + jsonBool(settings.playlistOn) + ",\"playlist\":" + jsonString(settings.playlist);
@@ -1230,20 +1213,6 @@ static void handleWeb() {
   sendState();
 }
 
-static void handlePomodoro() {
-  PomodoroMode &pom = pomodoroMode();
-  const String cmd = server.arg("cmd");
-  if (cmd == "start") pom.resume();
-  if (cmd == "pause") pom.pause();
-  if (cmd == "reset") pom.reset();
-  if (server.hasArg("work")) {
-    settings.pomodoroWork = constrain(server.arg("work").toInt(), 1, 120);
-    settings.pomodoroBreak = constrain(server.arg("break").toInt(), 1, 60);
-    saveSettings();
-  }
-  sendState();
-}
-
 static void handleCountdown() {
   const String date = server.arg("date"), time = server.arg("time");
   if (date.length() && date.length() != 10) return badRequest("Data non valida");
@@ -1380,7 +1349,6 @@ void webBegin() {
   server.on("/api/playlist", HTTP_POST, handlePlaylist);
   server.on("/api/night", HTTP_POST, handleNight);
   server.on("/api/web", HTTP_POST, handleWeb);
-  server.on("/api/pomodoro", HTTP_POST, handlePomodoro);
   server.on("/api/countdown", HTTP_POST, handleCountdown);
   server.on("/api/alarm", HTTP_POST, handleAlarm);
   server.on("/api/gallery", HTTP_GET, handleGalleryList);

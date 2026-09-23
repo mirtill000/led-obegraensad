@@ -1,15 +1,37 @@
 #include "gallery.h"
 
 #include <LittleFS.h>
+#include <Preferences.h>
+
+#include "gallery_examples.h"
 
 // File layout: "PX1", frame count, frameMs (2 bytes, little endian), name
 // length, name (UTF-8), then the frames.
 static const char *DIR = "/gallery";
 static bool mounted = false;
 
+// The example drawings go in once, on the first start with this feature;
+// deleting them later doesn't bring them back.
+static void addExamples() {
+  Preferences prefs;
+  prefs.begin("obegransad", false);
+  if (!prefs.getBool("galExamples", false)) {
+    for (const ExampleDrawing &e : EXAMPLES) {
+      Drawing d;
+      d.name = e.name;
+      d.frameMs = e.frameMs;
+      d.frames.assign(e.data, e.data + e.frames * 256);
+      gallerySave(d);  // ids keep increasing, so the list stays in this order
+    }
+    prefs.putBool("galExamples", true);
+  }
+  prefs.end();
+}
+
 bool galleryBegin() {
   mounted = LittleFS.begin(true);  // formats the partition on first use
   if (mounted && !LittleFS.exists(DIR)) LittleFS.mkdir(DIR);
+  if (mounted) addExamples();
   return mounted;
 }
 

@@ -109,8 +109,6 @@ void loadSettings() {
   settings.playlistOn = prefs.getBool("plOn", false);
   settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5");
   settings.demoOff = prefs.getString("demoOff", "");
-  settings.pomodoroWork = prefs.getUChar("pomWork", 25);
-  settings.pomodoroBreak = prefs.getUChar("pomBreak", 5);
   settings.countdownLabel = prefs.getString("cdLabel", "Vacanze");
   settings.countdownDate = prefs.getString("cdDate", "");
   settings.countdownTime = prefs.getString("cdTime", "00:00");
@@ -153,8 +151,6 @@ void saveSettings() {
   prefs.putBool("plOn", settings.playlistOn);
   prefs.putString("playlist", settings.playlist);
   prefs.putString("demoOff", settings.demoOff);
-  prefs.putUChar("pomWork", settings.pomodoroWork);
-  prefs.putUChar("pomBreak", settings.pomodoroBreak);
   prefs.putString("cdLabel", settings.countdownLabel);
   prefs.putString("cdDate", settings.countdownDate);
   prefs.putString("cdTime", settings.countdownTime);

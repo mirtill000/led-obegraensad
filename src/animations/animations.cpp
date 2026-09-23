@@ -5,8 +5,6 @@ extern Animation *const rainAnimation;
 extern Animation *const fireAnimation;
 extern Animation *const starsAnimation;
 extern Animation *const wavesAnimation;
-extern Animation *const breathAnimation;
-extern Animation *const moonAnimation;
 extern Animation *const tetrisAnimation;
 extern Animation *const snakeAnimation;
 extern Animation *const pongAnimation;
@@ -18,7 +16,6 @@ extern Animation *const analogClockAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
 extern Animation *const cubeAnimation;
-extern Animation *const tunnelAnimation;
 extern Animation *const plasmaAnimation;
 extern Animation *const metaballsAnimation;
 extern Animation *const mandelbrotAnimation;
@@ -29,8 +26,6 @@ Animation *const ANIMATIONS[] = {
     fireAnimation,
     starsAnimation,
     wavesAnimation,
-    breathAnimation,
-    moonAnimation,
     tetrisAnimation,
     snakeAnimation,
     pongAnimation,
@@ -42,7 +37,6 @@ Animation *const ANIMATIONS[] = {
     binaryClockAnimation,
     wordClockAnimation,
     cubeAnimation,
-    tunnelAnimation,
     plasmaAnimation,
     metaballsAnimation,
     mandelbrotAnimation,

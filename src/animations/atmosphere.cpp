@@ -1,10 +1,9 @@
-// Calm background animations: digital rain, fire, stars, waves, breathing.
+// Calm background animations: digital rain, fire, stars, waves.
 #include <math.h>
 
 #include "animation.h"
 #include "display.h"
 #include "gfx.h"
-#include "moon.h"
 
 static float random01() { return (esp_random() & 0xFFFF) / 65535.0f; }
 
@@ -129,83 +128,6 @@ class WavesAnimation : public Animation {
   }
 };
 
-// A soft-edged circle that grows (breathe in, 4 s) and shrinks (breathe
-// out, 6 s).
-class BreathAnimation : public Animation {
- public:
-  const char *id() const override { return "breath"; }
-  const char *name() const override { return "Respiro"; }
-  const char *group() const override { return "Atmosfere"; }
-  uint16_t frameMs() const override { return 40; }
-  void start() override { start_ = millis(); }
-  void frame(uint32_t now) override {
-    const float phase = (now - start_) % 10000 / 1000.0f;
-    const float eased = phase < 4 ? (1 - cosf(phase / 4 * PI)) / 2 : (1 + cosf((phase - 4) / 6 * PI)) / 2;
-    const float radius = 1 + eased * 8;
-    for (int y = 0; y < ROWS; y++) {
-      for (int x = 0; x < COLS; x++) {
-        const float dx = x - 7.5f, dy = y - 7.5f;
-        display.setLevel(x, y, gfx::level(radius - sqrtf(dx * dx + dy * dy) + 0.5f));
-      }
-    }
-  }
-
- private:
-  uint32_t start_ = 0;
-};
-
-// Tonight's moon in its real phase (as seen from the northern hemisphere),
-// the dark side faintly visible, with a few twinkling stars around it.
-class MoonAnimation : public Animation {
- public:
-  const char *id() const override { return "moon"; }
-  const char *name() const override { return "Luna"; }
-  const char *group() const override { return "Atmosfere"; }
-  uint16_t frameMs() const override { return 120; }
-  void start() override {
-    for (Star &s : stars_) place(s);
-  }
-  void frame(uint32_t now) override {
-    const float phase = moonPhase(time(nullptr));
-    // Terminator: lit where x > k*sqrt(1-y^2) while waxing (right side),
-    // where x < -k*sqrt(1-y^2) while waning (left side).
-    const float k = cosf(phase * 2 * PI);
-    const bool waxing = phase < 0.5f;
-    const float r = 6.3f;
-    display.clear();
-    for (int y = 0; y < ROWS; y++) {
-      for (int x = 0; x < COLS; x++) {
-        const float nx = (x - 7.5f) / r, ny = (y - 7.5f) / r;
-        const float d = sqrtf(nx * nx + ny * ny);
-        const float disc = gfx::level((1 - d) * r + 0.5f) / 255.0f;  // soft rim
-        if (disc <= 0) continue;
-        const float edge = k * sqrtf(fmaxf(0, 1 - ny * ny));
-        const float side = (waxing ? nx - edge : -edge - nx) * r + 0.5f;  // >0 lit, soft over a pixel
-        const float lit = fminf(1, fmaxf(0, side));
-        display.setLevel(x, y, gfx::level(disc * (0.05f + 0.95f * lit)));
-      }
-    }
-    for (Star &s : stars_) {
-      const float twinkle = 0.25f + 0.2f * sinf(now / 400.0f + s.seed);
-      gfx::plot(s.x, s.y, twinkle);
-    }
-  }
-
- private:
-  struct Star {
-    int8_t x, y;
-    float seed;
-  } stars_[6];
-  // Stars go in the corners, clear of the disc.
-  static void place(Star &s) {
-    do {
-      s.x = esp_random() % COLS;
-      s.y = esp_random() % ROWS;
-    } while ((s.x - 7.5f) * (s.x - 7.5f) + (s.y - 7.5f) * (s.y - 7.5f) < 60);
-    s.seed = (esp_random() % 628) / 100.0f;
-  }
-};
-
 static RainAnimation rain;
 extern Animation *const rainAnimation = &rain;
 static FireAnimation fire;
@@ -214,7 +136,3 @@ static StarsAnimation stars;
 extern Animation *const starsAnimation = &stars;
 static WavesAnimation waves;
 extern Animation *const wavesAnimation = &waves;
-static BreathAnimation breath;
-extern Animation *const breathAnimation = &breath;
-static MoonAnimation moon;
-extern Animation *const moonAnimation = &moon;

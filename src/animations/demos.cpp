@@ -46,31 +46,6 @@ class CubeAnimation : public Animation {
 };
 
 // ---------------------------------------------------------------------------
-// Flying down a checkered tunnel.
-class TunnelAnimation : public Animation {
- public:
-  const char *id() const override { return "tunnel"; }
-  const char *name() const override { return "Tunnel"; }
-  const char *group() const override { return "3D e demo"; }
-  uint16_t frameMs() const override { return 40; }
-  void frame(uint32_t now) override {
-    const float t = now / 1000.0f;
-    const float cx = 7.5f + 2.0f * sinf(t * 0.7f), cy = 7.5f + 2.0f * cosf(t * 0.5f);  // wobble
-    for (int y = 0; y < ROWS; y++) {
-      for (int x = 0; x < COLS; x++) {
-        const float dx = x - cx, dy = y - cy;
-        const float dist = sqrtf(dx * dx + dy * dy) + 0.01f;
-        const float depth = 24.0f / dist + t * 4.0f;
-        const float angle = atan2f(dy, dx) / (2 * PI) * 8 + t * 0.4f;
-        const bool light = ((int)floorf(depth) + (int)floorf(angle)) & 1;
-        const float fog = fminf(1.0f, dist / 7.0f);  // dark far away (the centre)
-        display.setLevel(x, y, gfx::level((light ? 1.0f : 0.12f) * fog));
-      }
-    }
-  }
-};
-
-// ---------------------------------------------------------------------------
 // Classic plasma: sums of sine waves turned into soft bands.
 class PlasmaAnimation : public Animation {
  public:
@@ -156,8 +131,6 @@ class MandelbrotAnimation : public Animation {
 
 static CubeAnimation cube;
 extern Animation *const cubeAnimation = &cube;
-static TunnelAnimation tunnel;
-extern Animation *const tunnelAnimation = &tunnel;
 static PlasmaAnimation plasma;
 extern Animation *const plasmaAnimation = &plasma;
 static MetaballsAnimation metaballs;
