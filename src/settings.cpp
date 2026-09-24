@@ -1,5 +1,6 @@
 #include "settings.h"
 
+#include <LittleFS.h>
 #include <Preferences.h>
 #include <math.h>
 
@@ -106,7 +107,7 @@ void loadSettings() {
   settings.infoCalendar = prefs.getBool("infoCal", false);
   settings.icalUrl = prefs.getString("icalUrl", "");
   settings.webPosition = prefs.getString("webPos", "random");
-  settings.quotes = prefs.getString("quotes", "");
+  settings.quotes = prefs.getString("quotes", "");  // from before /quotes.txt
   settings.galleryShow = prefs.getString("galleryShow", "all");
   settings.playlistOn = prefs.getBool("plOn", false);
   settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5");
@@ -150,7 +151,6 @@ void saveSettings() {
   prefs.putBool("infoCal", settings.infoCalendar);
   prefs.putString("icalUrl", settings.icalUrl);
   prefs.putString("webPos", settings.webPosition);
-  prefs.putString("quotes", settings.quotes);
   prefs.putString("galleryShow", settings.galleryShow);
   prefs.putBool("plOn", settings.playlistOn);
   prefs.putString("playlist", settings.playlist);
@@ -186,3 +186,29 @@ Transition transitionForSettings() {
 }
 
 uint16_t rotationForSettings() { return settings.vertical ? ROTATION_VERTICAL : ROTATION_HORIZONTAL; }
+
+static const char *QUOTES_FILE = "/quotes.txt";
+
+void loadQuotes() {
+  File f = LittleFS.open(QUOTES_FILE, "r");
+  if (!f) return;  // none saved: keep the old NVS copy, if any
+  settings.quotes = f.readString();
+  f.close();
+}
+
+bool saveQuotes() {
+  bool ok;
+  if (settings.quotes.length() == 0) {
+    ok = !LittleFS.exists(QUOTES_FILE) || LittleFS.remove(QUOTES_FILE);  // back to the built-in list
+  } else {
+    File f = LittleFS.open(QUOTES_FILE, "w");
+    ok = f && f.print(settings.quotes) == settings.quotes.length();
+    if (f) f.close();
+  }
+  if (ok) {
+    prefs.begin("obegransad", false);
+    prefs.remove("quotes");  // superseded by the file
+    prefs.end();
+  }
+  return ok;
+}

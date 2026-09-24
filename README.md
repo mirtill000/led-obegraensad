@@ -91,7 +91,7 @@ permanent) opening.
 include/
   constants.h        - pins, matrix size, rotation, default text, WiFi names
   secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
-  font_small.h       - 8px-tall proportional font (a-z, A-Z, à-ù, 0-9, . , : ! ? ' -)
+  font_small.h       - 8px-tall proportional font (a-z, A-Z, à-ù, 0-9, . , : ; ! ? ' - %)
   font_mini.h        - 5px-tall capitals (the "Mini" font; "Grande" is built from font_small)
   display.h, modes.h, settings.h, web.h
   ui.h               - shared look of the info screens (header band, waiting dots)
@@ -110,6 +110,11 @@ src/
   gallery.cpp        - drawings saved in flash (LittleFS)
   web.cpp            - control page + JSON API
   main.cpp           - WiFi, button, main loop
+content/
+  frasi_dell_ora.txt - built-in quotes of "Frase dell'ora"
+scripts/
+  build_info.py      - firmware version (git commit, build time) for the page
+  quotes.py          - content/frasi_dell_ora.txt -> include/quotes_builtin.h
 platformio.ini
 ```
 
@@ -188,8 +193,12 @@ Current modes:
   as in Display: it applies to all scrolling text)
 - **Frase dell'ora** - a different quote every hour, scrolling on one line
   at the chosen height (top, middle, bottom or variable, like the text).
-  The list is edited on the page (one per line); "restore" brings back the
-  built-in one (in `src/modes/quotes_mode.cpp`). Button: next quote
+  The built-in list is 100 motivational quotes from
+  `content/frasi_dell_ora.txt` (one per line, UTF-8; `scripts/quotes.py`
+  turns it into a header at every build, so edit the text file). On the
+  page you can replace it with your own (up to 16000 characters, saved in
+  flash as `/quotes.txt`); "restore" brings back the built-in one. Button:
+  next quote
 - **Orologio e meteo** - one screen: hours and minutes on the left, an
   animated weather icon (falling rain or snow, flashing lightning, drifting
   clouds, ...) and the temperature with a one-pixel degree sign on the
@@ -227,13 +236,12 @@ Current modes:
     surface; **Snake** - in demo mode it takes the shortest way to the food
     only if it can still reach its tail afterwards; **Pong** - you against
     the computer, first to 5; **Breakout** - 3 lives, faster at each level;
-    **Flappy Bird**; **Space Invaders** - waves that get faster; **2048** -
-    tile brightness shows the value; **Labirinto 3D** - a first-person
+    **Flappy Bird**; **Space Invaders** - waves that get faster; **Labirinto 3D** - a first-person
     maze drawn by raycasting (one ray per column, walls shaded by
     distance, a faint floor): find the pulsing block at the far end. The
     map is shown at the start; in demo mode the computer keeps its right
     hand on the wall, which always finds the exit
-  - *Orologi*: analog (antialiased hands, smooth seconds), binary (one
+  - *Orologi*: binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
@@ -265,7 +273,7 @@ default), shown on the page while the game is on the panel:
 - **off** - you play, with the on-screen pad or the keyboard: Mario jumps
   with *Salta*, space or up (a press just before landing still counts);
   Tetris moves with left/right, rotates with up, drops with down or space;
-  Snake and 2048 use the arrows; Pong up/down; Breakout left/right; Flappy
+  Snake uses the arrows; Pong up/down; Breakout left/right; Flappy
   Bird flies with *Vola*, space or up; Space Invaders moves with left/right
   and shoots with *Spara* or space; in Labirinto 3D up/down walk a step,
   left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow

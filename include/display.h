@@ -79,7 +79,7 @@ class Display {
 
   // Converts UTF-8 text (as typed on the web page) to the font's
   // single-byte characters: Italian accented lowercase letters keep their
-  // accent, accented capitals lose it, curly quotes become ', anything
+  // accent, accented capitals lose it, curly quotes become ', dashes (– —) become -, anything
   // else outside ASCII becomes a space.
   static String fontText(const String &utf8);
 

@@ -63,6 +63,7 @@ void setup() {
 
   loadSettings();
   galleryBegin();
+  loadQuotes();
   display.begin();
   display.setBrightness(settings.brightness);
   display.setRotation(rotationForSettings());

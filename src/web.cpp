@@ -138,7 +138,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <h2>Testo scorrevole</h2>
     <input type="text" id="text" maxlength="200" autocomplete="off">
     <button class="save" id="saveText">Mostra</button>
-    <p class="hint">Maiuscole e minuscole, cifre, . , : ! ? ' - e à è é ì ò ù.</p>
+    <p class="hint">Maiuscole e minuscole, cifre, . , : ; ! ? ' - % e à è é ì ò ù.</p>
     <label for="textPos">Altezza</label>
     <select id="textPos">
       <option value="random">Variabile (cambia a ogni passaggio)</option>
@@ -158,7 +158,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   <section data-mode="quotes" hidden>
     <h2>Frasi</h2>
     <textarea id="quotes" spellcheck="false"></textarea>
-    <p class="hint">Una frase per riga: ogni ora ne scorre una diversa.</p>
+    <p class="hint">Una frase per riga: ogni ora ne scorre una diversa. <span id="quotesInfo"></span></p>
     <label for="quotesPos">Altezza</label>
     <select id="quotesPos">
       <option value="random">Variabile (cambia a ogni passaggio)</option>
@@ -461,7 +461,7 @@ function render() {
   if (!editing('text')) $('text').value = s.text;
   $('textPos').value = s.textPos;
   $('quotesPos').value = s.quotesPos;
-  if (!dirty.quotes) $('quotes').value = s.quotes || s.defaultQuotes;
+  if (selected === 'quotes' && !quotesLoaded) loadQuotes().catch(() => {});
   $('clockInfo').textContent = 'Meteo per ' + s.city + ' (' + s.lat.toFixed(2) + ', ' + s.lon.toFixed(2) + '), fuso ' + s.tzName + '.';
 
   const sel = $('ambient');
@@ -515,7 +515,6 @@ const PADS = {
   breakout: { keys: ['L', 'R'], labels: {}, repeat: true, hint: 'Tastiera: ← → (tieni premuto).' },
   flappy: { keys: ['A'], labels: { A: 'Vola' }, hint: 'Tastiera: spazio o ↑.' },
   invaders: { keys: ['L', 'R', 'A'], labels: { A: 'Spara' }, repeat: true, hint: 'Tastiera: ← → per muoverti, spazio o ↑ per sparare.' },
-  '2048': { keys: ['L', 'R', 'U', 'D'], labels: { U: '↑', D: '↓' }, hint: 'Tastiera: le frecce.' },
   maze: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { L: '↶', R: '↷', U: '↑', D: '↓', A: 'Mappa' }, hint: '↑ ↓ per camminare, ← → per girarti, Mappa per vedere dove sei. Trova il blocco che pulsa. Tastiera: le frecce e la barra spaziatrice.' },
 };
 function playable() { return state && state.game && !state.game.demo; }
@@ -905,10 +904,20 @@ $('quotes').oninput = () => { dirty.quotes = true; };
 for (const id of ['textPos', 'quotesPos']) {
   $(id).onchange = (e) => post('/api/settings', { [id]: e.target.value }).then(() => status('Altezza cambiata')).catch(fail);
 }
+// The list can be long, so it isn't part of the state: it is fetched when
+// the quotes section is shown and after every change.
+let quotesLoaded = false;
+function loadQuotes() {
+  quotesLoaded = true;
+  return fetch('/api/quotes').then((r) => r.json()).then((q) => {
+    if (!dirty.quotes) $('quotes').value = q.quotes;
+    $('quotesInfo').textContent = (q.custom ? 'Le tue frasi: ' : 'Frasi predefinite: ') + q.count + '.';
+  }).catch((e) => { quotesLoaded = false; throw e; });
+}
 $('saveQuotes').onclick = () => post('/api/quotes', { quotes: $('quotes').value })
-  .then(() => { dirty.quotes = false; render(); status('Frasi salvate'); }).catch(fail);
+  .then(() => { dirty.quotes = false; return loadQuotes(); }).then(() => status('Frasi salvate')).catch(fail);
 $('resetQuotes').onclick = () => post('/api/quotes', { quotes: '' })
-  .then(() => { dirty.quotes = false; render(); status('Frasi predefinite ripristinate'); }).catch(fail);
+  .then(() => { dirty.quotes = false; return loadQuotes(); }).then(() => status('Frasi predefinite ripristinate')).catch(fail);
 $('openPlace').onclick = () => { $('placeBox').open = true; $('placeBox').scrollIntoView({ behavior: 'smooth' }); };
 $('ambient').onchange = (e) => post('/api/settings', { ambient: e.target.value }).then(() => status('Animazione cambiata')).catch(fail);
 
@@ -1103,8 +1112,6 @@ static void sendState() {
 
   json += ",\"text\":" + jsonString(settings.text) + ",\"textFont\":" + jsonString(settings.textFont);
   json += ",\"textPos\":" + jsonString(settings.textPosition) + ",\"quotesPos\":" + jsonString(settings.quotesPosition);
-  json += ",\"quotes\":" + jsonString(settings.quotes);
-  json += ",\"defaultQuotes\":" + jsonString(QuotesMode::defaultQuotes());
   json += ",\"brightness\":" + String(settings.brightness) + ",\"vertical\":" + jsonBool(settings.vertical);
   json += ",\"transition\":" + jsonString(settings.transition);
   json += ",\"lat\":" + String(settings.latitude, 4) + ",\"lon\":" + String(settings.longitude, 4);
@@ -1242,11 +1249,21 @@ static void handleQuotes() {
   String quotes = server.arg("quotes");
   quotes.replace("\r", "");
   quotes.trim();
-  if (quotes.length() > 3000) return badRequest("Troppo testo: al massimo 3000 caratteri");
+  if (quotes.length() > QUOTES_MAX) return badRequest(("Troppo testo: al massimo " + String(QUOTES_MAX) + " caratteri").c_str());
   settings.quotes = quotes;
-  saveSettings();
+  if (!saveQuotes()) return server.send(500, "text/plain", "Non riesco a salvare le frasi nella memoria della lampada");
   if (strcmp(currentMode()->id(), "quotes") == 0) restartMode();
   sendState();
+}
+
+// The quotes list being used (the user's, or the built-in one) and how
+// many there are.
+static void sendQuotes() {
+  const bool custom = settings.quotes.length() > 0;
+  const String list = custom ? settings.quotes : String(QuotesMode::defaultQuotes());
+  server.send(200, "application/json",
+              "{\"custom\":" + jsonBool(custom) + ",\"count\":" + String(QuotesMode::count()) +
+                  ",\"quotes\":" + jsonString(list) + "}");
 }
 
 // What the panel shows right now, for the page's preview: 256 levels as
@@ -1580,6 +1597,7 @@ void webBegin() {
   server.on("/api/demo", HTTP_POST, handleDemo);
   server.on("/api/text", HTTP_POST, handleText);
   server.on("/api/quotes", HTTP_POST, handleQuotes);
+  server.on("/api/quotes", HTTP_GET, sendQuotes);
   server.on("/api/settings", HTTP_POST, handleSettings);
   server.on("/api/location", HTTP_POST, handleLocation);
   server.on("/api/timezone", HTTP_POST, handleTimezone);

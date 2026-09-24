@@ -292,9 +292,10 @@ String Display::fontText(const String &utf8) {
       for (const auto &l : LATIN) {
         if ((uint8_t)utf8[i + 1] == l.second) mapped = l.out;
       }
-    } else if (c == 0xE2 && i + 2 < utf8.length() && (uint8_t)utf8[i + 1] == 0x80 &&
-               ((uint8_t)utf8[i + 2] == 0x98 || (uint8_t)utf8[i + 2] == 0x99)) {
-      mapped = '\'';  // curly apostrophe
+    } else if (c == 0xE2 && i + 2 < utf8.length() && (uint8_t)utf8[i + 1] == 0x80) {
+      const uint8_t third = utf8[i + 2];
+      if (third == 0x98 || third == 0x99) mapped = '\'';  // curly apostrophe
+      if (third == 0x93 || third == 0x94) mapped = '-';   // en and em dash
     }
     out += mapped;
     i += len - 1;

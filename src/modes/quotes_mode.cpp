@@ -3,42 +3,13 @@
 #include "settings.h"
 #include "timekeeping.h"
 
-static const char DEFAULT_QUOTES[] =
-    "Dare mighty things\n"
-    "Stay hungry, stay foolish\n"
-    "Chi va piano va sano e va lontano\n"
-    "Fatti non foste a viver come bruti\n"
-    "Per aspera ad astra\n"
-    "La semplicità è la suprema sofisticazione\n"
-    "Less but better\n"
-    "One step at a time\n"
-    "Done is better than perfect\n"
-    "Carpe diem\n"
-    "Think big, start small\n"
-    "Nulla dies sine linea\n"
-    "The best is yet to come\n"
-    "Stay curious\n"
-    "Work hard, be kind\n"
-    "Chi si ferma è perduto\n"
-    "Ad maiora\n"
-    "Small steps every day\n"
-    "Never stop learning\n"
-    "What we do echoes in eternity\n"
-    "Hic et nunc\n"
-    "Slow down, breathe\n"
-    "Enjoy the little things\n"
-    "Make it simple\n"
-    "Believe you can\n"
-    "Keep going\n"
-    "The journey is the reward\n"
-    "Sogna in grande, parti in piccolo\n"
-    "Fortes fortuna adiuvat\n"
-    "Be here now";
+// Built-in list, generated from content/frasi_dell_ora.txt at build time.
+#include "quotes_builtin.h"
 
-const char *QuotesMode::defaultQuotes() { return DEFAULT_QUOTES; }
+const char *QuotesMode::defaultQuotes() { return BUILTIN_QUOTES; }
 
 static const String &activeList() {
-  static String builtIn = DEFAULT_QUOTES;
+  static String builtIn = BUILTIN_QUOTES;
   return settings.quotes.length() ? settings.quotes : builtIn;
 }
 
@@ -96,6 +67,8 @@ void QuotesMode::update(uint32_t now) {
     nextRow();
   }
 }
+
+uint16_t QuotesMode::count() { return quoteLine(activeList(), UINT16_MAX, nullptr); }
 
 void QuotesMode::action() {
   skip_++;

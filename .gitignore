@@ -2,3 +2,4 @@
 .vscode/
 include/secrets.h
 include/build_info.h
+include/quotes_builtin.h

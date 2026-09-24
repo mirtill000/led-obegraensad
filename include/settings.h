@@ -32,7 +32,7 @@ struct Settings {
   bool infoCalendar;
   String icalUrl;
   String webPosition;
-  String quotes;        // one quote per line; empty = built-in list
+  String quotes;        // one quote per line; empty = built-in list (see loadQuotes)
   String galleryShow;   // drawing shown by the "Disegni" mode, or "all"
 
   // Playlist: modes shown in turn, "id:minutes,id:minutes,...".
@@ -67,6 +67,13 @@ extern Settings settings;
 
 void loadSettings();
 void saveSettings();
+
+// settings.quotes lives in its own file (/quotes.txt in LittleFS): the
+// list can be longer than NVS allows for a string. loadQuotes() needs the
+// file system mounted (galleryBegin()); saveQuotes() writes just that file.
+static const size_t QUOTES_MAX = 16000;  // bytes
+void loadQuotes();
+bool saveQuotes();
 
 // Font for scrolling text from settings.textFont.
 TextFont fontForSettings();

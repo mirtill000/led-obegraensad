@@ -1,4 +1,4 @@
-// Alternative clock faces: analog, binary and in words (Italian).
+// Alternative clock faces: binary and in words (Italian).
 #include <math.h>
 
 #include "animation.h"
@@ -6,6 +6,7 @@
 #include "gfx.h"
 #include "scroller.h"
 #include "timekeeping.h"
+#include "ui.h"
 
 // Seconds with a fractional part, for hands that move smoothly: counts
 // milliseconds since the whole second last changed.
@@ -19,44 +20,12 @@ static float smoothSeconds(const struct tm &t) {
   return t.tm_sec + min(999u, (unsigned)(millis() - secStart)) / 1000.0f;
 }
 
-// Shown by every clock face until the time has synced.
+// Shown by every clock face until the time has synced: the shared
+// waiting sign (see ui.h).
 static void drawNoTime() {
   display.clear();
-  for (int i = 0; i < 3; i++) display.setLevel(5 + i * 3, 8, 120);  // "..."
+  ui::waiting(millis(), 7);
 }
-
-// ---------------------------------------------------------------------------
-class AnalogClockAnimation : public Animation {
- public:
-  const char *id() const override { return "analog"; }
-  const char *name() const override { return "Orologio analogico"; }
-  const char *group() const override { return "Orologi"; }
-  uint16_t frameMs() const override { return 50; }
-  bool needsTime() const override { return true; }
-
-  void frame(uint32_t) override {
-    struct tm t;
-    if (!localTime(t)) return drawNoTime();
-    display.clear();
-    const float c = 7.5f;
-    // Hour marks: brighter at 12, 3, 6 and 9.
-    for (int h = 0; h < 12; h++) {
-      const float a = h * PI / 6;
-      gfx::plot((int)roundf(c + 7.2f * sinf(a)), (int)roundf(c - 7.2f * cosf(a)), h % 3 ? 0.18f : 0.5f);
-    }
-    const float sec = smoothSeconds(t);
-    const float minute = t.tm_min + sec / 60;
-    const float hour = (t.tm_hour % 12) + minute / 60;
-    hand(hour * PI / 6, 3.8f, 1.0f);
-    hand(minute * PI / 30, 5.8f, 1.0f);
-    hand(sec * PI / 30, 6.5f, 0.35f);
-  }
-
- private:
-  static void hand(float angle, float length, float v) {
-    gfx::line(7.5f, 7.5f, 7.5f + length * sinf(angle), 7.5f - length * cosf(angle), v);
-  }
-};
 
 // ---------------------------------------------------------------------------
 // Binary-coded decimal: one column per digit of HH:MM, bits from the bottom
@@ -146,8 +115,6 @@ class WordClockAnimation : public Animation {
   Scroller scroller_;
 };
 
-static AnalogClockAnimation analogClock;
-extern Animation *const analogClockAnimation = &analogClock;
 static BinaryClockAnimation binaryClock;
 extern Animation *const binaryClockAnimation = &binaryClock;
 static WordClockAnimation wordClock;
