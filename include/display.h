@@ -17,6 +17,12 @@
 //  Mini  - 5-row capitals, about 4 letters at a time
 enum class TextFont : uint8_t { Small, Big, Mini };
 
+// How the panel goes from one mode to the next (see beginTransition()).
+//  None - straight cut
+//  Fade - cross-fade from the old image to the new one
+//  Wipe - the new image sweeps in from the left, with a soft edge
+enum class Transition : uint8_t { None, Fade, Wipe };
+
 class Display {
  public:
   void begin();
@@ -30,6 +36,18 @@ class Display {
   // Draws glyph `c` with its top-left corner at (x, y); returns its width.
   int drawChar(int x, int y, char c);
   void render();
+
+  // Blends from what is on the panel now to the frames rendered next, in
+  // the style set by setTransition(). Call it just before a new mode or
+  // animation starts drawing; tick() keeps the blend moving even if the
+  // new mode renders only once.
+  void setTransition(Transition style) { transition_ = style; }
+  void beginTransition();
+  void tick(uint32_t now);
+
+  // Level of logical pixel (x, y) as last sent to the panel (after any
+  // transition), for the page's live preview.
+  uint8_t shownLevel(int x, int y) const;
 
   // Global brightness 1-255, done by PWM on the panel's output-enable pin.
   void setBrightness(uint8_t brightness);
@@ -81,7 +99,18 @@ class Display {
   // rotation; returns -1 when off-screen.
   int frameIndex(int x, int y) const;
 
-  uint8_t frame_[TOTAL_PIXELS] = {0};
+  // Blends from_ into target_ (the last rendered frame_) into shown_ and
+  // sends shown_ to the panel.
+  void output();
+
+  uint8_t frame_[TOTAL_PIXELS] = {0};   // being drawn
+  uint8_t target_[TOTAL_PIXELS] = {0};  // last render()ed
+  uint8_t from_[TOTAL_PIXELS] = {0};    // on the panel when a transition began
+  uint8_t shown_[TOTAL_PIXELS] = {0};   // on the panel now
+  Transition transition_ = Transition::Fade;
+  bool blending_ = false;
+  uint32_t blendStart_ = 0;
+  uint32_t lastBlend_ = 0;
   uint16_t rotation_ = ROTATION_HORIZONTAL;
 };
 

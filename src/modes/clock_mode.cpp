@@ -4,6 +4,7 @@
 #include "display.h"
 #include "settings.h"
 #include "timekeeping.h"
+#include "ui.h"
 #include "weather.h"
 #include "weather_icons.h"
 
@@ -19,7 +20,8 @@
 //   +----------------+
 //
 // Until there is weather data the clock uses big digits over the whole
-// inner area instead.
+// inner area instead, and until the time is known the shared "waiting"
+// dots (see ui.h).
 
 
 // 2-pixel-wide tens digits so a two-digit temperature fits in 6 columns.
@@ -77,19 +79,18 @@ static void drawTemperature(int y, float celsius) {
   }
 }
 
-void ClockMode::start() {
-  waiting_.start("in attesa dell'ora");
-  lastDraw_ = 0;
-}
+void ClockMode::start() { lastDraw_ = 0; }
 
 void ClockMode::update(uint32_t now) {
-  struct tm t;
-  if (!localTime(t)) {
-    waiting_.update(now, SCROLL_DELAY_MS);
-    return;
-  }
   if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
+  struct tm t;
+  if (!localTime(t)) {
+    display.clear();
+    ui::waiting(now, 7);  // until the clock has synced
+    display.render();
+    return;
+  }
 
   const Weather weather = weatherNow();
   display.clear();

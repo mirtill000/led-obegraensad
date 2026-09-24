@@ -4,8 +4,7 @@
 #include "display.h"
 #include "settings.h"
 #include "timekeeping.h"
-
-static const uint32_t NUMBER_MS = 6000;
+#include "ui.h"
 
 // Target time as epoch seconds, or 0 if the date isn't set/valid.
 static time_t target() {
@@ -51,46 +50,55 @@ String CountdownMode::sentence() {
   return String("Mancano ") + days + " giorni a " + label;
 }
 
-void CountdownMode::start() {
-  number_ = true;
-  phaseStart_ = millis();
-  lastDraw_ = 0;
-}
+void CountdownMode::start() { lastDraw_ = 0; }
 
+// Layout, like Previsioni (see ui.h):
+//
+//   rows 0-4    header: the event and when ("VACANZE  TRA 12 GIORNI")
+//   rows 7-14   days left in big digits, or hours:minutes on the day
 void CountdownMode::update(uint32_t now) {
-  if (!number_) {
-    if (scroller_.update(now, interval(SCROLL_DELAY_MS))) start();
-    return;
-  }
-  if (now - phaseStart_ >= NUMBER_MS) {
-    number_ = false;
-    scroller_.start(sentence());
-    row_ = Scroller::rowFor("random", row_);
-    scroller_.setRow(row_);
-    return;
-  }
-  if (now - lastDraw_ < 250) return;
+  if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
-
   display.clear();
-  const time_t when = target();
+
   struct tm t;
-  if (when && localTime(t)) {
-    const long days = daysLeft(when);
-    if (days >= 1 && days <= 99) {
-      drawBigNumber(days, 5);
-    } else if (days == 0) {
-      // Today: hours:minutes left in the small font.
-      const long s = max(0L, (long)difftime(when, time(nullptr)));
-      char buf[16];
-      snprintf(buf, sizeof(buf), "%ld:%02ld", s / 3600, s % 3600 / 60);
-      const int w = Display::textWidth(buf, 0, strlen(buf)) - 1;
-      display.drawText((COLS - w) / 2, 5, buf, 0, strlen(buf));
-    } else if (days > 99) {
-      const String s(days);
-      const int w = Display::textWidth(s.c_str(), 0, s.length()) - 1;
-      display.drawText((COLS - w) / 2, 5, s.c_str(), 0, s.length());
+  const time_t when = target();
+  const String label = Display::fontText(settings.countdownLabel);
+  if (!localTime(t)) {
+    ui::headerLoop(label, now);
+    ui::waiting(now, 10);
+    display.render();
+    return;
+  }
+  if (!when) {
+    ui::headerLoop("SCEGLI UNA DATA NELLA PAGINA", now);
+    display.render();
+    return;
+  }
+
+  const long days = daysLeft(when);
+  const long seconds = (long)difftime(when, time(nullptr));
+  String header = label;
+  if (days < 0 || (days == 0 && seconds < -12 * 3600)) {
+    header += "  E' PASSATO";
+  } else if (days == 0) {
+    header += seconds <= 0 ? "  E' OGGI!" : "  OGGI";
+    // Hours:minutes left in the small font.
+    const long s = max(0L, seconds);
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%ld:%02ld", s / 3600, s % 3600 / 60);
+    const int w = Display::textWidth(buf, 0, strlen(buf)) - 1;
+    display.drawText((COLS - w) / 2, 7, buf, 0, strlen(buf));
+  } else {
+    header += days == 1 ? String("  DOMANI") : String("  TRA ") + days + " GIORNI";
+    if (days <= 99) {
+      drawBigNumber(days, 8);
+    } else {
+      const String n(days);
+      const int w = Display::textWidth(n.c_str(), 0, n.length()) - 1;
+      display.drawText((COLS - w) / 2, 7, n.c_str(), 0, n.length());
     }
   }
+  ui::headerLoop(header, now);
   display.render();
 }

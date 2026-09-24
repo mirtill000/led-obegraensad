@@ -1,9 +1,9 @@
 #include "modes/forecast_mode.h"
 
 #include "display.h"
-#include "font_mini.h"
 #include "settings.h"
 #include "timekeeping.h"
+#include "ui.h"
 #include "weather.h"
 #include "weather_icons.h"
 
@@ -29,29 +29,6 @@ String ForecastMode::summary() {
 }
 
 void ForecastMode::action() { requestWeatherUpdate(); }
-
-// Mini-font text at a brightness level; returns the x after it.
-static int drawMini(int x, int y, const String &text, uint8_t level) {
-  for (unsigned i = 0; i < text.length(); i++) {
-    const MiniGlyph *g = findMiniGlyph(text[i]);
-    for (int r = 0; r < MINI_HEIGHT; r++) {
-      for (int c = 0; c < g->width; c++) {
-        if (g->rows[r] & (0x80 >> c)) display.setLevel(x + c, y + r, level);
-      }
-    }
-    x += g->width + 1;
-  }
-  return x;
-}
-
-static int miniWidth(const String &text) {
-  int w = 0;
-  for (unsigned i = 0; i < text.length(); i++) w += findMiniGlyph(text[i])->width + 1;
-  return w - 1;
-}
-
-static const uint32_t HEADER_STEP_MS = 90;  // header scroll: 1 pixel per step
-static const int HEADER_GAP = 8;             // blank pixels between repeats
 
 static const char *const DAYS[] = {"DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"};
 static const char *const MONTHS[] = {"GEN", "FEB", "MAR", "APR", "MAG", "GIU",
@@ -83,11 +60,9 @@ static String header(const Weather &w, int day) {
 bool ForecastMode::drawHeader(const Weather &w, uint32_t now) {
   const int next = w.days > 0 ? (day_ + 1) % w.days : 0;
   const String text = header(w, day_);
-  const int period = miniWidth(text) + HEADER_GAP;
-  const int offset = (now - dayStart_) / HEADER_STEP_MS;
-  if (offset >= period) return true;
-  drawMini(-offset, 0, text, 255);
-  drawMini(period - offset, 0, header(w, next), 255);
+  const int offset = (now - dayStart_) / ui::HEADER_STEP_MS;
+  if (offset >= ui::headerPeriod(text)) return true;
+  ui::header(text, offset, header(w, next));
   return false;
 }
 
@@ -99,10 +74,10 @@ static void drawTemperature(int y, float celsius, uint8_t level) {
   const int value = abs(t);
   int left = 12;
   if (value >= 10) {
-    drawMini(8, y, String(value / 10), level);
+    ui::mini(8, y, String(value / 10), level);
     left = 8;
   }
-  drawMini(12, y, String(value % 10), level);
+  ui::mini(12, y, String(value % 10), level);
   if (t < 0) {
     display.setLevel(left - 3, y + 2, level);
     display.setLevel(left - 2, y + 2, level);
@@ -132,7 +107,7 @@ void ForecastMode::update(uint32_t now) {
     drawHeader(w, now);
   }
   if (!w.valid || w.days == 0) {
-    for (int i = 0; i < 3; i++) display.setLevel(5 + i * 3, 10, 255);  // waiting: "..."
+    ui::waiting(now, 10);
     display.render();
     return;
   }

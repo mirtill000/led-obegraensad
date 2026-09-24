@@ -23,6 +23,7 @@ void AmbientMode::play(Animation *animation) {
   animation_ = animation;
   since_ = millis();
   lastFrame_ = 0;
+  display.beginTransition();
   display.clear();
   animation_->start();
 }

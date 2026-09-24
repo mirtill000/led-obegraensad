@@ -94,8 +94,10 @@ include/
   font_small.h       - 8px-tall proportional font (a-z, A-Z, à-ù, 0-9, . , : ! ? ' -)
   font_mini.h        - 5px-tall capitals (the "Mini" font; "Grande" is built from font_small)
   display.h, modes.h, settings.h, web.h
+  ui.h               - shared look of the info screens (header band, waiting dots)
 src/
-  display.cpp        - shift-register driver, font renderer, brightness
+  display.cpp        - shift-register driver, font renderer, brightness, transitions
+  ui.cpp             - mini-font header band, "waiting" and "no WiFi" signs
   modes.cpp          - list of modes + switching between them
   modes/             - one file per mode
   animations/        - the animations of the "Animazioni" mode
@@ -131,7 +133,12 @@ The lamp only uses your home network; it never opens a WiFi network of its
 own. Until it manages to connect it scrolls `wifi...` and retries every
 20 s; if WiFi drops later it reconnects by itself.
 
-The page shows the modes at the top; the one on the panel is highlighted,
+At the top, **Sulla lampada ora** is a live preview: a 16x16 picture of
+what the panel shows, refreshed five times a second while the page is in
+view (from `GET /api/frame`, 256 levels in hex). While you play a game it
+moves right above the pad, so you can play without looking at the lamp.
+
+Below it are the modes; the one on the panel is highlighted,
 with its own command button ("next quote", "jump", ...; the space bar
 works too) and a **speed** slider (1-9, per mode). Below that only the
 settings of the mode being shown appear (the text, the quotes list, the
@@ -157,7 +164,10 @@ animation menu, ...). General settings are in collapsible sections:
   accents), *Grande* (the same font doubled with the EPX/Scale2x algorithm,
   which keeps diagonals smooth: it fills the whole panel, for reading from
   across the room) or *Mini 3x5* (capitals only, 5 pixels). Fixed layouts
-  like the clock digits keep their own font.
+  like the clock digits keep their own font. Also how the lamp goes from
+  one mode or animation to the next: *Dissolvenza* (cross-fade, 0.6 s, the
+  default), *Tendina da sinistra* (the new image sweeps in, 0.5 s) or
+  *Stacco netto*.
 
 Everything is saved in flash, so the lamp comes back in the same state
 after a power cut.
@@ -184,7 +194,8 @@ Current modes:
   clouds, ...) and the temperature with a one-pixel degree sign on the
   right, and a dot running round the border for the seconds. Weather is
   refreshed every 15 min; until the first reading arrives the clock uses
-  big digits. Button: refresh weather
+  big digits, and until the time is known it shows the waiting dots (see
+  below). Button: refresh weather
 - **Previsioni** - the daily forecast for today and the next 3 days, one
   screen per day: the city and date ("MILANO  MER 24 SET") scroll along
   the top and the next day follows once they have gone by (about 7 s);
@@ -195,7 +206,8 @@ Current modes:
 - **Dal web** - in turn: the word of the day (built-in list), an "on this
   day" event from Italian Wikipedia, and the next event of your calendar
   (paste its secret iCal link, e.g. from Google Calendar; recurring events
-  aren't supported). Choose the sources and the height on the page
+  aren't supported). Choose the sources and the height on the page. Until
+  the first data arrives it shows the waiting dots
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
@@ -216,7 +228,11 @@ Current modes:
     only if it can still reach its tail afterwards; **Pong** - you against
     the computer, first to 5; **Breakout** - 3 lives, faster at each level;
     **Flappy Bird**; **Space Invaders** - waves that get faster; **2048** -
-    tile brightness shows the value
+    tile brightness shows the value; **Labirinto 3D** - a first-person
+    maze drawn by raycasting (one ray per column, walls shaded by
+    distance, a faint floor): find the pulsing block at the far end. The
+    map is shown at the start; in demo mode the computer keeps its right
+    hand on the wall, which always finds the exit
   - *Orologi*: analog (antialiased hands, smooth seconds), binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
@@ -230,9 +246,15 @@ Current modes:
   the lamp while you draw; you can also import a photo or an animated GIF
   (cropped to a square, turned into grayscale, contrast stretched). Up to
   60 drawings are saved in flash
-- **Conto alla rovescia** - days left to a date in big digits (hours and
-  minutes on the day), alternating with "Mancano 12 giorni a Vacanze"
+- **Conto alla rovescia** - laid out like Previsioni: the event and when
+  ("VACANZE  TRA 12 GIORNI") scroll along the top, the days left sit below
+  in big digits (hours and minutes on the day itself)
 - **Spento** - all LEDs off
+
+The information screens share one look (`include/ui.h`): a header band in
+the mini font along the top (Previsioni, Conto alla rovescia), everything
+at full brightness, and the same sign while data is missing - three dots
+filling in, or a blinking WiFi symbol when the lamp is offline.
 
 ### Games and demo mode
 
@@ -245,7 +267,8 @@ default), shown on the page while the game is on the panel:
   Tetris moves with left/right, rotates with up, drops with down or space;
   Snake and 2048 use the arrows; Pong up/down; Breakout left/right; Flappy
   Bird flies with *Vola*, space or up; Space Invaders moves with left/right
-  and shoots with *Spara* or space. In the paddle games holding an arrow
+  and shoots with *Spara* or space; in Labirinto 3D up/down walk a step,
+  left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow
   down keeps moving.
 
 Games shown by the "automatic" animation rotation or by the night schedule

@@ -94,6 +94,8 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   .item canvas { width: 40px; height: 40px; border-radius: 4px; background: #000; image-rendering: pixelated; }
   .item .name { flex: 1 1 120px; min-width: 0; font-size: 14px; }
   .item button { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; font-size: 13px; }
+  #preview { width: 100%; max-width: 220px; aspect-ratio: 1; display: block; margin: 0 auto; border-radius: 8px; background: #000; }
+  #gameBox #preview { margin-top: 12px; }
   [hidden] { display: none !important; }
   #status { min-height: 1.4em; font-size: 14px; color: var(--muted); text-align: center; }
 </style>
@@ -102,6 +104,11 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
 <main>
   <h1>OBEGRÄNSAD</h1>
   <p class="info" id="info"></p>
+
+  <section id="previewBox">
+    <h2>Sulla lampada ora</h2>
+    <canvas id="preview" width="320" height="320"></canvas>
+  </section>
 
   <section>
     <h2>Modalità</h2>
@@ -324,6 +331,12 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="mini">Mini 3×5 (solo maiuscole)</option>
     </select>
     <p class="hint">Vale per testo scorrevole, frasi, dati dal web, previsioni, conto alla rovescia e orologio a parole. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
+    <label for="transition">Passaggio tra modalità e animazioni</label>
+    <select id="transition">
+      <option value="fade">Dissolvenza</option>
+      <option value="wipe">Tendina da sinistra</option>
+      <option value="none">Stacco netto</option>
+    </select>
   </details>
 
   <details id="updateBox">
@@ -481,6 +494,7 @@ function render() {
   for (const b of $('orientation').children) b.classList.toggle('on', b.dataset.vertical === (s.vertical ? '1' : '0'));
   if (!editing('brightness')) $('brightness').value = s.brightness;
   $('textFont').value = s.textFont;
+  $('transition').value = s.transition;
   $('fwVersion').textContent = s.version;
 }
 
@@ -494,11 +508,16 @@ const PADS = {
   flappy: { keys: ['A'], labels: { A: 'Vola' }, hint: 'Tastiera: spazio o ↑.' },
   invaders: { keys: ['L', 'R', 'A'], labels: { A: 'Spara' }, repeat: true, hint: 'Tastiera: ← → per muoverti, spazio o ↑ per sparare.' },
   '2048': { keys: ['L', 'R', 'U', 'D'], labels: { U: '↑', D: '↓' }, hint: 'Tastiera: le frecce.' },
+  maze: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { L: '↶', R: '↷', U: '↑', D: '↓', A: 'Mappa' }, hint: '↑ ↓ per camminare, ← → per girarti, Mappa per vedere dove sei. Trova il blocco che pulsa. Tastiera: le frecce e la barra spaziatrice.' },
 };
 function playable() { return state && state.game && !state.game.demo; }
 function renderGame() {
   const g = state.game;
   $('gameBox').hidden = !g;
+  // While you play, the preview sits right above the pad.
+  const home = g && !g.demo ? $('gameBox') : $('previewBox');
+  if ($('preview').parentNode !== home) home.insertBefore($('preview'), g && !g.demo ? $('pad') : null);
+  $('previewBox').hidden = home !== $('previewBox');
   if (!g) return;
   $('gameTitle').textContent = g.name;
   $('demo').checked = g.demo;
@@ -947,6 +966,8 @@ for (const b of $('orientation').children) {
 }
 $('textFont').onchange = (e) => post('/api/settings', { textFont: e.target.value })
   .then(() => status('Font cambiato')).catch(fail);
+$('transition').onchange = (e) => post('/api/settings', { transition: e.target.value })
+  .then(() => status('Passaggio: ' + e.target.selectedOptions[0].textContent.toLowerCase())).catch(fail);
 $('brightness').onchange = (e) => post('/api/settings', { brightness: e.target.value }).catch(fail);
 
 // Firmware update: upload with progress, then wait for the lamp to come
@@ -991,6 +1012,29 @@ $('fwUpload').onclick = () => {
   xhr.onerror = () => { status('Caricamento interrotto: riprova'); $('fwUpload').disabled = false; bar.hidden = true; };
   xhr.send(form);
 };
+
+// Live preview: what the lamp shows, polled a few times a second while
+// the page is in view. Off LEDs are faint dots, lit ones white discs.
+const preview = $('preview'), pctx = preview.getContext('2d');
+let previewBusy = false;
+function drawPreview(hex) {
+  if (hex.length !== 512) return;
+  const cell = preview.width / 16;
+  pctx.fillStyle = '#000';
+  pctx.fillRect(0, 0, preview.width, preview.height);
+  for (let i = 0; i < 256; i++) {
+    const v = parseInt(hex.substr(i * 2, 2), 16);
+    pctx.fillStyle = v ? 'rgba(255,255,255,' + (0.15 + 0.85 * v / 255).toFixed(3) + ')' : '#1c1c1c';
+    pctx.beginPath();
+    pctx.arc((i % 16 + 0.5) * cell, ((i >> 4) + 0.5) * cell, cell * 0.4, 0, 2 * Math.PI);
+    pctx.fill();
+  }
+}
+setInterval(() => {
+  if (document.hidden || previewBusy) return;
+  previewBusy = true;
+  fetch('/api/frame').then((r) => r.text()).then(drawPreview).catch(() => {}).finally(() => { previewBusy = false; });
+}, 200);
 
 function refresh() { return fetch('/api/state').then((r) => r.json()).then((s) => { state = s; render(); }); }
 refresh().catch(() => status('Lampada non raggiungibile'));
@@ -1049,6 +1093,7 @@ static void sendState() {
   json += ",\"quotes\":" + jsonString(settings.quotes);
   json += ",\"defaultQuotes\":" + jsonString(QuotesMode::defaultQuotes());
   json += ",\"brightness\":" + String(settings.brightness) + ",\"vertical\":" + jsonBool(settings.vertical);
+  json += ",\"transition\":" + jsonString(settings.transition);
   json += ",\"lat\":" + String(settings.latitude, 4) + ",\"lon\":" + String(settings.longitude, 4);
   json += ",\"city\":" + jsonString(settings.city) + ",\"tzName\":" + jsonString(settings.timezoneName);
 
@@ -1191,6 +1236,24 @@ static void handleQuotes() {
   sendState();
 }
 
+// What the panel shows right now, for the page's preview: 256 levels as
+// hex, row by row from the top-left (as seen on the lamp).
+static void handleFrame() {
+  static const char HEX_DIGITS[] = "0123456789abcdef";
+  char out[TOTAL_PIXELS * 2 + 1];
+  int n = 0;
+  for (int y = 0; y < ROWS; y++) {
+    for (int x = 0; x < COLS; x++) {
+      const uint8_t v = display.shownLevel(x, y);
+      out[n++] = HEX_DIGITS[v >> 4];
+      out[n++] = HEX_DIGITS[v & 15];
+    }
+  }
+  out[n] = 0;
+  server.sendHeader("Cache-Control", "no-store");
+  server.send(200, "text/plain", out);
+}
+
 static void handleSettings() {
   if (server.hasArg("brightness")) settings.brightness = constrain(server.arg("brightness").toInt(), 1, 255);
   if (server.hasArg("textFont")) {
@@ -1199,6 +1262,12 @@ static void handleSettings() {
     settings.textFont = font;
     Display::setScrollFont(fontForSettings());
     restartMode();  // scrolling widths depend on the font
+  }
+  if (server.hasArg("transition")) {
+    const String style = server.arg("transition");
+    if (style != "fade" && style != "wipe" && style != "none") return badRequest("Passaggio sconosciuto");
+    settings.transition = style;
+    display.setTransition(transitionForSettings());
   }
   if (server.hasArg("vertical")) {
     settings.vertical = server.arg("vertical") == "1";
@@ -1490,6 +1559,7 @@ static void handleUpdateDone() {
 void webBegin() {
   server.on("/", HTTP_GET, [] { server.send_P(200, "text/html; charset=utf-8", PAGE); });
   server.on("/api/state", HTTP_GET, sendState);
+  server.on("/api/frame", HTTP_GET, handleFrame);
   server.on("/api/mode", HTTP_POST, handleMode);
   server.on("/api/action", HTTP_POST, handleAction);
   server.on("/api/speed", HTTP_POST, handleSpeed);

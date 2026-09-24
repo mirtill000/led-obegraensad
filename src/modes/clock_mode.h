@@ -1,7 +1,6 @@
 #pragma once
 
 #include "modes.h"
-#include "scroller.h"
 
 // Clock and weather on one screen: hours and minutes on the left, an
 // animated weather icon and the temperature on the right, and a dot running
@@ -17,6 +16,5 @@ class ClockMode : public Mode {
   bool hasSpeed() const override { return false; }
 
  private:
-  Scroller waiting_;  // shown until the clock has synced
   uint32_t lastDraw_ = 0;
 };

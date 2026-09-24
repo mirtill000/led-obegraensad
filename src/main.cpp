@@ -66,6 +66,7 @@ void setup() {
   display.begin();
   display.setBrightness(settings.brightness);
   display.setRotation(rotationForSettings());
+  display.setTransition(transitionForSettings());
   Display::setScrollFont(fontForSettings());
   applyTimezone();
 

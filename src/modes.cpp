@@ -137,6 +137,7 @@ static void evaluate(uint32_t now) {
   if (!started || wanted != current || (overrideChanged && wanted == indexOf("ambient"))) {
     current = wanted;
     started = true;
+    display.beginTransition();
     MODES[current]->start();
   }
 }
@@ -173,6 +174,7 @@ void updateMode() {
     evaluate(now);
   }
   MODES[current]->update(now);
+  display.tick(now);
 }
 
 void restartMode() { MODES[current]->start(); }

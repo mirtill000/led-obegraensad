@@ -15,6 +15,7 @@ struct Settings {
   String quotesPosition;
   uint8_t brightness;   // 1-255
   bool vertical;        // how the lamp hangs: vertical or horizontal
+  String transition;    // between modes: "fade", "wipe" or "none"
 
   // Weather location and time zone.
   float latitude;
@@ -69,6 +70,8 @@ void saveSettings();
 
 // Font for scrolling text from settings.textFont.
 TextFont fontForSettings();
+// Transition style from settings.transition.
+Transition transitionForSettings();
 // Display rotation for the current orientation setting.
 uint16_t rotationForSettings();
 

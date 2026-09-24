@@ -94,6 +94,7 @@ void loadSettings() {
   settings.quotesPosition = prefs.getString("quotesPos", "random");
   settings.brightness = prefs.getUChar("brightness", 255);
   settings.vertical = prefs.getBool("vertical", false);
+  settings.transition = prefs.getString("transition", "fade");
   settings.latitude = prefs.getFloat("lat", DEFAULT_LATITUDE);
   settings.longitude = prefs.getFloat("lon", DEFAULT_LONGITUDE);
   settings.city = prefs.getString("city", DEFAULT_CITY);
@@ -137,6 +138,7 @@ void saveSettings() {
   prefs.putString("quotesPos", settings.quotesPosition);
   prefs.putUChar("brightness", settings.brightness);
   prefs.putBool("vertical", settings.vertical);
+  prefs.putString("transition", settings.transition);
   prefs.putFloat("lat", settings.latitude);
   prefs.putFloat("lon", settings.longitude);
   prefs.putString("city", settings.city);
@@ -175,6 +177,12 @@ TextFont fontForSettings() {
   if (settings.textFont == "big") return TextFont::Big;
   if (settings.textFont == "mini") return TextFont::Mini;
   return TextFont::Small;
+}
+
+Transition transitionForSettings() {
+  if (settings.transition == "wipe") return Transition::Wipe;
+  if (settings.transition == "none") return Transition::None;
+  return Transition::Fade;
 }
 
 uint16_t rotationForSettings() { return settings.vertical ? ROTATION_VERTICAL : ROTATION_HORIZONTAL; }

@@ -184,11 +184,61 @@ void Display::drawBitmap(int x, int y, const uint16_t *bitmap, int width, int ro
 }
 
 void Display::render() {
+  memcpy(target_, frame_, sizeof(target_));
+  output();
+}
+
+static const uint32_t FADE_MS = 600;
+static const uint32_t WIPE_MS = 500;
+static const uint32_t BLEND_STEP_MS = 16;
+
+void Display::beginTransition() {
+  if (transition_ == Transition::None) return;
+  memcpy(from_, shown_, sizeof(from_));
+  blending_ = true;
+  blendStart_ = millis();
+}
+
+void Display::tick(uint32_t now) {
+  if (blending_ && now - lastBlend_ >= BLEND_STEP_MS) output();
+}
+
+uint8_t Display::shownLevel(int x, int y) const {
+  const int i = frameIndex(x, y);
+  return i >= 0 ? shown_[i] : 0;
+}
+
+void Display::output() {
+  const uint32_t now = millis();
+  lastBlend_ = now;
+  const uint32_t duration = transition_ == Transition::Wipe ? WIPE_MS : FADE_MS;
+  if (blending_ && (transition_ == Transition::None || now - blendStart_ >= duration)) blending_ = false;
+  if (!blending_) {
+    memcpy(shown_, target_, sizeof(shown_));
+  } else {
+    float t = (now - blendStart_) / (float)duration;
+    t = t * t * (3 - 2 * t);  // ease in and out
+    if (transition_ == Transition::Fade) {
+      for (int i = 0; i < TOTAL_PIXELS; i++) shown_[i] = (uint8_t)(from_[i] + (target_[i] - from_[i]) * t + 0.5f);
+    } else {
+      // The edge moves across the logical columns (whatever the rotation),
+      // one column of soft blend wide.
+      const float edge = t * (COLS + 1);
+      for (int y = 0; y < ROWS; y++) {
+        for (int x = 0; x < COLS; x++) {
+          const int i = frameIndex(x, y);
+          const float k = constrain(edge - x, 0.0f, 1.0f);
+          shown_[i] = (uint8_t)(from_[i] + (target_[i] - from_[i]) * k + 0.5f);
+        }
+      }
+    }
+  }
+
   if (!GRAYSCALE) {
     static uint8_t bits[FRAME_BYTES];
     memset(bits, 0, sizeof(bits));
     for (int chainIndex = 0; chainIndex < TOTAL_PIXELS; chainIndex++) {
-      if (frame_[positions[chainIndex]]) bits[chainIndex >> 3] |= (0x80 >> (chainIndex & 7));
+      if (shown_[positions[chainIndex]]) bits[chainIndex >> 3] |= (0x80 >> (chainIndex & 7));
     }
     pushBits(bits);
     return;
@@ -204,7 +254,7 @@ void Display::render() {
   PlaneSet &set = planeSets[target];
   memset(&set, 0, sizeof(set));
   for (int chainIndex = 0; chainIndex < TOTAL_PIXELS; chainIndex++) {
-    const uint8_t units = gammaTable[frame_[positions[chainIndex]]];
+    const uint8_t units = gammaTable[shown_[positions[chainIndex]]];
     const uint8_t mask = 0x80 >> (chainIndex & 7);
     for (int p = 0; p < PLANES; p++) {
       if (units & (1 << p)) set.bits[p][chainIndex >> 3] |= mask;
