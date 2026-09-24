@@ -23,6 +23,11 @@ struct Weather {
   // Today's sunrise and sunset, minutes after local midnight; -1 unknown.
   int16_t sunrise = -1;
   int16_t sunset = -1;
+
+  // Today's range and chance of rain.
+  bool hasDaily = false;
+  float todayMin = 0, todayMax = 0;
+  uint8_t todayRain = 0;  // highest precipitation probability of the day, %
 };
 
 // A consistent copy of the latest data (safe to call from any task).

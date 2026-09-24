@@ -1,28 +1,25 @@
 #pragma once
 
 #include "modes.h"
-#include "scroller.h"
 
-// The next 12 hours: a temperature curve on top and rain-probability bars
-// at the bottom, one column per hour, alternating with a scrolling summary
-// (range, rain, sunrise and sunset).
+// Today at a glance, on one screen:
+//  - top: sunrise and sunset in turn (every 4 s): a sun on the horizon with
+//    a triangle pointing up (sunrise) or down (sunset), the time below;
+//  - bottom: today's minimum (dimmer) and maximum temperature, and a
+//    falling drop when rain is likely (>= 50%).
 class ForecastMode : public Mode {
  public:
   const char *id() const override { return "forecast"; }
   const char *name() const override { return "Previsioni"; }
-  void start() override;
+  void start() override { lastDraw_ = 0; }
   void update(uint32_t now) override;
   const char *actionName() const override { return "Aggiorna"; }
   void action() override;
+  bool hasSpeed() const override { return false; }
 
-  // "Prossime 12 ore: 12°-18°, ..." (UTF-8), or "" without data.
+  // "Prossime 12 ore: 12°-18°, ..." (UTF-8) for the page, or "" without data.
   static String summary();
 
  private:
-  void drawChart();
-
-  bool chart_ = true;
-  uint32_t phaseStart_ = 0;
   uint32_t lastDraw_ = 0;
-  Scroller scroller_;
 };

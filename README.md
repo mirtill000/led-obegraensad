@@ -185,9 +185,11 @@ Current modes:
   right, and a dot running round the border for the seconds. Weather is
   refreshed every 15 min; until the first reading arrives the clock uses
   big digits. Button: refresh weather
-- **Previsioni** - the next 12 hours: temperature curve on top, rain
-  probability bars at the bottom, one column per hour, alternating with a
-  scrolling summary (range, when it rains, sunrise and sunset). The clock
+- **Previsioni** - today at a glance on one screen: on top a sun on the
+  horizon with an up/down arrow and the sunrise or sunset time (they
+  alternate every 4 s), at the bottom today's minimum (dim) and maximum
+  (bright) temperature, plus an animated drop when rain is likely
+  (>= 50%) today. The web page still shows the hourly chart. The clock
   also shows an umbrella next to the weather icon when rain is likely
   (>= 60%) within 2 hours
 - **Dal web** - in turn: the word of the day (built-in list), an "on this
