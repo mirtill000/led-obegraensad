@@ -12,7 +12,7 @@
 // registers hold their state, so without it a frame is only sent when it
 // changes.
 // Font for scrolling text (everything drawn through drawScrollFrame):
-//  Small - the proportional 8-row font (a-z, A-Z, accents)
+//  Small - the proportional 8-row font (a-z, A-Z)
 //  Big   - the same font doubled with EPX/Scale2x: 16 rows, the whole panel
 //  Mini  - 5-row capitals, about 4 letters at a time
 enum class TextFont : uint8_t { Small, Big, Mini };
@@ -78,8 +78,9 @@ class Display {
   void scrollTextOnce(const char *text, uint16_t frameDelayMs);
 
   // Converts UTF-8 text (as typed on the web page) to the font's
-  // single-byte characters: Italian accented lowercase letters keep their
-  // accent, accented capitals lose it, curly quotes become ', dashes (– —) become -, anything
+  // single-byte characters: accented letters become the plain letter and
+  // an apostrophe ("perché" -> "perche'", "È" -> "E'"), as a one-pixel
+  // accent is hard to see; curly quotes become ', dashes (– —) become -, anything
   // else outside ASCII becomes a space.
   static String fontText(const String &utf8);
 

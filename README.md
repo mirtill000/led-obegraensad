@@ -91,7 +91,7 @@ permanent) opening.
 include/
   constants.h        - pins, matrix size, rotation, default text, WiFi names
   secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
-  font_small.h       - 8px-tall proportional font (a-z, A-Z, à-ù, 0-9, . , : ; ! ? ' - %)
+  font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ; ! ? ' - %)
   font_mini.h        - 5px-tall capitals (the "Mini" font; "Grande" is built from font_small)
   display.h, modes.h, settings.h, web.h
   ui.h               - shared look of the info screens (header band, waiting dots)
@@ -165,8 +165,7 @@ animation menu, ...). General settings are in collapsible sections:
   the time zone; picking a city also picks its time zone when it's in the
   list.
 - **Display** - horizontal/vertical, brightness, and the font of all
-  scrolling text: *Attuale* (proportional, 8 pixels, lowercase and
-  accents), *Grande* (the same font doubled with the EPX/Scale2x algorithm,
+  scrolling text: *Attuale* (proportional, 8 pixels, lowercase), *Grande* (the same font doubled with the EPX/Scale2x algorithm,
   which keeps diagonals smooth: it fills the whole panel, for reading from
   across the room) or *Mini 3x5* (capitals only, 5 pixels). Fixed layouts
   like the clock digits keep their own font. Also how the lamp goes from
@@ -299,9 +298,12 @@ page (variable by default).
 split by a `|`.)
 
 The text is case sensitive: the font has lowercase and capital letters
-(capitals are one pixel taller), digits, a few punctuation marks and the
-Italian accented lowercase letters (à è é ì ò ù). Accented capitals are
-shown without the accent; anything else is shown as a space. To
+(capitals are one pixel taller), digits and a few punctuation marks.
+Accented letters are written with an apostrophe, as when typing without
+accents - "perché" scrolls as `perche'`, "È" as `E'` - because a
+one-pixel accent is lost on the panel; this goes for every font and all
+text (scrolling text, quotes, web info, ...). Anything else is shown as a
+space. To
 add characters, add entries to `FONT_GLYPHS` in `include/font_small.h`
 (width in pixels + 8 rows, bit 7 = leftmost column).
 

@@ -138,7 +138,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <h2>Testo scorrevole</h2>
     <input type="text" id="text" maxlength="200" autocomplete="off">
     <button class="save" id="saveText">Mostra</button>
-    <p class="hint">Maiuscole e minuscole, cifre, . , : ; ! ? ' - % e à è é ì ò ù.</p>
+    <p class="hint">Maiuscole e minuscole, cifre, . , : ; ! ? ' - %. Le lettere accentate compaiono con l'apostrofo: «perché» diventa «perche'».</p>
     <label for="textPos">Altezza</label>
     <select id="textPos">
       <option value="random">Variabile (cambia a ogni passaggio)</option>

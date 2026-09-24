@@ -2,9 +2,9 @@
 
 #include <Arduino.h>
 
-// Small proportional font: a-z, A-Z, digits, basic punctuation and the
-// Italian accented lowercase letters, stored under their Latin-1 codes
-// (0xE0 = a grave, ...); Display::fontText() converts UTF-8 text to these.
+// Small proportional font: a-z, A-Z, digits and basic punctuation.
+// Display::fontText() converts UTF-8 text to these characters (accented
+// letters become the letter and an apostrophe: "è" -> "e'").
 // Each glyph is FONT_HEIGHT rows tall: row 0 is the ascender (b d f h k l t)
 // and the top of the capitals, rows 1-5 the x-height and rows 6-7 the
 // descender (g j p q y). Bit 7 is the leftmost column. Unknown characters
@@ -91,12 +91,6 @@ static const Glyph FONT_GLYPHS[] = {
     {'Y', 3, {0xA0, 0xA0, 0xA0, 0x40, 0x40, 0x40, 0x00, 0x00}},
     {'Z', 4, {0xF0, 0x10, 0x20, 0x40, 0x80, 0xF0, 0x00, 0x00}},
     {':', 1, {0x00, 0x80, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00}},
-    {'\xE0', 4, {0x40, 0x60, 0x10, 0x70, 0x90, 0x70, 0x00, 0x00}},  // a grave
-    {'\xE8', 4, {0x40, 0x60, 0x90, 0xF0, 0x80, 0x70, 0x00, 0x00}},  // e grave
-    {'\xE9', 4, {0x20, 0x60, 0x90, 0xF0, 0x80, 0x70, 0x00, 0x00}},  // e acute
-    {'\xEC', 2, {0x80, 0x00, 0x40, 0x40, 0x40, 0x40, 0x00, 0x00}},  // i grave
-    {'\xF2', 4, {0x40, 0x60, 0x90, 0x90, 0x90, 0x60, 0x00, 0x00}},  // o grave
-    {'\xF9', 4, {0x40, 0x90, 0x90, 0x90, 0x90, 0x70, 0x00, 0x00}},  // u grave
 };
 
 inline const Glyph *findGlyph(char c) {

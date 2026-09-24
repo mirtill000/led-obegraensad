@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 // "Mini" font: capitals only, 5 rows tall, mostly 3 pixels wide (M, N, W
-// wider). Lowercase and accented letters are drawn as plain capitals.
+// wider). Lowercase letters are drawn as capitals.
 #define MINI_HEIGHT 5
 
 struct MiniGlyph {
@@ -62,14 +62,6 @@ static const MiniGlyph MINI_GLYPHS[] = {
 };
 
 inline const MiniGlyph *findMiniGlyph(char c) {
-  // Accented lowercase (Latin-1, see Display::fontText) -> plain letter.
-  switch ((uint8_t)c) {
-    case 0xE0: c = 'a'; break;
-    case 0xE8: case 0xE9: c = 'e'; break;
-    case 0xEC: c = 'i'; break;
-    case 0xF2: c = 'o'; break;
-    case 0xF9: c = 'u'; break;
-  }
   if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
   const MiniGlyph *space = nullptr;
   for (const MiniGlyph &g : MINI_GLYPHS) {

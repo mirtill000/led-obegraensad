@@ -267,13 +267,14 @@ void Display::output() {
 }
 
 String Display::fontText(const String &utf8) {
-  // Two-byte UTF-8 sequences starting with 0xC3, second byte -> font char.
+  // Two-byte UTF-8 sequences starting with 0xC3, second byte -> the plain
+  // letter; an apostrophe after it stands for the accent.
   static const struct {
     uint8_t second;
     char out;
   } LATIN[] = {
-      {0xA0, '\xE0'}, {0xA1, '\xE0'}, {0xA8, '\xE8'}, {0xA9, '\xE9'}, {0xAC, '\xEC'}, {0xAD, '\xEC'},
-      {0xB2, '\xF2'}, {0xB3, '\xF2'}, {0xB9, '\xF9'}, {0xBA, '\xF9'},  // lowercase
+      {0xA0, 'a'}, {0xA1, 'a'}, {0xA8, 'e'}, {0xA9, 'e'}, {0xAC, 'i'}, {0xAD, 'i'},
+      {0xB2, 'o'}, {0xB3, 'o'}, {0xB9, 'u'}, {0xBA, 'u'},  // lowercase
       {0x80, 'A'}, {0x81, 'A'}, {0x88, 'E'}, {0x89, 'E'}, {0x8C, 'I'}, {0x8D, 'I'},
       {0x92, 'O'}, {0x93, 'O'}, {0x99, 'U'}, {0x9A, 'U'},  // capitals
   };
@@ -290,7 +291,10 @@ String Display::fontText(const String &utf8) {
     char mapped = ' ';
     if (c == 0xC3 && i + 1 < utf8.length()) {
       for (const auto &l : LATIN) {
-        if ((uint8_t)utf8[i + 1] == l.second) mapped = l.out;
+        if ((uint8_t)utf8[i + 1] == l.second) {
+          out += l.out;
+          mapped = '\'';  // "perché" -> "perche'"
+        }
       }
     } else if (c == 0xE2 && i + 2 < utf8.length() && (uint8_t)utf8[i + 1] == 0x80) {
       const uint8_t third = utf8[i + 2];
