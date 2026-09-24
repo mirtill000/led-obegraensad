@@ -3,7 +3,8 @@
 #include <Arduino.h>
 
 // Weather from Open-Meteo (free, no API key) for settings.latitude/longitude:
-// current conditions, the next 12 hours and today's sunrise and sunset.
+// current conditions, the next 12 hours and today's sunrise and sunset, and
+// a daily forecast for today and the next 3 days.
 // Fetched in the background by the network task (see net.h), every 15
 // minutes or on request.
 struct Weather {
@@ -24,11 +25,15 @@ struct Weather {
   int16_t sunrise = -1;
   int16_t sunset = -1;
 
-  // Today's range and chance of rain.
-  bool hasDaily = false;
-  float todayMin = 0, todayMax = 0;
-  uint8_t todayRain = 0;  // highest precipitation probability of the day, %
-  int todayCode = -1;     // WMO code for the day as a whole; -1 unknown
+  // Daily forecast: today and the next 3 days (index 0 = today).
+  static const int DAYS = 4;
+  uint8_t days = 0;                // how many of the entries below are set
+  uint16_t dayYear[DAYS] = {};     // date of each day; 0 unknown
+  uint8_t dayMonth[DAYS] = {};     // 1-12
+  uint8_t dayOfMonth[DAYS] = {};   // 1-31
+  float dayMin[DAYS] = {}, dayMax[DAYS] = {};
+  uint8_t dayRain[DAYS] = {};      // highest precipitation probability, %
+  int16_t dayCode[DAYS] = {-1, -1, -1, -1};  // WMO code for the day; -1 unknown
 };
 
 // A consistent copy of the latest data (safe to call from any task).

@@ -84,18 +84,29 @@ bool parseWeather(const String &json, Weather &out) {
     const int rise = valueStart(json, "sunrise", daily), set = valueStart(json, "sunset", daily);
     if (rise >= 0) out.sunrise = readClock(json, rise + 1);
     if (set >= 0) out.sunset = readClock(json, set + 1);
-    float lo, hi, rain;
-    if (readNumbers(json, valueStart(json, "temperature_2m_min", daily), &lo, 1) &&
-        readNumbers(json, valueStart(json, "temperature_2m_max", daily), &hi, 1)) {
-      out.hasDaily = true;
-      out.todayMin = lo;
-      out.todayMax = hi;
-      if (readNumbers(json, valueStart(json, "precipitation_probability_max", daily), &rain, 1)) {
-        out.todayRain = (uint8_t)constrain((int)rain, 0, 100);
+    float lo[Weather::DAYS], hi[Weather::DAYS], rain[Weather::DAYS], code[Weather::DAYS];
+    const int n = min(readNumbers(json, valueStart(json, "temperature_2m_min", daily), lo, Weather::DAYS),
+                      readNumbers(json, valueStart(json, "temperature_2m_max", daily), hi, Weather::DAYS));
+    const int rains = readNumbers(json, valueStart(json, "precipitation_probability_max", daily), rain, Weather::DAYS);
+    const int codes = readNumbers(json, valueStart(json, "weather_code", daily), code, Weather::DAYS);
+    // "time":["2026-09-24","2026-09-25",...]
+    int at = valueStart(json, "time", daily);
+    for (int i = 0; i < n; i++) {
+      out.dayMin[i] = lo[i];
+      out.dayMax[i] = hi[i];
+      out.dayRain[i] = i < rains ? (uint8_t)constrain((int)rain[i], 0, 100) : 0;
+      out.dayCode[i] = i < codes ? (int16_t)code[i] : -1;
+      at = at < 0 ? -1 : json.indexOf('"', at);
+      if (at >= 0 && at + 11 < (int)json.length() && json[at + 5] == '-' && json[at + 8] == '-') {
+        out.dayYear[i] = json.substring(at + 1, at + 5).toInt();
+        out.dayMonth[i] = json.substring(at + 6, at + 8).toInt();
+        out.dayOfMonth[i] = json.substring(at + 9, at + 11).toInt();
+        at += 12;  // past the closing quote
+      } else {
+        at = -1;
       }
-      float code;
-      if (readNumbers(json, valueStart(json, "weather_code", daily), &code, 1)) out.todayCode = (int)code;
     }
+    out.days = n;
   }
   return true;
 }
@@ -119,7 +130,7 @@ void weatherTick() {
                      "&current=temperature_2m,weather_code,is_day"
                      "&hourly=temperature_2m,precipitation_probability&forecast_hours=12"
                      "&daily=weather_code,sunrise,sunset,temperature_2m_min,temperature_2m_max,precipitation_probability_max"
-                     "&forecast_days=1&timezone=auto";
+                     "&forecast_days=4&timezone=auto";
   if (!http.begin(client, url)) return;
   if (http.GET() == HTTP_CODE_OK) {
     Weather fresh;

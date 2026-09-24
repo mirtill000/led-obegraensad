@@ -57,27 +57,38 @@ static const char *const DAYS[] = {"DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SA
 static const char *const MONTHS[] = {"GEN", "FEB", "MAR", "APR", "MAG", "GIU",
                                      "LUG", "AGO", "SET", "OTT", "NOV", "DIC"};
 
-// "MILANO  MER 24 SET" (city only until the clock is set).
-static String header() {
+// Day of the week (0 = Sunday) for a Gregorian date.
+static int weekday(int y, int m, int d) {
+  static const int T[] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+  if (m < 3) y--;
+  return (y + y / 4 - y / 100 + y / 400 + T[m - 1] + d) % 7;
+}
+
+// "MILANO  MER 24 SET" for forecast day `day` (city only without a date).
+static String header(const Weather &w, int day) {
   String s = Display::fontText(settings.city);
-  struct tm t;
-  if (localTime(t)) s += String("  ") + DAYS[t.tm_wday] + " " + t.tm_mday + " " + MONTHS[t.tm_mon];
+  if (day < w.days && w.dayYear[day] && w.dayMonth[day] >= 1 && w.dayMonth[day] <= 12) {
+    s += String("  ") + DAYS[weekday(w.dayYear[day], w.dayMonth[day], w.dayOfMonth[day])] + " " +
+         w.dayOfMonth[day] + " " + MONTHS[w.dayMonth[day] - 1];
+  } else if (day == 0) {
+    struct tm t;
+    if (localTime(t)) s += String("  ") + DAYS[t.tm_wday] + " " + t.tm_mday + " " + MONTHS[t.tm_mon];
+  }
   return s;
 }
 
-// Mini-font text limited to rows 0-4, scrolling in a loop when it's wider
-// than the display, centred otherwise.
-static void drawHeader(uint32_t now) {
-  const String text = header();
-  const int width = miniWidth(text);
-  if (width <= COLS) {
-    drawMini((COLS - width) / 2, 0, text, 255);
-    return;
-  }
-  const int period = width + HEADER_GAP;
-  const int x = -(int)((now / HEADER_STEP_MS) % period);
-  drawMini(x, 0, text, 255);
-  drawMini(x + period, 0, text, 255);
+// Scrolls the current day's header along rows 0-4, with the next day's
+// coming in behind it. Returns true once that one has reached x0, i.e.
+// when the screen should move on to the next day.
+bool ForecastMode::drawHeader(const Weather &w, uint32_t now) {
+  const int next = w.days > 0 ? (day_ + 1) % w.days : 0;
+  const String text = header(w, day_);
+  const int period = miniWidth(text) + HEADER_GAP;
+  const int offset = (now - dayStart_) / HEADER_STEP_MS;
+  if (offset >= period) return true;
+  drawMini(-offset, 0, text, 255);
+  drawMini(period - offset, 0, header(w, next), 255);
+  return false;
 }
 
 // Temperature with the tens at x8-10, the units at x12-14 and a one-pixel
@@ -103,28 +114,36 @@ static void drawTemperature(int y, float celsius, uint8_t level) {
 //
 //   rows 0-4    city and date, scrolling
 //   rows 6-15   icon x0-5 (rows 7-13)   min x8-14 rows 6-10, ° x15
-//                                                 max x8-14 rows 11-15, ° x15
+//                                        max x8-14 rows 11-15, ° x15
 //
-// Everything is at full brightness.
+// Everything is at full brightness. The screen shows today, then each of
+// the next 3 days in turn, moving on each time the header has scrolled by.
 void ForecastMode::update(uint32_t now) {
   if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
   const Weather w = weatherNow();
+  if (dayStart_ == 0) dayStart_ = now;
+  if (day_ >= max(1, (int)w.days)) day_ = 0;
   display.clear();
-  drawHeader(now);
-  if (!w.valid || !w.hasDaily) {
+  if (drawHeader(w, now)) {
+    day_ = w.days > 0 ? (day_ + 1) % w.days : 0;
+    dayStart_ = now;
+    display.clear();
+    drawHeader(w, now);
+  }
+  if (!w.valid || w.days == 0) {
     for (int i = 0; i < 3; i++) display.setLevel(5 + i * 3, 10, 255);  // waiting: "..."
     display.render();
     return;
   }
 
   // The day's weather (daytime icon); the current one if the API didn't
-  // send it.
-  const AnimatedIcon &icon = w.todayCode >= 0 ? iconFor(w.todayCode, true) : iconFor(w.code, w.isDay);
+  // send a daily code.
+  const AnimatedIcon &icon = w.dayCode[day_] >= 0 ? iconFor(w.dayCode[day_], true)
+                                                  : iconFor(w.code, day_ == 0 ? w.isDay : true);
   display.drawBitmap(0, 7, icon.frames[(now / icon.frameMs) % icon.frameCount], 6, 7);
 
-
-  drawTemperature(6, w.todayMin, 255);
-  drawTemperature(11, w.todayMax, 255);
+  drawTemperature(6, w.dayMin[day_], 255);
+  drawTemperature(11, w.dayMax[day_], 255);
   display.render();
 }
