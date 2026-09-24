@@ -16,30 +16,22 @@ static const float MAX_FALL = 3.0f;
 static const float GOOMBA_SPEED = 0.25f;
 
 // Sprites: bit 15 = leftmost column.
-// Mario, 5x7, facing right, as brightness levels: cap and brim brightest,
-// face mid, hair/eye/moustache faint, overalls bright, shoes dim.
+// Mario, 5x7, facing right: C cap, S skin, M hair/eye/moustache (left
+// dark), O overalls, B shoes.
 static const char *const MARIO_RUN[2][MARIO_H] = {
     {".CCC.", "CCCCC", "MSSMS", "SSMMM", ".OOO.", "OO.OO", "B...B"},
     {".CCC.", "CCCCC", "MSSMS", "SSMMM", ".OOO.", ".OOO.", ".BB.."},
 };
 static const char *const MARIO_JUMP[MARIO_H] = {"SCCC.", "CCCCC", "MSSMS", "SSMMM", "OOOOS", "OO.OO", "B..B."};
 
-static uint8_t spriteLevel(char c) {
-  switch (c) {
-    case 'C': return 255;  // cap
-    case 'O': return 200;  // overalls
-    case 'S': return 120;  // skin
-    case 'B': return 90;   // shoes
-    case 'M': return 35;   // hair, eye, moustache
-    default: return 0;
-  }
-}
-
+// LEDs are only fully on or off (in-between levels are made by fast
+// switching, which can flicker): Mario is a lit silhouette, with the hair,
+// eye and moustache ('M') left dark so the face still reads.
 static void drawMario(int x, int y, const char *const *rows) {
   for (int r = 0; r < MARIO_H; r++) {
     for (int c = 0; c < MARIO_W; c++) {
-      const uint8_t l = spriteLevel(rows[r][c]);
-      if (l) display.setLevel(x + c, y + r, l);
+      const char k = rows[r][c];
+      if (k != '.' && k != 'M') display.setPixel(x + c, y + r, true);
     }
   }
 }
@@ -304,32 +296,19 @@ void MarioMode::update(uint32_t now) {
 
 void MarioMode::draw(uint32_t now) {
   display.clear();
-  // Faint clouds in the background, drifting at half speed.
-  static const uint16_t CLOUD[2] = {0x6000, 0xF000};
-  for (int i = 0; i < 2; i++) {
-    const int period = 24;
-    const int x = ((i * 13 - s_.cam / 2) % period + period) % period - 4;
-    for (int row = 0; row < 2; row++) {
-      for (int col = 0; col < 4; col++) {
-        if (CLOUD[row] & (0x8000 >> col)) display.setLevel(x + col, 2 + i * 3 + row, 35);
-      }
-    }
-  }
   for (int sx = 0; sx < COLS; sx++) {
     const int32_t wx = s_.cam + sx;
     const int top = topAt(s_, wx);
     if (top == NONE) continue;
     display.setPixel(sx, GROUND, true);
-    display.setLevel(sx, GROUND + 1, wx % 4 != 3 ? 110 : 0);  // bricks show the scrolling
+    display.setPixel(sx, GROUND + 1, wx % 4 != 3);  // bricks show the scrolling
     for (int y = top; y < GROUND; y++) display.setPixel(sx, y, true);
   }
   for (const Coin &c : s_.coins) {
     if (c.taken) continue;
     const int sx = c.x - s_.cam;
-    // Spinning glint: the two halves swap brightness.
-    const bool phase = (now / 200) % 2;
-    display.setLevel(sx, c.y, phase ? 255 : 120);
-    display.setLevel(sx, c.y + 1, phase ? 120 : 255);
+    display.setPixel(sx, c.y, true);
+    display.setPixel(sx, c.y + 1, true);
   }
   for (const Goomba &g : s_.goombas) {
     if (g.alive) display.drawBitmap((int)lroundf(g.x) - s_.cam, GROUND - 2, GOOMBA[(frame_ / 3) % 2], 3, 2);

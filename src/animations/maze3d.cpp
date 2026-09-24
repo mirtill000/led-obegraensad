@@ -1,5 +1,6 @@
 // "Labirinto 3D": a first-person maze drawn by raycasting, one ray per
-// column, with walls shaded by distance using the panel's gray levels.
+// column, with walls shaded by distance through a fixed dot pattern (LEDs
+// only on or off, so nothing flickers).
 #include <math.h>
 #include <string.h>
 
@@ -211,19 +212,20 @@ class Maze3dAnimation : public Animation {
     }
   }
 
-  // One ray per column (DDA through the grid). Walls get brighter the
-  // closer they are, sides facing north/south a bit darker so corners
-  // read; the floor is a faint gradient and the exit pulses.
+  // One ray per column (DDA through the grid). LEDs are only fully on or
+  // off (in-between levels are made by fast switching, which can flicker),
+  // so walls are shaded with a fixed dot pattern (ordered dithering): the
+  // closer the wall, the more of its LEDs are lit; sides facing north/south
+  // are a bit sparser so corners read. Their top and bottom edges are fully
+  // lit, and so is a column wherever the view passes from one block face
+  // to another. The exit is a solid block.
   void render() {
     display.clear();
+    static const uint8_t BAYER[4][4] = {{0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};
     const float dirX = cosf(angle_), dirY = sinf(angle_);
     const float planeX = -dirY * 0.66f, planeY = dirX * 0.66f;  // ~66° field of view
     const float horizon = ROWS / 2.0f;
-
-    for (int y = (int)horizon; y < ROWS; y++) {
-      const uint8_t floorLevel = 8 + (y - horizon) * 4;
-      for (int x = 0; x < COLS; x++) display.setLevel(x, y, floorLevel);
-    }
+    int lastFace = -1;
 
     for (int x = 0; x < COLS; x++) {
       const float camera = 2 * (x + 0.5f) / COLS - 1;
@@ -251,23 +253,19 @@ class Maze3dAnimation : public Animation {
       }
       const float dist = max(0.05f, ySide ? sideY - deltaY : sideX - deltaX);
 
-      // Where along the block face the ray landed: darker near the edges.
-      float wallU = ySide ? posX_ + dist * rayX : posY_ + dist * rayY;
-      wallU -= floorf(wallU);
       float shade = 1.0f / (1.0f + dist * 0.45f);
       if (ySide) shade *= 0.72f;
-      if (wallU < 0.06f || wallU > 0.94f) shade *= 0.55f;
-      if (hit == EXIT) shade = 0.55f + 0.45f * sinf(tick_ * 0.25f);
-      const uint8_t level = (uint8_t)constrain(shade * 255, 12.0f, 255.0f);
+      const int density = (int)(shade * 16);  // lit LEDs out of 16
 
-      // Wall span, with the partly covered end pixels blended.
+      // Wall span (rounded to whole pixels).
       const float height = ROWS / dist;
-      const float top = horizon - height / 2, bottom = horizon + height / 2;
-      for (int y = max(0, (int)floorf(top)); y < ROWS && y < bottom; y++) {
-        const float cover = min(bottom, y + 1.0f) - max(top, (float)y);
-        if (cover <= 0) continue;
-        const uint8_t under = display.getLevel(x, y);
-        display.setLevel(x, y, (uint8_t)(under + (level - under) * min(1.0f, cover)));
+      const int top = (int)lroundf(horizon - height / 2), bottom = (int)lroundf(horizon + height / 2) - 1;
+      const int face = (mapY * N + mapX) * 2 + ySide;
+      const bool edge = face != lastFace;  // a new block face starts here
+      lastFace = face;
+      for (int y = max(0, top); y <= min(ROWS - 1, bottom); y++) {
+        const bool on = hit == EXIT || edge || y == top || y == bottom || BAYER[y % 4][x % 4] < density;
+        display.setPixel(x, y, on);
       }
     }
   }
@@ -278,11 +276,18 @@ class Maze3dAnimation : public Animation {
     const int ox = (COLS - N) / 2, oy = (ROWS - N) / 2;
     for (int y = 0; y < N; y++) {
       for (int x = 0; x < N; x++) {
-        if (grid_[y][x] == WALL) display.setLevel(ox + x, oy + y, 70);
-        if (grid_[y][x] == EXIT) display.setLevel(ox + x, oy + y, 255);
+        if (grid_[y][x] == WALL) display.setPixel(ox + x, oy + y, true);
       }
     }
-    if ((tick_ / 4) % 2) display.setLevel(ox + cellX_, oy + cellY_, 255);
+    // With the walls lit, the exit and the player show as slow blinks, in
+    // turn.
+    const bool phase = (tick_ / 6) % 2;
+    for (int y = 0; y < N; y++) {
+      for (int x = 0; x < N; x++) {
+        if (grid_[y][x] == EXIT) display.setPixel(ox + x, oy + y, phase);
+      }
+    }
+    display.setPixel(ox + cellX_, oy + cellY_, !phase);
   }
 
   uint8_t grid_[N][N];

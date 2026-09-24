@@ -470,15 +470,13 @@ class SnakeAnimation : public Animation {
     } while (taken[food_]);
   }
 
-  void draw(uint32_t now) {
+  // LEDs only fully on or off (no flicker from in-between levels). At game
+  // over the snake shortens from the tail until it is gone.
+  void draw(uint32_t) {
     display.clear();
-    for (int i = length_ - 1; i >= 0; i--) {
-      // Head brightest, fading towards the tail.
-      uint8_t l = i == 0 ? 255 : 200 - 140 * i / max(1, length_ - 1);
-      if (over_) l = l * (25 - min(over_, 25)) / 25;
-      display.setLevel(body_[i] % COLS, body_[i] / COLS, l);
-    }
-    if (!over_) display.setLevel(food_ % COLS, food_ / COLS, (now / 250) % 2 ? 255 : 90);
+    const int shown = over_ ? length_ * (25 - min(over_, 25)) / 25 : length_;
+    for (int i = 0; i < shown; i++) display.setPixel(body_[i] % COLS, body_[i] / COLS, true);
+    if (!over_) display.setPixel(food_ % COLS, food_ / COLS, true);
   }
 
   uint8_t body_[N];

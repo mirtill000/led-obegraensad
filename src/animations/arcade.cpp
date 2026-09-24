@@ -6,21 +6,15 @@
 
 #include "animation.h"
 #include "display.h"
-#include "gfx.h"
 #include "scroller.h"
 
 static float random01() { return (esp_random() & 0xFFFF) / 65535.0f; }
 
-// A dot at a fractional position, spread over the 4 nearest pixels so it
-// glides instead of jumping.
-static void dot(float x, float y, float v = 1) {
-  const int x0 = (int)floorf(x), y0 = (int)floorf(y);
-  const float fx = x - x0, fy = y - y0;
-  gfx::plot(x0, y0, v * (1 - fx) * (1 - fy));
-  gfx::plot(x0 + 1, y0, v * fx * (1 - fy));
-  gfx::plot(x0, y0 + 1, v * (1 - fx) * fy);
-  gfx::plot(x0 + 1, y0 + 1, v * fx * fy);
-}
+// All the games in this file draw LEDs only fully on or off: in-between
+// levels are made by switching the LEDs rapidly, which can show as flicker.
+
+// A dot at a fractional position, on the nearest pixel.
+static void dot(float x, float y) { display.setPixel((int)lroundf(x), (int)lroundf(y), true); }
 
 // "Punti 12" scrolling once after a game over.
 class ScoreScreen {
@@ -149,10 +143,9 @@ class PongGame : public ArcadeGame {
 
   void draw() {
     display.clear();
-    for (int y = 0; y < ROWS; y += 2) display.setLevel(7, y, 18);  // net
     for (int i = 0; i < PADDLE; i++) {
-      gfx::plot(0, (int)roundf(left_) + i, 1);
-      gfx::plot(COLS - 1, (int)roundf(right_) + i, 1);
+      display.setPixel(0, (int)roundf(left_) + i, true);
+      display.setPixel(COLS - 1, (int)roundf(right_) + i, true);
     }
     dot(x_, y_);
   }
@@ -277,17 +270,15 @@ class BreakoutGame : public ArcadeGame {
 
   void draw() {
     display.clear();
-    static const uint8_t ROW_LEVEL[BRICK_ROWS] = {255, 190, 130, 80};
     for (int r = 0; r < BRICK_ROWS; r++) {
       for (int c = 0; c < COLS / BRICK_W; c++) {
         if (!bricks_[r][c]) continue;
-        display.setLevel(c * BRICK_W, TOP + r, ROW_LEVEL[r]);
-        display.setLevel(c * BRICK_W + 1, TOP + r, ROW_LEVEL[r] / 2);  // brick edges
+        for (int k = 0; k < BRICK_W; k++) display.setPixel(c * BRICK_W + k, TOP + r, true);
       }
     }
-    for (int i = 0; i < lives_ - 1; i++) display.setLevel(i * 2, 0, 50);  // spare balls
+    for (int i = 0; i < lives_ - 1; i++) display.setPixel(i * 2, 0, true);  // spare balls
     const int p = (int)roundf(paddle_);
-    for (int i = 0; i < PADDLE; i++) display.setLevel(p + i, ROWS - 1, 200);
+    for (int i = 0; i < PADDLE; i++) display.setPixel(p + i, ROWS - 1, true);
     dot(x_, y_);
   }
 
@@ -405,14 +396,13 @@ class FlappyGame : public ArcadeGame {
       const int px = (int)floorf(pipeX_[i]);
       for (int y = 0; y < ROWS; y++) {
         if (y >= pipeGap_[i] && y < pipeGap_[i] + GAP) continue;
-        display.setLevel(px, y, 110);
-        display.setLevel(px + 1, y, 70);
+        display.setPixel(px, y, true);
+        display.setPixel(px + 1, y, true);
       }
     }
-    dot(BIRD_X, y_);
-    dot(BIRD_X + 1, y_);
-    dot(BIRD_X, y_ + 1, 0.8f);
-    dot(BIRD_X + 1, y_ + 1, 0.8f);
+    // The bird: a 2x2 block.
+    const int by = (int)lroundf(y_);
+    for (int k = 0; k < 4; k++) display.setPixel(BIRD_X + k % 2, by + k / 2, true);
   }
 
   float y_ = 6, vy_ = 0, scroll_ = 0;
@@ -548,17 +538,16 @@ class InvadersGame : public ArcadeGame {
 
   void draw() {
     display.clear();
-    const bool legs = (tick_ / 8) % 2;
     for (int i = 0; i < ALIENS; i++) {
       if (!aliens_[i]) continue;
-      display.setLevel(alienX(i), alienY(i), legs ? 255 : 170);
-      display.setLevel(alienX(i) + 1, alienY(i), legs ? 170 : 255);
+      display.setPixel(alienX(i), alienY(i), true);
+      display.setPixel(alienX(i) + 1, alienY(i), true);
     }
-    if (shotY_ >= 0) display.setLevel(shotX_, shotY_, 255);
-    if (bombY_ >= 0) display.setLevel(bombX_, bombY_, 120);
-    display.setLevel(player_, ROWS - 2, 255);
-    for (int dx = -1; dx <= 1; dx++) display.setLevel(player_ + dx, ROWS - 1, 200);
-    for (int i = 0; i < lives_ - 1; i++) display.setLevel(COLS - 1 - i * 2, 0, 45);  // spare lives
+    if (shotY_ >= 0) display.setPixel(shotX_, shotY_, true);
+    if (bombY_ >= 0) display.setPixel(bombX_, bombY_, true);
+    display.setPixel(player_, ROWS - 2, true);
+    for (int dx = -1; dx <= 1; dx++) display.setPixel(player_ + dx, ROWS - 1, true);
+    for (int i = 0; i < lives_ - 1; i++) display.setPixel(COLS - 1 - i * 2, 0, true);  // spare lives
   }
 
   bool aliens_[ALIENS];
@@ -569,9 +558,10 @@ class InvadersGame : public ArcadeGame {
 };
 
 // ---------------------------------------------------------------------------
-// Pac-Man: one pixel per cell on a 16x16 maze with a tunnel on row 6. Walls
-// are faint, dots dim, the four power pellets blink; Pac-Man is steady and
-// full, the ghosts flicker (and pulse dimly while they can be eaten). Eat
+// Pac-Man: one pixel per cell on a 16x16 maze with a tunnel on row 6. With
+// LEDs only on or off the walls stay dark and the dots trace the corridors;
+// Pac-Man is steady, the ghosts blink slowly (and only light up briefly
+// while they can be eaten). Eat
 // every dot to clear the level; 3 lives. In demo mode Pac-Man heads for the
 // nearest dot along paths that keep clear of the ghosts, runs from them
 // when they get close and hunts them while they are frightened.
@@ -815,22 +805,25 @@ class PacManGame : public ArcadeGame {
 
   void draw() {
     display.clear();
-    const bool flashOn = flash_ > 0 && (flash_ / 4) % 2;
+    if (flash_ > 0) {  // level cleared: the walls blink
+      if ((flash_ / 4) % 2) {
+        for (int y = 0; y < ROWS; y++) {
+          for (int x = 0; x < COLS; x++) display.setPixel(x, y, MAZE[y][x] == '#');
+        }
+      }
+      return;
+    }
     for (int y = 0; y < ROWS; y++) {
       for (int x = 0; x < COLS; x++) {
-        if (MAZE[y][x] == '#') display.setLevel(x, y, flashOn ? 255 : 35);
-        else if (food_[y][x] == 1) display.setLevel(x, y, 90);
-        else if (food_[y][x] == 2 && (tick_ / 5) % 2) display.setLevel(x, y, 255);
+        if (food_[y][x]) display.setPixel(x, y, true);
       }
     }
-    if (flash_ > 0) return;
-    for (const Ghost &g : ghosts_) {
-      const uint8_t level = frightened_ > 0 ? (frightened_ < 40 && (tick_ / 3) % 2 ? 200 : 110)
-                                            : ((tick_ / 2) % 2 ? 255 : 150);
-      display.setLevel(g.x, g.y, level);
-    }
-    if (pause_ == 0 || (tick_ / 3) % 2) display.setLevel(px_, py_, 255);
-    for (int i = 0; i < lives_ - 1; i++) display.setLevel(COLS - 1 - i, 0, 0);  // spare lives: gaps in the top wall
+    // Ghosts: on 300 ms, off 200 ms; while they can be eaten, on only one
+    // frame in four. Off means dark, even over a dot, so the blink shows.
+    const bool ghostOn = frightened_ > 0 ? tick_ % 4 == 0 : tick_ % 10 < 6;
+    for (const Ghost &g : ghosts_) display.setPixel(g.x, g.y, ghostOn);
+    if (pause_ == 0 || (tick_ / 5) % 2) display.setPixel(px_, py_, true);
+    for (int i = 0; i < lives_ - 1; i++) display.setPixel(COLS - 1 - i, 0, true);  // spare lives, top right
   }
 
   uint8_t food_[ROWS][COLS];  // 0 none, 1 dot, 2 power pellet
