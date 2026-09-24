@@ -13,11 +13,12 @@
 //   +----------------+
 //   |temp° icon      |   temperature x1-6, rows 1-6, degree sign x7, row 1
 //   |                |   weather icon x9-14, rows 1-7
-//   |HH MM           |   hours x1-7 and minutes x9-15, rows 8-13
+//   |HH MM           |   hours x1-6 and minutes x8-14, rows 8-13
 //   +----------------+
 //
-// "HH MM" needs 15 columns, one more than inside the seconds track, so the
-// minutes' last column lies on the track's right edge.
+// Everything stays inside the seconds track: the hours have no leading zero
+// and a 2-pixel tens digit (only ever 1 or 2), so they take the same
+// columns as the temperature above them.
 //
 // Until there is weather data the clock uses big digits over the whole
 // inner area instead, and until the time is known the shared "waiting"
@@ -49,6 +50,17 @@ static void borderPixel(int s, int &x, int &y) {
   s -= 15;
   x = 1 + s;
   y = 0;
+}
+
+// Hours in x1-6: the units at x4-6 and, from 10, a 2-pixel tens digit at
+// x1-2 (the same columns as the temperature's).
+static void drawHours(int y, int hour) {
+  if (hour >= 10) {
+    for (const NarrowGlyph &g : NARROW_TENS) {
+      if (g.c == '0' + hour / 10) display.drawBitmap(1, y, g.rows, 2, 6);
+    }
+  }
+  display.drawChar(4, y, '0' + hour % 10);
 }
 
 // Two-digit number in the small font with its left edge at x.
@@ -132,8 +144,8 @@ void ClockMode::update(uint32_t now) {
   const Weather weather = weatherNow();
   display.clear();
   if (weather.valid) {
-    drawSmallNumber(1, 8, t.tm_hour);
-    drawSmallNumber(9, 8, t.tm_min);
+    drawHours(8, t.tm_hour);
+    drawSmallNumber(8, 8, t.tm_min);
     // Rain within 2 hours: the icon alternates with an umbrella every 2 s.
     const bool umbrella = rainSoon(weather) && (now / 2000) % 2;
     const AnimatedIcon &icon = umbrella ? ICON_UMBRELLA : iconFor(weather.code, weather.isDay);
