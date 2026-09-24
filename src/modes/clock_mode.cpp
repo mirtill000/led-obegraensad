@@ -2,6 +2,7 @@
 
 #include "bigdigits.h"
 #include "display.h"
+#include "font_small.h"
 #include "settings.h"
 #include "timekeeping.h"
 #include "ui.h"
@@ -11,7 +12,7 @@
 // Layout (the outer border is the seconds track):
 //
 //   +----------------+
-//   |temp° icon      |   temperature x1-6, rows 1-6, degree sign x7, row 1
+//   |temp° icon      |   temperature x1-6, rows 1-6, degree sign x8, row 1
 //   |                |   weather icon x9-14, rows 1-7
 //   |HH MM           |   hours x1-6 and minutes x8-14, rows 8-13
 //   +----------------+
@@ -25,7 +26,8 @@
 // dots (see ui.h).
 
 
-// 2-pixel-wide tens digits so a two-digit temperature fits in 6 columns.
+// 2-pixel-wide tens digits so a two-digit temperature fits in 6 columns:
+// the same square shapes as the font's digits (font_small.h), squeezed.
 struct NarrowGlyph {
   char c;
   uint16_t rows[6];
@@ -52,6 +54,10 @@ static void borderPixel(int s, int &x, int &y) {
   y = 0;
 }
 
+// A digit right-aligned in the 3-column slot at x, so the narrower 1
+// doesn't shift the digits next to it.
+static void drawDigit(int x, int y, char c) { display.drawChar(x + 3 - findGlyph(c)->width, y, c); }
+
 // Hours in x1-6: the units at x4-6 and, from 10, a 2-pixel tens digit at
 // x1-2 (the same columns as the temperature's).
 static void drawHours(int y, int hour) {
@@ -60,19 +66,20 @@ static void drawHours(int y, int hour) {
       if (g.c == '0' + hour / 10) display.drawBitmap(1, y, g.rows, 2, 6);
     }
   }
-  display.drawChar(4, y, '0' + hour % 10);
+  drawDigit(4, y, '0' + hour % 10);
 }
 
-// Two-digit number in the small font with its left edge at x.
+// Two-digit number in the small font in the slots at x and x + 4.
 static void drawSmallNumber(int x, int y, int value) {
-  char buf[3] = {(char)('0' + value / 10), (char)('0' + value % 10), 0};
-  display.drawText(x, y, buf, 0, 2);
+  drawDigit(x, y, '0' + value / 10);
+  drawDigit(x + 4, y, '0' + value % 10);
 }
 
 // Temperature from x1, clamped to -9..99, with a one-pixel degree sign
 // after it on its top row. Two-digit values starting with 1, 2, 3 or a
-// minus use 2-pixel tens so the number fits in x1-6 and the degree sits at
-// x7, clear of the icon; 40 and above take x1-7 and go without it.
+// minus use 2-pixel tens so the number fits in x1-6; the degree sits at x8,
+// a column away from the digits' full top row, and the icon pixel next to
+// it is turned off. 40 and above take x1-7 and go without it.
 static void drawTemperature(int y, float celsius) {
   int t = (int)lroundf(celsius);
   if (t < -9) t = -9;
@@ -87,14 +94,14 @@ static void drawTemperature(int y, float celsius) {
   if (narrow) {
     // 2-wide tens, 1 gap, 3-wide units: 6 columns, x1-6.
     display.drawBitmap(1, y, narrow->rows, 2, 6);
-    display.drawChar(4, y, s[1]);
+    drawDigit(4, y, s[1]);
   } else {
     const int w = Display::textWidth(s.c_str(), 0, s.length()) - 1;
     display.drawText(w <= 6 ? 7 - w : 1, y, s.c_str(), 0, s.length());
     if (w > 6) return;  // no room for the degree sign
   }
-  display.setPixel(8, y, false);  // keep the degree apart from the icon
-  display.setPixel(7, y, true);
+  display.setPixel(9, y, false);  // keep the degree apart from the icon
+  display.setPixel(8, y, true);
 }
 
 // Seconds with a fractional part: milliseconds since the second last

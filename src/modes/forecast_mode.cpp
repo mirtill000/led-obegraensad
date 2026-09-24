@@ -86,12 +86,14 @@ static void drawDay(const Weather &w, int day) {
 static void drawTemperature(int y, float celsius, uint8_t level) {
   const int t = constrain((int)lroundf(celsius), -99, 99);
   const int value = abs(t);
-  int left = 12;
+  // Each digit right-aligned in its 3-column slot (the 1 is narrower).
+  const String units(value % 10), tens(value / 10);
+  int left = 15 - ui::miniWidth(units);
+  ui::mini(left, y, units, level);
   if (value >= 10) {
-    ui::mini(8, y, String(value / 10), level);
-    left = 8;
+    left = 11 - ui::miniWidth(tens);
+    ui::mini(left, y, tens, level);
   }
-  ui::mini(12, y, String(value % 10), level);
   if (t < 0) {
     display.setLevel(left - 3, y + 2, level);
     display.setLevel(left - 2, y + 2, level);
