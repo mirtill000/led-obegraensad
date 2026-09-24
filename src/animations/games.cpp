@@ -226,18 +226,21 @@ class TetrisAnimation : public Animation {
     }
   }
 
+  // Every LED is either fully on or off: in-between levels are made by
+  // switching the LEDs rapidly, which can show as a slight flicker, and
+  // Tetris' blocks should look crisp.
   void draw() {
     display.clear();
     for (int y = 0; y < H; y++) {
-      display.setLevel(LEFT - 1, y, 30);  // walls
-      display.setLevel(LEFT + W, y, 30);
+      display.setPixel(LEFT - 1, y, true);  // walls
+      display.setPixel(LEFT + W, y, true);
       const bool flashing = phase_ == CLEARING && rowFull(y);
+      // Game over: the rows go dark one by one from the top.
+      const bool gone = phase_ == GAME_OVER && y < phaseFrames_ * H / 30;
       for (int x = 0; x < W; x++) {
-        if (!board_[y][x]) continue;
-        uint8_t l = 150;
-        if (flashing) l = (phaseFrames_ % 2) ? 255 : 40;
-        if (phase_ == GAME_OVER) l = 150 * (30 - phaseFrames_) / 30;  // fade out
-        display.setLevel(LEFT + x, y, l);
+        if (!board_[y][x] || gone) continue;
+        if (flashing && phaseFrames_ % 2 == 0) continue;  // full rows blink
+        display.setPixel(LEFT + x, y, true);
       }
     }
     if (phase_ == DROPPING) {

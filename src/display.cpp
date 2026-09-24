@@ -5,6 +5,8 @@
 #include <math.h>
 #include <string.h>
 
+#include "font_mini.h"
+#include "font_compact.h"
 #include "font_small.h"
 
 Display display;
@@ -306,11 +308,86 @@ String Display::fontText(const String &utf8) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Fonts for scrolling text.
+
+static TextFont scrollFont_ = TextFont::Small;
+static const int GLYPH_COUNT = sizeof(FONT_GLYPHS) / sizeof(FONT_GLYPHS[0]);
+
+void Display::setScrollFont(TextFont font) { scrollFont_ = font; }
+TextFont Display::scrollFont() { return scrollFont_; }
+
+static int fontHeight(TextFont f) { return f == TextFont::Big ? 16 : f == TextFont::Mini ? MINI_HEIGHT : FONT_HEIGHT; }
+static int fontSpacing(TextFont f) { return f == TextFont::Big ? 2 : FONT_SPACING; }
+int Display::scrollFontHeight() { return fontHeight(scrollFont_); }
+
+// The big font: every small glyph scaled x2 with EPX (Scale2x), which keeps
+// diagonals smooth instead of doubling the steps. Built once, on first use.
+static uint16_t bigRows[GLYPH_COUNT][16];
+static void buildBigFont() {
+  static bool built = false;
+  if (built) return;
+  built = true;
+  for (int i = 0; i < GLYPH_COUNT; i++) {
+    const Glyph &g = FONT_GLYPHS[i];
+    auto P = [&](int x, int y) -> bool {
+      return x >= 0 && x < g.width && y >= 0 && y < FONT_HEIGHT && (g.rows[y] & (0x80 >> x));
+    };
+    for (int r = 0; r < 16; r++) bigRows[i][r] = 0;
+    for (int y = 0; y < FONT_HEIGHT; y++) {
+      for (int x = 0; x < g.width; x++) {
+        const bool p = P(x, y), a = P(x, y - 1), b = P(x + 1, y), c = P(x - 1, y), d = P(x, y + 1);
+        const bool out[4] = {(c == a && c != d && a != b) ? a : p, (a == b && a != c && b != d) ? b : p,
+                             (d == c && d != b && c != a) ? c : p, (b == d && b != a && d != c) ? d : p};
+        for (int k = 0; k < 4; k++) {
+          if (out[k]) bigRows[i][2 * y + k / 2] |= 0x8000 >> (2 * x + k % 2);
+        }
+      }
+    }
+  }
+}
+
+// Rows of `c` in `font` (bit 15 = leftmost column); returns its width.
+static int glyphRows(TextFont font, char c, uint16_t rows[16]) {
+  if (font == TextFont::Mini) {
+    const MiniGlyph *g = findMiniGlyph(c);
+    for (int r = 0; r < MINI_HEIGHT; r++) rows[r] = g->rows[r] << 8;
+    return g->width;
+  }
+  const Glyph *g = font == TextFont::Compact ? findCompactGlyph(c) : findGlyph(c);
+  if (font == TextFont::Big) {
+    buildBigFont();
+    memcpy(rows, bigRows[g - FONT_GLYPHS], sizeof(bigRows[0]));
+    return g->width * 2;
+  }
+  for (int r = 0; r < FONT_HEIGHT; r++) rows[r] = g->rows[r] << 8;
+  return g->width;
+}
+
+int Display::textWidthIn(TextFont font, const char *text, int start, int end) {
+  if (font == TextFont::Small) return textWidth(text, start, end);
+  int width = 0;
+  uint16_t rows[16];
+  for (int i = start; i < end; i++) width += glyphRows(font, text[i], rows) + fontSpacing(font);
+  return width;
+}
+
+void Display::drawTextIn(TextFont font, int x, int y, const char *text, int start, int end) {
+  if (font == TextFont::Small) return drawText(x, y, text, start, end);
+  uint16_t rows[16];
+  const int height = fontHeight(font);
+  for (int i = start; i < end && x < COLS; i++) {
+    const int w = glyphRows(font, text[i], rows);
+    if (x + w >= 0) drawBitmap(x, y, rows, w, height);
+    x += w + fontSpacing(font);
+  }
+}
+
 int Display::textRow(const String &position, int previous) {
-  const int lowest = ROWS - FONT_HEIGHT;  // text touching the bottom edge
+  const int lowest = ROWS - scrollFontHeight();  // text touching the bottom edge
   if (position == "top") return 0;
   if (position == "bottom") return lowest;
-  if (position != "random") return lowest / 2;
+  if (position != "random" || lowest < 3) return lowest / 2;  // the big font has no room to move
   int row;
   do {
     row = esp_random() % (lowest + 1);
@@ -318,23 +395,28 @@ int Display::textRow(const String &position, int previous) {
   return row;
 }
 
-int Display::scrollWidth(const char *text) {
+// The scroll font, with Small swapped for Compact when asked.
+static TextFont scrollFontFor(bool compact) {
+  return compact && scrollFont_ == TextFont::Small ? TextFont::Compact : scrollFont_;
+}
+
+int Display::scrollWidth(const char *text, bool compact) {
   const int len = strlen(text);
   const char *split = strchr(text, '|');
-  if (split == nullptr) return textWidth(text, 0, len);
+  if (split == nullptr) return textWidthIn(scrollFontFor(compact), text, 0, len);
   const int mid = split - text;
   return max(textWidth(text, 0, mid), textWidth(text, mid + 1, len));
 }
 
-void Display::drawScrollFrame(const char *text, int offset, int y) {
+void Display::drawScrollFrame(const char *text, int offset, int y, bool compact) {
   const int len = strlen(text);
   const char *split = strchr(text, '|');
 
   clear();
   if (split == nullptr) {
-    // One line, at row y or vertically centred.
-    const int lowest = ROWS - FONT_HEIGHT;
-    drawText(-offset, y >= 0 ? min(y, lowest) : lowest / 2, text, 0, len);
+    // One line in the scroll font, at row y or vertically centred.
+    const int lowest = ROWS - scrollFontHeight();
+    drawTextIn(scrollFontFor(compact), -offset, y >= 0 ? min(y, lowest) : lowest / 2, text, 0, len);
   } else {
     // Two lines (small font) at the top and bottom edges, both starting together.
     const int mid = split - text;

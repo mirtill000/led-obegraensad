@@ -146,6 +146,13 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="middle">Al centro</option>
       <option value="bottom">In basso</option>
     </select>
+    <label for="textFontText">Font</label>
+    <select id="textFontText">
+      <option value="small">Attuale (8 pixel)</option>
+      <option value="big">Grande (tutto il pannello)</option>
+      <option value="mini">Mini 3×5 (solo maiuscole)</option>
+    </select>
+    <p class="hint">È lo stesso font di Display: vale per tutto il testo che scorre. Qui, con «Attuale», le lettere sono strette di un pixel. Con il Grande l'altezza non conta.</p>
   </section>
 
   <section data-mode="quotes" hidden>
@@ -324,6 +331,13 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     </div>
     <label for="brightness">Luminosità</label>
     <input type="range" id="brightness" min="1" max="255">
+    <label for="textFont">Font del testo che scorre</label>
+    <select id="textFont">
+      <option value="small">Attuale (8 pixel)</option>
+      <option value="big">Grande (tutto il pannello)</option>
+      <option value="mini">Mini 3×5 (solo maiuscole)</option>
+    </select>
+    <p class="hint">Vale per testo scorrevole, frasi, dati dal web e orologio a parole. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
     <label for="transition">Passaggio tra modalità e animazioni</label>
     <select id="transition">
       <option value="fade">Dissolvenza</option>
@@ -486,6 +500,8 @@ function render() {
 
   for (const b of $('orientation').children) b.classList.toggle('on', b.dataset.vertical === (s.vertical ? '1' : '0'));
   if (!editing('brightness')) $('brightness').value = s.brightness;
+  $('textFont').value = s.textFont;
+  $('textFontText').value = s.textFont;
   $('transition').value = s.transition;
   $('fwVersion').textContent = s.version;
 }
@@ -966,6 +982,13 @@ for (const b of $('orientation').children) {
   b.onclick = () => post('/api/settings', { vertical: b.dataset.vertical })
     .then(() => status('Orientamento: ' + b.textContent.toLowerCase())).catch(fail);
 }
+// The font can be picked in Display and in the scrolling text's section.
+for (const id of ['textFont', 'textFontText']) {
+  $(id).onchange = (e) => {
+    $('textFont').value = $('textFontText').value = e.target.value;
+    post('/api/settings', { textFont: e.target.value }).then(() => status('Font cambiato')).catch(fail);
+  };
+}
 $('transition').onchange = (e) => post('/api/settings', { transition: e.target.value })
   .then(() => status('Passaggio: ' + e.target.selectedOptions[0].textContent.toLowerCase())).catch(fail);
 $('brightness').onchange = (e) => post('/api/settings', { brightness: e.target.value }).catch(fail);
@@ -1088,7 +1111,7 @@ static void sendState() {
   }
   json += "],\"activeMode\":" + modeJson(currentMode());
 
-  json += ",\"text\":" + jsonString(settings.text);
+  json += ",\"text\":" + jsonString(settings.text) + ",\"textFont\":" + jsonString(settings.textFont);
   json += ",\"textPos\":" + jsonString(settings.textPosition) + ",\"quotesPos\":" + jsonString(settings.quotesPosition);
   json += ",\"brightness\":" + String(settings.brightness) + ",\"vertical\":" + jsonBool(settings.vertical);
   json += ",\"transition\":" + jsonString(settings.transition);
@@ -1264,6 +1287,13 @@ static void handleFrame() {
 
 static void handleSettings() {
   if (server.hasArg("brightness")) settings.brightness = constrain(server.arg("brightness").toInt(), 1, 255);
+  if (server.hasArg("textFont")) {
+    const String font = server.arg("textFont");
+    if (font != "small" && font != "big" && font != "mini") return badRequest("Font sconosciuto");
+    settings.textFont = font;
+    Display::setScrollFont(fontForSettings());
+    restartMode();  // scrolling widths depend on the font
+  }
   if (server.hasArg("transition")) {
     const String style = server.arg("transition");
     if (style != "fade" && style != "wipe" && style != "none") return badRequest("Passaggio sconosciuto");

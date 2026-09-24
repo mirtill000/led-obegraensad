@@ -8,6 +8,7 @@
 struct Settings {
   String mode;          // mode picked by the user, see modes.h
   String text;          // scrolling text (UTF-8)
+  String textFont;      // font of all scrolling text: "small" (font A, the default), "big" or "mini"
   // Height of the scrolling text and of the hourly quote: "top", "middle",
   // "bottom" or "random" (a different height at every pass).
   String textPosition;
@@ -74,6 +75,8 @@ static const size_t QUOTES_MAX = 16000;  // bytes
 void loadQuotes();
 bool saveQuotes();
 
+// Font for scrolling text from settings.textFont.
+TextFont fontForSettings();
 // Transition style from settings.transition.
 Transition transitionForSettings();
 // Display rotation for the current orientation setting.

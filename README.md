@@ -92,7 +92,8 @@ include/
   constants.h        - pins, matrix size, rotation, default text, WiFi names
   secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
   font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ; ! ? ' - %)
-  font_mini.h        - 5px-tall capitals (only Previsioni, which has no room for 8 rows)
+  font_mini.h        - 5px-tall capitals (Previsioni and the "Mini" choice; "Grande" is built from font_small)
+  font_compact.h     - font_small with letters one pixel narrower (Testo scorrevole)
   display.h, modes.h, settings.h, web.h
   ui.h               - shared look of the info screens (header band, waiting dots)
 src/
@@ -164,7 +165,12 @@ animation menu, ...). General settings are in collapsible sections:
   free geocoding service and sends the lamp just the coordinates) and pick
   the time zone; picking a city also picks its time zone when it's in the
   list.
-- **Display** - horizontal/vertical, brightness, and how the lamp goes from
+- **Display** - horizontal/vertical, brightness, the font of all
+  scrolling text (text, quotes, web info, word clock): *Attuale* (font A:
+  proportional, 8 pixels, lowercase; the default), *Grande* (the same
+  font doubled with the EPX/Scale2x algorithm, which keeps diagonals
+  smooth: it fills the whole panel, for reading from across the room) or
+  *Mini 3x5* (capitals only, 5 pixels), and how the lamp goes from
   one mode or animation to the next: *Dissolvenza* (cross-fade, 0.6 s, the
   default), *Tendina da sinistra* (the new image sweeps in, 0.5 s) or
   *Stacco netto*.
@@ -184,7 +190,11 @@ Current modes:
 
 - **Testo scorrevole** - scrolls the text set on the page, at the height
   chosen there: top, middle, bottom or variable (a different height at
-  every pass, the default)
+  every pass, the default), in the font chosen there (the same setting as
+  in Display). With *Attuale* this mode uses its compact variant
+  (`include/font_compact.h`): letters one pixel narrower - 3 instead of 4 -
+  where the shape allows it, so more text fits; the digits are already 3
+  pixels wide, the narrowest that stays readable
 - **Frase dell'ora** - a different quote every hour, scrolling on one line
   at the chosen height (top, middle, bottom or variable, like the text).
   The built-in list is 100 motivational quotes from
@@ -228,7 +238,7 @@ Current modes:
   minutes); button: next animation. The animations, in
   `src/animations/`:
   - *Atmosfere*: digital rain, fire, stars, waves
-  - *Giochi*: **Tetris** - in demo mode, for each piece the computer tries
+  - *Giochi*: **Tetris** - blocks drawn only fully on or off, so they stay crisp; in demo mode, for each piece the computer tries
     every rotation and column and picks the best by stack height, holes and
     surface; **Snake** - in demo mode it takes the shortest way to the food
     only if it can still reach its tail afterwards; **Pong** - you against
@@ -261,10 +271,10 @@ Current modes:
   (hours and minutes on the day itself)
 - **Spento** - all LEDs off
 
-All text and numbers use one font (A: proportional, 8 rows, lowercase,
-"Morbido" digits) in every mode; only Previsioni, where 8-row text leaves
-no room for the minimum and maximum, uses the 5-row mini font (same
-rounded shapes). The information screens share one look (`include/ui.h`):
+Fixed layouts use font A (proportional, 8 rows, lowercase, "Morbido"
+digits): the clock, the countdown's header; only Previsioni, where 8-row
+text leaves no room for the minimum and maximum, uses the 5-row mini font
+(same rounded shapes). Scrolling text uses the font picked in Display. The information screens share one look (`include/ui.h`):
 a header band along the top (Conto alla rovescia), everything
 at full brightness, and the same sign while data is missing - three dots
 filling in, or a blinking WiFi symbol when the lamp is offline.
