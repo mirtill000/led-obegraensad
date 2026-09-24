@@ -198,7 +198,8 @@ Current modes:
   page you can replace it with your own (up to 16000 characters, saved in
   flash as `/quotes.txt`); "restore" brings back the built-in one. Button:
   next quote
-- **Orologio e meteo** - one screen: on top the temperature with a
+- **Orologio e meteo** - one screen, numbers in the mini font like
+  Previsioni: on top the temperature with a
   one-pixel degree sign and an animated weather icon (falling rain or snow,
   flashing lightning, drifting clouds, ...), below the time (hours without a
   leading zero, then the minutes), and a dot gliding round the border for the
