@@ -198,9 +198,8 @@ Current modes:
   big digits, and until the time is known it shows the waiting dots (see
   below). Button: refresh weather
 - **Previsioni** - the daily forecast for today and the next 3 days, one
-  screen per day: the city and date ("MILANO  MER 24 SET") scroll along
-  the top and the next day follows once they have gone by (about 7 s);
-  below, the day's weather icon and its minimum over its maximum, each
+  screen per day, 5 s each: the weekday in two letters and the date ("VE
+  26", still - "VEN 26" wouldn't fit in 16 pixels) along the top; below, the day's weather icon and its minimum over its maximum, each
   with a degree dot. The web page still shows the hourly chart. The clock
   also shows an umbrella next to the weather icon when rain is likely
   (>= 60%) within 2 hours

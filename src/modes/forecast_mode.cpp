@@ -1,7 +1,7 @@
 #include "modes/forecast_mode.h"
 
 #include "display.h"
-#include "settings.h"
+#include "font_mini.h"
 #include "timekeeping.h"
 #include "ui.h"
 #include "weather.h"
@@ -30,9 +30,11 @@ String ForecastMode::summary() {
 
 void ForecastMode::action() { requestWeatherUpdate(); }
 
-static const char *const DAYS[] = {"DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"};
-static const char *const MONTHS[] = {"GEN", "FEB", "MAR", "APR", "MAG", "GIU",
-                                     "LUG", "AGO", "SET", "OTT", "NOV", "DIC"};
+static const uint32_t DAY_MS = 5000;  // each day's screen
+
+// Two-letter Italian weekday names (0 = Sunday), so that name and date fit
+// on 16 columns without scrolling.
+static const char *const DAYS[] = {"DO", "LU", "MA", "ME", "GI", "VE", "SA"};
 
 // Day of the week (0 = Sunday) for a Gregorian date.
 static int weekday(int y, int m, int d) {
@@ -41,29 +43,41 @@ static int weekday(int y, int m, int d) {
   return (y + y / 4 - y / 100 + y / 400 + T[m - 1] + d) % 7;
 }
 
-// "MILANO  MER 24 SET" for forecast day `day` (city only without a date).
-static String header(const Weather &w, int day) {
-  String s = Display::fontText(settings.city);
+// Weekday and day of the month of forecast day `day`; false if unknown.
+static bool dayDate(const Weather &w, int day, int &wday, int &mday) {
   if (day < w.days && w.dayYear[day] && w.dayMonth[day] >= 1 && w.dayMonth[day] <= 12) {
-    s += String("  ") + DAYS[weekday(w.dayYear[day], w.dayMonth[day], w.dayOfMonth[day])] + " " +
-         w.dayOfMonth[day] + " " + MONTHS[w.dayMonth[day] - 1];
-  } else if (day == 0) {
-    struct tm t;
-    if (localTime(t)) s += String("  ") + DAYS[t.tm_wday] + " " + t.tm_mday + " " + MONTHS[t.tm_mon];
+    wday = weekday(w.dayYear[day], w.dayMonth[day], w.dayOfMonth[day]);
+    mday = w.dayOfMonth[day];
+    return true;
   }
-  return s;
+  struct tm t;
+  if (day != 0 || !localTime(t)) return false;
+  wday = t.tm_wday;
+  mday = t.tm_mday;
+  return true;
 }
 
-// Scrolls the current day's header along rows 0-4, with the next day's
-// coming in behind it. Returns true once that one has reached x0, i.e.
-// when the screen should move on to the next day.
-bool ForecastMode::drawHeader(const Weather &w, uint32_t now) {
-  const int next = w.days > 0 ? (day_ + 1) % w.days : 0;
-  const String text = header(w, day_);
-  const int offset = (now - dayStart_) / ui::HEADER_STEP_MS;
-  if (offset >= ui::headerPeriod(text)) return true;
-  ui::header(text, offset, header(w, next));
-  return false;
+// Header on rows 0-4, not scrolling: "VE" at x0-6 and the day of the month
+// right-aligned to x15 ("VE 26"). The mini font's M is 5 pixels wide, so
+// a 3-pixel one stands in for it here.
+static void drawDay(const Weather &w, int day) {
+  int wday, mday;
+  if (!dayDate(w, day, wday, mday)) return;
+  static const uint8_t NARROW_M[MINI_HEIGHT] = {0xA0, 0xE0, 0xE0, 0xA0, 0xA0};
+  for (int i = 0; i < 2; i++) {
+    const char c = DAYS[wday][i];
+    if (c != 'M') {
+      ui::mini(i * 4, 0, String(c));
+      continue;
+    }
+    for (int r = 0; r < MINI_HEIGHT; r++) {
+      for (int k = 0; k < 3; k++) {
+        if (NARROW_M[r] & (0x80 >> k)) display.setLevel(i * 4 + k, r, 255);
+      }
+    }
+  }
+  const String n(mday);
+  ui::mini(COLS - ui::miniWidth(n), 0, n);
 }
 
 // Temperature with the tens at x8-10, the units at x12-14 and a one-pixel
@@ -87,25 +101,25 @@ static void drawTemperature(int y, float celsius, uint8_t level) {
 
 // Layout, as in the mockup:
 //
-//   rows 0-4    city and date, scrolling
+//   rows 0-4    weekday and date, e.g. "VE 26" (still)
 //   rows 6-15   icon x0-5 (rows 7-13)   min x8-14 rows 6-10, ° x15
 //                                        max x8-14 rows 11-15, ° x15
 //
 // Everything is at full brightness. The screen shows today, then each of
-// the next 3 days in turn, moving on each time the header has scrolled by.
+// the next 3 days in turn, 5 s each, with the mode transition in between.
 void ForecastMode::update(uint32_t now) {
   if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
   const Weather w = weatherNow();
   if (dayStart_ == 0) dayStart_ = now;
   if (day_ >= max(1, (int)w.days)) day_ = 0;
-  display.clear();
-  if (drawHeader(w, now)) {
-    day_ = w.days > 0 ? (day_ + 1) % w.days : 0;
+  if (now - dayStart_ >= DAY_MS && w.days > 1) {
+    day_ = (day_ + 1) % w.days;
     dayStart_ = now;
-    display.clear();
-    drawHeader(w, now);
+    display.beginTransition();
   }
+  display.clear();
+  drawDay(w, day_);
   if (!w.valid || w.days == 0) {
     ui::waiting(now, 10);
     display.render();

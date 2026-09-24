@@ -4,8 +4,8 @@
 #include "weather.h"
 
 // Daily forecast, one screen per day: today, then the next 3 days in turn.
-// City and date scroll along the top; below are the day's weather icon and
-// its minimum and maximum temperature.
+// Weekday and date along the top ("VE 26"); below are the day's weather
+// icon and its minimum and maximum temperature.
 class ForecastMode : public Mode {
  public:
   const char *id() const override { return "forecast"; }
@@ -24,9 +24,7 @@ class ForecastMode : public Mode {
   static String summary();
 
  private:
-  bool drawHeader(const Weather &w, uint32_t now);
-
   uint32_t lastDraw_ = 0;
-  uint32_t dayStart_ = 0;  // when the current day's header started scrolling
+  uint32_t dayStart_ = 0;  // when the current day's screen started
   int day_ = 0;            // 0 = today
 };

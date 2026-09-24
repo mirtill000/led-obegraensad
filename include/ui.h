@@ -5,7 +5,8 @@
 // The shared look of the lamp's information screens, so they all read the
 // same way:
 //  - a header band on rows 0-4 with scrolling text in the mini font
-//    (Previsioni: city and date; Conto alla rovescia: the event);
+//    (Conto alla rovescia: the event; Previsioni uses the same band for a
+//    still "VE 26");
 //  - one "waiting for data" animation - three dots filling in -
 //    replaced by a blinking WiFi sign while the lamp is offline;
 //  - everything at full brightness.
