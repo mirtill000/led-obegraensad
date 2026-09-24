@@ -29,15 +29,15 @@
 
 
 // 2-pixel-wide tens digits, so a two-digit temperature or hour fits in 6
-// columns: the mini font's square shapes, squeezed (its 1 is already 2
+// columns: the mini font's rounded shapes, squeezed (its 1 is already 2
 // pixels wide).
 struct NarrowGlyph {
   char c;
   uint8_t rows[MINI_HEIGHT];  // bit 7 = leftmost column
 };
 static const NarrowGlyph NARROW_TENS[] = {
-    {'2', {0xC0, 0x40, 0xC0, 0x80, 0xC0}},
-    {'3', {0xC0, 0x40, 0xC0, 0x40, 0xC0}},
+    {'2', {0x80, 0x40, 0x40, 0x80, 0xC0}},
+    {'3', {0x80, 0x40, 0x80, 0x40, 0x80}},
     {'-', {0x00, 0x00, 0xC0, 0x00, 0x00}},
 };
 

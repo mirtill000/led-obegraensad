@@ -302,7 +302,7 @@ split by a `|`.)
 
 The text is case sensitive: the font has lowercase and capital letters
 (capitals are one pixel taller), digits and a few punctuation marks.
-Digits have the same square "digital display" shapes everywhere - text
+Digits have the same soft, rounded shapes ("Morbido") everywhere - text
 font, mini font, big digits, the clock's 2-pixel tens - with a 1 without
 a foot; in fixed layouts each digit sits right-aligned in its slot so the
 narrower 1 doesn't shift the others.
