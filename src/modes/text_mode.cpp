@@ -7,7 +7,6 @@ void TextMode::start() {
   // still contain the two-line '|' separator.
   String text = settings.text;
   text.replace('|', ' ');
-  scroller_.setCompact(true);  // letters one pixel narrower in this mode
   scroller_.start(text);
   row_ = Scroller::rowFor(settings.textPosition, -1);
   scroller_.setRow(row_);

@@ -80,18 +80,19 @@ static void drawDay(const Weather &w, int day) {
   ui::mini(COLS - ui::miniWidth(n), 0, n);
 }
 
-// Temperature with the tens at x8-10, the units at x12-14 and a one-pixel
-// degree sign at x15. The minus is 2 pixels wide, one pixel left of the
-// first digit; at -10 and below it takes x5-6.
+// Temperature with the tens at x7-9, the units at x11-13, a blank column
+// and a one-pixel degree sign at x15 (kept apart from the digits, as in the
+// clock). The minus is 2 pixels wide, one pixel left of the first digit; at
+// -10 and below it takes x4-5.
 static void drawTemperature(int y, float celsius, uint8_t level) {
   const int t = constrain((int)lroundf(celsius), -99, 99);
   const int value = abs(t);
   // Each digit right-aligned in its 3-column slot (the 1 is narrower).
   const String units(value % 10), tens(value / 10);
-  int left = 15 - ui::miniWidth(units);
+  int left = 14 - ui::miniWidth(units);
   ui::mini(left, y, units, level);
   if (value >= 10) {
-    left = 11 - ui::miniWidth(tens);
+    left = 10 - ui::miniWidth(tens);
     ui::mini(left, y, tens, level);
   }
   if (t < 0) {
@@ -104,8 +105,8 @@ static void drawTemperature(int y, float celsius, uint8_t level) {
 // Layout, as in the mockup:
 //
 //   rows 0-4    weekday and date, e.g. "VE 26" (still)
-//   rows 6-15   icon x0-5 (rows 7-13)   min x8-14 rows 6-10, ° x15
-//                                        max x8-14 rows 11-15, ° x15
+//   rows 6-15   icon x0-5 (rows 7-13)   min x7-13 rows 6-10, ° x15
+//                                        max x7-13 rows 11-15, ° x15
 //
 // Everything is at full brightness. The screen shows today, then each of
 // the next 3 days in turn, 5 s each, with the mode transition in between.
@@ -123,7 +124,7 @@ void ForecastMode::update(uint32_t now) {
   display.clear();
   drawDay(w, day_);
   if (!w.valid || w.days == 0) {
-    ui::waiting(now, 10);
+    ui::waiting(now);
     display.render();
     return;
   }

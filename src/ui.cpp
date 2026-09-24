@@ -29,15 +29,17 @@ int miniWidth(const String &text) {
 }
 
 void textHeaderLoop(const String &text, uint32_t now) {
+  // The compact letters, like all scrolling text.
   const String t = Display::fontText(text);
-  const int width = Display::textWidth(t.c_str(), 0, t.length());
+  const int width = Display::textWidthIn(TextFont::Compact, t.c_str(), 0, t.length());
   const int period = width + HEADER_GAP;
   const int offset = (now / HEADER_STEP_MS) % period;
-  display.drawText(-offset, 0, t.c_str(), 0, t.length());
-  display.drawText(period - offset, 0, t.c_str(), 0, t.length());
+  display.drawTextIn(TextFont::Compact, -offset, 0, t.c_str(), 0, t.length());
+  display.drawTextIn(TextFont::Compact, period - offset, 0, t.c_str(), 0, t.length());
 }
 
-void waiting(uint32_t now, int y) {
+void waiting(uint32_t now) {
+  const int y = WAITING_ROW;
   if (WiFi.status() != WL_CONNECTED) {
     // Fan of arcs, 7x5, blinking once a second.
     static const char *WIFI[] = {".#####.", "#.....#", "..###..", ".#...#.", "...#..."};

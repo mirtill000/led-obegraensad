@@ -15,9 +15,8 @@
 //  Small - the proportional 8-row font (a-z, A-Z)
 //  Big   - the same font doubled with EPX/Scale2x: 16 rows, the whole panel
 //  Mini  - 5-row capitals, about 4 letters at a time
-//  Compact - Small with letters one pixel narrower (font_compact.h); only
-//            "Testo scorrevole", "Frase dell'ora" and "Dal web" ask for
-//            it, see Scroller
+//  Compact - Small with letters one pixel narrower (font_compact.h): what
+//            scrolling text actually uses when Small is picked
 enum class TextFont : uint8_t { Small, Big, Mini, Compact };
 
 // How the panel goes from one mode to the next (see beginTransition()).
@@ -64,8 +63,7 @@ class Display {
   //
   // Scroll length in pixels: offsets -COLS .. scrollWidth(text) - 1 take the
   // text from off-screen right to off-screen left.
-  // `compact`: the Small font becomes Compact (other fonts are unchanged).
-  static int scrollWidth(const char *text, bool compact = false);
+  static int scrollWidth(const char *text);
   static void setScrollFont(TextFont font);
   static TextFont scrollFont();
   // Rows of a line of scrolling text in the current font.
@@ -77,7 +75,7 @@ class Display {
   // Clears, draws `text` scrolled left by `offset` pixels and renders. A
   // single line has its top at row `y` (0 = top edge, ROWS - FONT_HEIGHT
   // = bottom edge), or is centred when `y` is negative.
-  void drawScrollFrame(const char *text, int offset, int y = -1, bool compact = false);
+  void drawScrollFrame(const char *text, int offset, int y = -1);
   // Blocking: scrolls `text` once from off-screen right to off-screen left.
   void scrollTextOnce(const char *text, uint16_t frameDelayMs);
 
@@ -95,10 +93,11 @@ class Display {
   // Draws `rows` of a bitmap `width` pixels wide (bit 15 = leftmost).
   void drawBitmap(int x, int y, const uint16_t *bitmap, int width, int rows);
 
- private:
   // Text in any font (drawText/textWidth use the small one).
   static int textWidthIn(TextFont font, const char *text, int start, int end);
   void drawTextIn(TextFont font, int x, int y, const char *text, int start, int end);
+
+ private:
 
   // Maps logical (x, y) to an index into frame_, applying flips and the
   // rotation; returns -1 when off-screen.

@@ -24,7 +24,7 @@ static float smoothSeconds(const struct tm &t) {
 // waiting sign (see ui.h).
 static void drawNoTime() {
   display.clear();
-  ui::waiting(millis(), 7);
+  ui::waiting(millis());
 }
 
 // ---------------------------------------------------------------------------

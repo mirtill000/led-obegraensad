@@ -5,6 +5,7 @@ extern Animation *const rainAnimation;
 extern Animation *const fireAnimation;
 extern Animation *const starsAnimation;
 extern Animation *const wavesAnimation;
+extern Animation *const marioAnimation;
 extern Animation *const tetrisAnimation;
 extern Animation *const snakeAnimation;
 extern Animation *const pongAnimation;
@@ -25,6 +26,7 @@ Animation *const ANIMATIONS[] = {
     fireAnimation,
     starsAnimation,
     wavesAnimation,
+    marioAnimation,
     tetrisAnimation,
     snakeAnimation,
     pongAnimation,

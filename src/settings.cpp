@@ -111,6 +111,12 @@ void loadSettings() {
   settings.galleryShow = prefs.getString("galleryShow", "all");
   settings.playlistOn = prefs.getBool("plOn", false);
   settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5");
+  // Super Mario used to be a mode of its own; it is now one of the games.
+  if (settings.mode == "mario") {
+    settings.mode = "ambient";
+    settings.ambient = "mario";
+  }
+  settings.playlist.replace("mario:", "ambient:");
   settings.demoOff = prefs.getString("demoOff", "");
   settings.countdownLabel = prefs.getString("cdLabel", "Vacanze");
   settings.countdownDate = prefs.getString("cdDate", "");

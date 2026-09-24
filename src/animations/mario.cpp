@@ -1,4 +1,4 @@
-#include "modes/mario_mode.h"
+#include "animations/mario.h"
 
 #include "display.h"
 #include "settings.h"
@@ -51,17 +51,17 @@ static const uint16_t GOOMBA[2][2] = {
 
 static int32_t randomInt(int32_t lo, int32_t hi) { return lo + (int32_t)(esp_random() % (uint32_t)(hi - lo + 1)); }
 
-static uint8_t topAt(const MarioMode::State &s, int32_t x) {
+static uint8_t topAt(const MarioGame::State &s, int32_t x) {
   if (x < 0 || x >= s.generatedTo) return GROUND;
-  return s.top[x % MarioMode::RING];
+  return s.top[x % MarioGame::RING];
 }
 
 // Advances the world by one frame; returns false if Mario died.
-static bool step(MarioMode::State &s) {
+static bool step(MarioGame::State &s) {
   s.cam++;
   const int32_t px = s.cam + MARIO_X;
 
-  for (MarioMode::Goomba &g : s.goombas) {
+  for (MarioGame::Goomba &g : s.goombas) {
     if (!g.alive) continue;
     // Walk, turning round at pits and pipes.
     const float next = g.x + g.dir * GOOMBA_SPEED;
@@ -100,7 +100,7 @@ static bool step(MarioMode::State &s) {
   }
 
   // Goombas: stomp them from above, anything else hurts.
-  for (MarioMode::Goomba &g : s.goombas) {
+  for (MarioGame::Goomba &g : s.goombas) {
     if (!g.alive) continue;
     const int32_t gx = (int32_t)lroundf(g.x);
     if (px > gx + 2 || gx > px + MARIO_W - 1 || bottomRow < GROUND - 2) continue;
@@ -115,7 +115,7 @@ static bool step(MarioMode::State &s) {
   }
 
   const int topRow = (int)floorf(s.y);
-  for (MarioMode::Coin &c : s.coins) {
+  for (MarioGame::Coin &c : s.coins) {
     if (c.taken) continue;
     if (c.x >= px && c.x <= px + MARIO_W - 1 && c.y + 1 >= topRow && c.y <= bottomRow) {
       c.taken = true;
@@ -133,10 +133,10 @@ static bool step(MarioMode::State &s) {
 static const int PLAN_FRAMES = 60;  // "survives this long" counts as safe
 static const int JUMP_WINDOW = 12;  // moments considered for the next jump
 
-static int bestFrom(const MarioMode::State &s, int jumps, int budget);
+static int bestFrom(const MarioGame::State &s, int jumps, int budget);
 
 // Frames survived (up to `budget`) just walking on.
-static int walkFrames(MarioMode::State s, int budget) {
+static int walkFrames(MarioGame::State s, int budget) {
   for (int i = 0; i < budget; i++) {
     if (!step(s)) return i;
   }
@@ -145,7 +145,7 @@ static int walkFrames(MarioMode::State s, int budget) {
 
 // Frames survived (up to `budget`) jumping now, then playing on as well as
 // possible with `jumps - 1` more jumps.
-static int jumpFrames(MarioMode::State s, int jumps, int budget) {
+static int jumpFrames(MarioGame::State s, int jumps, int budget) {
   s.vy = JUMP_SPEED;
   s.onGround = false;
   for (int i = 0; i < budget; i++) {
@@ -157,10 +157,10 @@ static int jumpFrames(MarioMode::State s, int jumps, int budget) {
 
 // Frames survived (up to `budget`) with the best choice of when to jump,
 // using at most `jumps` jumps.
-static int bestFrom(const MarioMode::State &start, int jumps, int budget) {
+static int bestFrom(const MarioGame::State &start, int jumps, int budget) {
   int best = walkFrames(start, budget);
   if (jumps == 0 || best == budget) return best;
-  MarioMode::State s = start;
+  MarioGame::State s = start;
   for (int wait = 0; wait < JUMP_WINDOW && wait < budget; wait++) {
     if (s.onGround) {
       best = max(best, wait + jumpFrames(s, jumps, budget - wait));
@@ -171,19 +171,18 @@ static int bestFrom(const MarioMode::State &start, int jumps, int budget) {
   return best;
 }
 
-void MarioMode::start() {
+void MarioGame::start() {
   memset(&s_, 0, sizeof(s_));
   s_.y = GROUND - MARIO_H;
   s_.onGround = true;
   flatLeft_ = 20;
   extendWorld();
   phase_ = PLAYING;
-  lastFrame_ = 0;
 }
 
 // Generates level columns up to the end of the ring buffer: flat stretches
 // separated by a pipe, a pit, a goomba or a row of coins.
-void MarioMode::extendWorld() {
+void MarioGame::extendWorld() {
   auto put = [this](uint8_t top) { s_.top[s_.generatedTo++ % RING] = top; };
 
   for (Goomba &g : s_.goombas) {
@@ -233,7 +232,7 @@ void MarioMode::extendWorld() {
 // Autopilot decision for this frame: jump when an obstacle is coming and
 // jumping now is (one of) the best moments, or to grab a coin just ahead
 // when that is safe.
-bool MarioMode::shouldJump() const {
+bool MarioGame::shouldJump() const {
   if (!s_.onGround) return false;
 
   const int32_t px = s_.cam + MARIO_X;
@@ -253,26 +252,26 @@ bool MarioMode::shouldJump() const {
   return now > 1 + bestFrom(later, 3, PLAN_FRAMES - 1);
 }
 
-bool MarioMode::input(char key) {
-  if (demoMode("mario")) return false;  // the autopilot is playing
-  if (key != 'U' && key != 'A') return true;
-  if (phase_ != PLAYING) return true;
+uint16_t MarioGame::frameMs() const { return FRAME_MS; }
+
+void MarioGame::input(char key) {
+  if (demo_) return;  // the autopilot is playing
+  if (key != 'U' && key != 'A') return;
+  if (phase_ != PLAYING) return;
   if (s_.onGround) {
     s_.vy = JUMP_SPEED;
     s_.onGround = false;
   } else {
     jumpQueuedUntil_ = millis() + JUMP_BUFFER_MS;
   }
-  return true;
 }
 
-void MarioMode::update(uint32_t now) {
+// Called every FRAME_MS (scaled by the animations' speed setting).
+void MarioGame::frame(uint32_t now) {
   if (phase_ == SCORE) {
-    if (score_.update(now, SCROLL_DELAY_MS)) start();
+    if (score_.update(now, 0)) start();  // a pixel per frame
     return;
   }
-  if (now - lastFrame_ < interval(FRAME_MS)) return;
-  lastFrame_ = now;
   frame_++;
 
   if (phase_ == DYING) {
@@ -282,12 +281,12 @@ void MarioMode::update(uint32_t now) {
     draw(now);
     if (deathY_ > ROWS + 10) {
       phase_ = SCORE;
-      score_.start(String("punti ") + s_.score);
+      score_.start(String("Punti ") + s_.score);
     }
     return;
   }
 
-  const bool jump = demoMode("mario") ? shouldJump() : (s_.onGround && (int32_t)(jumpQueuedUntil_ - now) > 0);
+  const bool jump = demo_ ? shouldJump() : (s_.onGround && (int32_t)(jumpQueuedUntil_ - now) > 0);
   if (jump) {
     s_.vy = JUMP_SPEED;
     s_.onGround = false;
@@ -302,7 +301,7 @@ void MarioMode::update(uint32_t now) {
   draw(now);
 }
 
-void MarioMode::draw(uint32_t now) {
+void MarioGame::draw(uint32_t now) {
   display.clear();
   // Faint clouds in the background, drifting at half speed.
   static const uint16_t CLOUD[2] = {0x6000, 0xF000};
@@ -342,3 +341,6 @@ void MarioMode::draw(uint32_t now) {
   }
   display.render();
 }
+
+static MarioGame mario;
+extern Animation *const marioAnimation = &mario;

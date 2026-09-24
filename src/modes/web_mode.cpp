@@ -28,7 +28,6 @@ void WebMode::showNext() {
   waitSince_ = millis();
   if (waiting_) return;
   if (line.length() == 0) line = "Scegli cosa mostrare nella pagina";
-  scroller_.setCompact(true);  // the same letters as Testo scorrevole
   scroller_.start(line);
   row_ = Scroller::rowFor(settings.webPosition, row_);
   scroller_.setRow(row_);
@@ -40,7 +39,7 @@ void WebMode::update(uint32_t now) {
     if (now - lastWait_ < 50) return;
     lastWait_ = now;
     display.clear();
-    ui::waiting(now, 7);
+    ui::waiting(now);
     display.render();
     return;
   }

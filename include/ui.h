@@ -22,12 +22,15 @@ int mini(int x, int y, const String &text, uint8_t level = 255);
 // Width of mini-font text in pixels, without trailing spacing.
 int miniWidth(const String &text);
 
-// Header band on rows 0-7: `text` in the text font scrolling in a loop,
+// Header band on rows 0-7: `text` in the text font (compact letters, like
+// all scrolling text) scrolling in a loop,
 // timed by `now` (capitals on rows 0-5, the descenders below); UTF-8.
 void textHeaderLoop(const String &text, uint32_t now);
 
-// Waiting for data: three dots on row `y` appearing one by one, or a blinking
-// WiFi sign centred there while WiFi is down.
-void waiting(uint32_t now, int y);
+// Waiting for data: three dots appearing one by one, or a blinking WiFi
+// sign while WiFi is down - always at the same height (row 10: below the
+// header of the screens that have one).
+static const int WAITING_ROW = 10;
+void waiting(uint32_t now);
 
 }  // namespace ui

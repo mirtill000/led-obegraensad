@@ -395,20 +395,19 @@ int Display::textRow(const String &position, int previous) {
   return row;
 }
 
-// The scroll font, with Small swapped for Compact when asked.
-static TextFont scrollFontFor(bool compact) {
-  return compact && scrollFont_ == TextFont::Small ? TextFont::Compact : scrollFont_;
-}
+// The font scrolling text is drawn in: Small ("Attuale") scrolls with its
+// compact letters.
+static TextFont scrollingFont() { return scrollFont_ == TextFont::Small ? TextFont::Compact : scrollFont_; }
 
-int Display::scrollWidth(const char *text, bool compact) {
+int Display::scrollWidth(const char *text) {
   const int len = strlen(text);
   const char *split = strchr(text, '|');
-  if (split == nullptr) return textWidthIn(scrollFontFor(compact), text, 0, len);
+  if (split == nullptr) return textWidthIn(scrollingFont(), text, 0, len);
   const int mid = split - text;
   return max(textWidth(text, 0, mid), textWidth(text, mid + 1, len));
 }
 
-void Display::drawScrollFrame(const char *text, int offset, int y, bool compact) {
+void Display::drawScrollFrame(const char *text, int offset, int y) {
   const int len = strlen(text);
   const char *split = strchr(text, '|');
 
@@ -416,7 +415,7 @@ void Display::drawScrollFrame(const char *text, int offset, int y, bool compact)
   if (split == nullptr) {
     // One line in the scroll font, at row y or vertically centred.
     const int lowest = ROWS - scrollFontHeight();
-    drawTextIn(scrollFontFor(compact), -offset, y >= 0 ? min(y, lowest) : lowest / 2, text, 0, len);
+    drawTextIn(scrollingFont(), -offset, y >= 0 ? min(y, lowest) : lowest / 2, text, 0, len);
   } else {
     // Two lines (small font) at the top and bottom edges, both starting together.
     const int mid = split - text;

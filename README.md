@@ -191,10 +191,11 @@ Current modes:
 - **Testo scorrevole** - scrolls the text set on the page, at the height
   chosen there: top, middle, bottom or variable (a different height at
   every pass, the default), in the font chosen there (the same setting as
-  in Display). With *Attuale* this mode uses its compact variant
-  (`include/font_compact.h`): letters one pixel narrower - 3 instead of 4 -
-  where the shape allows it, so more text fits; the digits are already 3
-  pixels wide, the narrowest that stays readable
+  in Display). With *Attuale*, this and all other scrolling text (quotes,
+  web info, word clock, game scores, the countdown's header) use its
+  compact variant (`include/font_compact.h`): letters one pixel narrower -
+  3 instead of 4 - where the shape allows it, so more text fits; the
+  digits are already 3 pixels wide, the narrowest that stays readable
 - **Frase dell'ora** - a different quote every hour, scrolling on one line
   at the chosen height (top, middle, bottom or variable, like the text).
   The built-in list is 100 motivational quotes from
@@ -202,8 +203,7 @@ Current modes:
   turns it into a header at every build, so edit the text file). On the
   page you can replace it with your own (up to 16000 characters, saved in
   flash as `/quotes.txt`); "restore" brings back the built-in one. Button:
-  next quote. The quotes use the same letters as Testo scorrevole (the
-  compact variant of *Attuale*)
+  next quote
 - **Orologio e meteo** - one screen, numbers in the text font: on top the
   temperature with a
   one-pixel degree sign and an animated weather icon (falling rain or snow,
@@ -211,37 +211,38 @@ Current modes:
   leading zero, then the minutes), and a dot gliding round the border for the
   seconds (it moves continuously, its light shared between neighbouring
   pixels, with a short fading trail). Weather is
-  refreshed every 15 min; until the first reading arrives the clock uses
-  big digits, and until the time is known it shows the waiting dots (see
-  below). Button: refresh weather
+  refreshed every 15 min; until the first reading arrives the clock shows
+  just the time, centred, and until the time is known the waiting dots
+  (see below). Button: refresh weather
 - **Previsioni** - the daily forecast for today and the next 3 days, one
   screen per day, 5 s each: the weekday in two letters and the date ("VE
   26", still - "VEN 26" wouldn't fit in 16 pixels) along the top; below, the day's weather icon and its minimum over its maximum, each
-  with a degree dot. The web page still shows the hourly chart. The clock
+  with a degree dot set one column apart, as in the clock. The page shows
+  the same four days (icon, minimum, maximum, chance of rain) and a chart
+  of the next 12 hours. The clock
   also shows an umbrella next to the weather icon when rain is likely
   (>= 60%) within 2 hours
 - **Dal web** - in turn: the word of the day (built-in list), an "on this
   day" event from Italian Wikipedia, and the next event of your calendar
   (paste its secret iCal link, e.g. from Google Calendar; recurring events
-  aren't supported). Choose the sources and the height on the page. The
-  text uses the same letters as Testo scorrevole (the compact variant of
-  *Attuale*). Until
+  aren't supported). Choose the sources and the height on the page. Until
   the first data arrives it shows the waiting dots
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
   40-150 generations; when the board dies, freezes or loops a new game
   starts; button: restart
-- **Super Mario** - side-scrolling platformer (Mario is a 5x7 sprite in
-  grayscale: cap, face and moustache, overalls, shoes) with pipes, pits, goombas
-  (stomp them) and coins. In demo mode an autopilot simulates the next
-  moves and jumps at the best moment; otherwise you jump. At game over it
-  shows the score and starts again; button: restart
 - **Animazioni** - one animation, or "automatic" (a different one every 5
   minutes); button: next animation. The animations, in
   `src/animations/`:
   - *Atmosfere*: digital rain, fire, stars, waves
-  - *Giochi*: **Tetris** - in demo mode, for each piece the computer tries
+  - *Giochi*: **Super Mario** - side-scrolling platformer (Mario is a
+    5x7 sprite in grayscale: cap, face and moustache, overalls, shoes)
+    with pipes, pits, goombas (stomp them) and coins; in demo mode an
+    autopilot simulates the next moves and jumps at the best moment,
+    otherwise you jump. At game over it shows the score and starts again
+    (it used to be a mode of its own: a saved choice moves here by
+    itself); **Tetris** - in demo mode, for each piece the computer tries
     every rotation and column and picks the best by stack height, holes and
     surface; **Snake** - in demo mode it takes the shortest way to the food
     only if it can still reach its tail afterwards; **Pong** - you against
@@ -270,12 +271,13 @@ Current modes:
 - **Spento** - all LEDs off
 
 Fixed layouts use font A (proportional, 8 rows, lowercase, "Morbido"
-digits): the clock, the countdown's header; only Previsioni, where 8-row
+digits): the clock and the countdown; only Previsioni, where 8-row
 text leaves no room for the minimum and maximum, uses the 5-row mini font
 (same rounded shapes). Scrolling text uses the font picked in Display. The information screens share one look (`include/ui.h`):
 a header band along the top (Conto alla rovescia), everything
 at full brightness, and the same sign while data is missing - three dots
-filling in, or a blinking WiFi symbol when the lamp is offline.
+filling in, or a blinking WiFi symbol when the lamp is offline - always
+on row 10.
 
 ### Games and demo mode
 
@@ -285,7 +287,7 @@ by switching LEDs on and off very fast, which can show as a slight
 flicker. Super Mario and Labirinto 3D keep their shades of gray, which
 their look depends on.
 
-Super Mario and all the games in the animations have a **Modalità demo** checkbox (on by
+All the games in the animations have a **Modalità demo** checkbox (on by
 default), shown on the page while the game is on the panel:
 
 - **on** - the game plays by itself and ignores input;

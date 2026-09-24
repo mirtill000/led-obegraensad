@@ -80,6 +80,10 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   .fc div { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; font-size: 10px; color: var(--muted); }
   .fc .bar { width: 100%; background: var(--line); border-radius: 3px 3px 0 0; }
   .fc .t { color: var(--fg); font-size: 11px; }
+  .fcdays { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .fcdays div { border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center; font-size: 13px; }
+  .fcdays .ic { font-size: 22px; display: block; margin: 2px 0; }
+  .fcdays small { color: var(--muted); display: block; }
   .days { display: flex; gap: 6px; flex-wrap: wrap; }
   .days label { display: flex; align-items: center; gap: 4px; margin: 0; color: var(--fg); }
   #canvas { width: 100%; max-width: 320px; aspect-ratio: 1; display: block; margin: 0 auto; border-radius: 8px; touch-action: none; background: #000; }
@@ -152,7 +156,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="big">Grande (tutto il pannello)</option>
       <option value="mini">Mini 3×5 (solo maiuscole)</option>
     </select>
-    <p class="hint">È lo stesso font di Display: vale per tutto il testo che scorre. Qui, nelle frasi dell'ora e in «Dal web», con «Attuale», le lettere sono strette di un pixel. Con il Grande l'altezza non conta.</p>
+    <p class="hint">È lo stesso font di Display: vale per tutto il testo che scorre. Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza non conta.</p>
   </section>
 
   <section data-mode="quotes" hidden>
@@ -180,6 +184,8 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
 
   <section data-mode="forecast" hidden>
     <h2>Previsioni</h2>
+    <div class="fcdays" id="fcDays"></div>
+    <label>Prossime 12 ore</label>
     <div class="fc" id="fcChart"></div>
     <p class="hint" id="fcInfo"></p>
   </section>
@@ -337,7 +343,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="big">Grande (tutto il pannello)</option>
       <option value="mini">Mini 3×5 (solo maiuscole)</option>
     </select>
-    <p class="hint">Vale per testo scorrevole, frasi, dati dal web e orologio a parole. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
+    <p class="hint">Vale per tutto il testo che scorre: testo, frasi, dati dal web, orologio a parole e punteggi dei giochi. Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
     <label for="transition">Passaggio tra modalità e animazioni</label>
     <select id="transition">
       <option value="fade">Dissolvenza</option>
@@ -569,9 +575,35 @@ $('demo').onchange = (e) => (e.target.blur(), post('/api/demo', { id: state.game
 // Sections of the newer modes, and the general alarm/night extras.
 const DAY_NAMES = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
 function clock(minutes) { return minutes < 0 ? '?' : Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0'); }
+// WMO weather code -> emoji, grouped like the lamp's icons.
+function weatherEmoji(code) {
+  if (code < 0) return '·';
+  if (code === 0) return '☀️';
+  if (code <= 2) return '🌤️';
+  if (code === 3) return '☁️';
+  if (code === 45 || code === 48) return '🌫️';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return '❄️';
+  if (code >= 95) return '⛈️';
+  if (code >= 51) return '🌧️';
+  return '☁️';
+}
+
 function renderExtras() {
   const s = state;
-  // Forecast: 12 columns, bar = rain probability, label = temperature.
+  // Forecast: the same days as the lamp (today and the next 3), then 12
+  // columns for the next hours, bar = rain probability, label = temperature.
+  const fd = $('fcDays');
+  fd.innerHTML = '';
+  for (const [y, m, d, code, lo, hi, rain] of (s.weather ? s.weather.days : [])) {
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    const label = date.toDateString() === today.toDateString() ? 'Oggi'
+      : date.toLocaleDateString('it-IT', { weekday: 'short' }).replace('.', '');
+    const card = document.createElement('div');
+    card.innerHTML = '<b>' + label + '</b><small>' + d + '/' + m + '</small><span class="ic">' + weatherEmoji(code) +
+      '</span>' + Math.round(lo) + '° / <b>' + Math.round(hi) + '°</b><small>💧 ' + rain + '%</small>';
+    fd.appendChild(card);
+  }
   const fc = $('fcChart');
   fc.innerHTML = '';
   const hours = s.weather ? s.weather.hours : [];
@@ -1185,6 +1217,14 @@ static void sendState() {
       json += "[" + String((weather.firstHour + i) % 24) + "," + String(weather.hourlyTemp[i], 1) + "," +
               String(weather.hourlyRain[i]) + "]";
     }
+    // Daily forecast as on the lamp: [year, month, day, code, min, max, rain %].
+    json += "],\"days\":[";
+    for (int i = 0; i < weather.days; i++) {
+      if (i) json += ',';
+      json += "[" + String(weather.dayYear[i]) + "," + String(weather.dayMonth[i]) + "," + String(weather.dayOfMonth[i]) + "," +
+              String(weather.dayCode[i]) + "," + String(weather.dayMin[i], 1) + "," + String(weather.dayMax[i], 1) + "," +
+              String(weather.dayRain[i]) + "]";
+    }
     json += "]}";
   } else {
     json += ",\"weather\":null";
@@ -1219,7 +1259,7 @@ static void handleInput() {
 static void handleDemo() {
   const String id = server.arg("id");
   const Animation *a = findAnimation(id);
-  if (id != "mario" && !(a && a->isGame())) return badRequest("Gioco sconosciuto");
+  if (!(a && a->isGame())) return badRequest("Gioco sconosciuto");
   setDemoMode(id.c_str(), server.arg("on") == "1");
   saveSettings();
   sendState();

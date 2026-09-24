@@ -7,7 +7,6 @@
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
 #include "modes/life_mode.h"
-#include "modes/mario_mode.h"
 #include "modes/off_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
@@ -23,14 +22,13 @@ static ClockMode clockMode;
 static ForecastMode forecastMode;
 static WebMode webMode;
 static LifeMode lifeMode;
-static MarioMode marioMode;
 static AmbientMode ambientMode;
 static GalleryMode galleryModeInstance;
 static CountdownMode countdownMode;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
-Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &marioMode, &ambientMode, &galleryModeInstance,
+Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &ambientMode, &galleryModeInstance,
                         &countdownMode, &offMode, &sunriseMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 

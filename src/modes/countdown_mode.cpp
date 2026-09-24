@@ -67,7 +67,7 @@ void CountdownMode::update(uint32_t now) {
   const String label = settings.countdownLabel;
   if (!localTime(t)) {
     ui::textHeaderLoop(label, now);
-    ui::waiting(now, 11);
+    ui::waiting(now);
     display.render();
     return;
   }

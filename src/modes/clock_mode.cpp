@@ -1,6 +1,5 @@
 #include "modes/clock_mode.h"
 
-#include "bigdigits.h"
 #include "display.h"
 #include "font_small.h"
 #include "settings.h"
@@ -23,9 +22,9 @@
 // and a 2-pixel tens digit (only ever 1 or 2), so they take the same
 // columns as the temperature above them.
 //
-// Until there is weather data the clock uses big digits over the whole
-// inner area instead, and until the time is known the shared "waiting"
-// dots (see ui.h).
+// Until there is weather data only the time is shown, in the same digits,
+// centred (rows 5-10); until the time is known, the shared "waiting" dots
+// (see ui.h).
 
 
 // 2-pixel-wide tens digits, so a two-digit temperature or hour fits in 6
@@ -153,7 +152,7 @@ void ClockMode::update(uint32_t now) {
   struct tm t;
   if (!localTime(t)) {
     display.clear();
-    ui::waiting(now, 7);  // until the clock has synced
+    ui::waiting(now);  // until the clock has synced
     display.render();
     return;
   }
@@ -170,10 +169,9 @@ void ClockMode::update(uint32_t now) {
     display.drawBitmap(9, 1, icon.frames[frame], 6, 7);
     drawTemperature(1, weather.temperature);  // after the icon: it clears a pixel of it
   } else {
-    display.drawBitmap(2, 1, BIG_DIGITS[t.tm_hour / 10], 5, 6);
-    display.drawBitmap(8, 1, BIG_DIGITS[t.tm_hour % 10], 5, 6);
-    display.drawBitmap(2, 9, BIG_DIGITS[t.tm_min / 10], 5, 6);
-    display.drawBitmap(8, 9, BIG_DIGITS[t.tm_min % 10], 5, 6);
+    // No weather yet: just the time, in the same digits, centred.
+    drawHours(5, t.tm_hour);
+    drawNumber(8, 5, t.tm_min);
   }
   drawSeconds(t.tm_sec);
   display.render();

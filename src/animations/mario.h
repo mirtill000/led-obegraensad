@@ -1,22 +1,24 @@
 #pragma once
 
+#include "animation.h"
 #include "constants.h"
-#include "modes.h"
 #include "scroller.h"
 
-// Side-scrolling platformer in the style of Super Mario: the level scrolls
-// by with pipes, pits, goombas and coins. In demo mode (the default) an
-// autopilot plays; otherwise the player jumps with the page's controls.
-class MarioMode : public Mode {
+// Side-scrolling platformer in the style of Super Mario, one of the games
+// in "Animazioni": the level scrolls by with pipes, pits, goombas and
+// coins. In demo mode (the default) an autopilot plays; otherwise the
+// player jumps with the page's controls.
+class MarioGame : public Animation {
  public:
   const char *id() const override { return "mario"; }
   const char *name() const override { return "Super Mario"; }
+  const char *group() const override { return "Giochi"; }
+  uint16_t frameMs() const override;
+  bool isGame() const override { return true; }
+  void setDemo(bool demo) override { demo_ = demo; }
   void start() override;
-  void update(uint32_t now) override;
-  const char *actionName() const override { return "Ricomincia"; }
-  void action() override { start(); }
-  bool input(char key) override;
-  const char *gameId() const override { return "mario"; }
+  void frame(uint32_t now) override;
+  void input(char key) override;
 
   // World column heights live in a ring buffer this long; it must cover
   // the screen plus the autopilot's look-ahead.
@@ -57,9 +59,9 @@ class MarioMode : public Mode {
   State s_;
   Phase phase_ = PLAYING;
   int flatLeft_ = 0;
-  uint32_t lastFrame_ = 0;
   uint32_t jumpQueuedUntil_ = 0;  // a press just before landing still counts
   uint32_t frame_ = 0;
   float deathY_ = 0, deathVy_ = 0;
   Scroller score_;
+  bool demo_ = true;
 };

@@ -11,7 +11,7 @@ class Scroller {
   // `text` is UTF-8; accented letters are converted for the font.
   void start(const String &text) {
     text_ = Display::fontText(text);
-    width_ = Display::scrollWidth(text_.c_str(), compact_);
+    width_ = Display::scrollWidth(text_.c_str());
     offset_ = -COLS;
     lastStep_ = 0;
   }
@@ -21,17 +21,13 @@ class Scroller {
   bool update(uint32_t now, uint16_t stepMs) {
     if (now - lastStep_ < stepMs) return false;
     lastStep_ = now;
-    display.drawScrollFrame(text_.c_str(), offset_, row_, compact_);
+    display.drawScrollFrame(text_.c_str(), offset_, row_);
     if (++offset_ < width_) return false;
     offset_ = -COLS;
     return true;
   }
 
   const String &text() const { return text_; }
-
-  // Narrower letters in the Small font (see TextFont::Compact); call
-  // before start().
-  void setCompact(bool compact) { compact_ = compact; }
 
   // Top row of the text (-1 = centred); takes effect on the next step.
   void setRow(int row) { row_ = row; }
@@ -45,6 +41,5 @@ class Scroller {
   int width_ = 0;
   int offset_ = 0;
   int row_ = -1;
-  bool compact_ = false;
   uint32_t lastStep_ = 0;
 };
