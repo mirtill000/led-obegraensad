@@ -52,10 +52,11 @@ String CountdownMode::sentence() {
 
 void CountdownMode::start() { lastDraw_ = 0; }
 
-// Layout, like Previsioni (see ui.h):
+// Layout (see ui.h):
 //
-//   rows 0-4    header: the event and when ("VACANZE  TRA 12 GIORNI")
-//   rows 7-14   days left in big digits, or hours:minutes on the day
+//   rows 0-7    header in the text font: the event and when ("Vacanze  tra
+//               12 giorni"), scrolling
+//   rows 9-14   days left in big digits, or hours:minutes on the day
 void CountdownMode::update(uint32_t now) {
   if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
@@ -63,15 +64,15 @@ void CountdownMode::update(uint32_t now) {
 
   struct tm t;
   const time_t when = target();
-  const String label = Display::fontText(settings.countdownLabel);
+  const String label = settings.countdownLabel;
   if (!localTime(t)) {
-    ui::headerLoop(label, now);
-    ui::waiting(now, 10);
+    ui::textHeaderLoop(label, now);
+    ui::waiting(now, 11);
     display.render();
     return;
   }
   if (!when) {
-    ui::headerLoop("SCEGLI UNA DATA NELLA PAGINA", now);
+    ui::textHeaderLoop("Scegli una data nella pagina", now);
     display.render();
     return;
   }
@@ -80,25 +81,25 @@ void CountdownMode::update(uint32_t now) {
   const long seconds = (long)difftime(when, time(nullptr));
   String header = label;
   if (days < 0 || (days == 0 && seconds < -12 * 3600)) {
-    header += "  E' PASSATO";
+    header += "  è passato";
   } else if (days == 0) {
-    header += seconds <= 0 ? "  E' OGGI!" : "  OGGI";
-    // Hours:minutes left in the small font.
+    header += seconds <= 0 ? "  è oggi!" : "  oggi";
+    // Hours:minutes left in the text font.
     const long s = max(0L, seconds);
     char buf[16];
     snprintf(buf, sizeof(buf), "%ld:%02ld", s / 3600, s % 3600 / 60);
     const int w = Display::textWidth(buf, 0, strlen(buf)) - 1;
-    display.drawText((COLS - w) / 2, 7, buf, 0, strlen(buf));
+    display.drawText((COLS - w) / 2, 9, buf, 0, strlen(buf));
   } else {
-    header += days == 1 ? String("  DOMANI") : String("  TRA ") + days + " GIORNI";
+    header += days == 1 ? String("  domani") : String("  tra ") + days + " giorni";
     if (days <= 99) {
-      drawBigNumber(days, 8);
+      drawBigNumber(days, 9);
     } else {
       const String n(days);
       const int w = Display::textWidth(n.c_str(), 0, n.length()) - 1;
-      display.drawText((COLS - w) / 2, 7, n.c_str(), 0, n.length());
+      display.drawText((COLS - w) / 2, 9, n.c_str(), 0, n.length());
     }
   }
-  ui::headerLoop(header, now);
+  ui::textHeaderLoop(header, now);
   display.render();
 }

@@ -4,9 +4,9 @@
 
 // The shared look of the lamp's information screens, so they all read the
 // same way:
-//  - a header band on rows 0-4 with scrolling text in the mini font
-//    (Conto alla rovescia: the event; Previsioni uses the same band for a
-//    still "VE 26");
+//  - text in the text font (font A, 8 rows), e.g. the scrolling header of
+//    Conto alla rovescia; only Previsioni, which has no room for it, keeps
+//    the 5-row mini font for its still "VE 26";
 //  - one "waiting for data" animation - three dots filling in -
 //    replaced by a blinking WiFi sign while the lamp is offline;
 //  - everything at full brightness.
@@ -22,14 +22,9 @@ int mini(int x, int y, const String &text, uint8_t level = 255);
 // Width of mini-font text in pixels, without trailing spacing.
 int miniWidth(const String &text);
 
-// Pixels the header moves before `text` has scrolled by and the one after
-// it has reached the left edge.
-int headerPeriod(const String &text);
-// Header band: `text` scrolled left by `offset` pixels, followed after the
-// gap by `next` (pass the same text to loop it).
-void header(const String &text, int offset, const String &next);
-// A header that just loops `text`, timed by `now`.
-void headerLoop(const String &text, uint32_t now);
+// Header band on rows 0-7: `text` in the text font scrolling in a loop,
+// timed by `now` (capitals on rows 0-5, the descenders below); UTF-8.
+void textHeaderLoop(const String &text, uint32_t now);
 
 // Waiting for data: three dots on row `y` appearing one by one, or a blinking
 // WiFi sign centred there while WiFi is down.

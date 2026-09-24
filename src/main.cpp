@@ -68,7 +68,6 @@ void setup() {
   display.setBrightness(settings.brightness);
   display.setRotation(rotationForSettings());
   display.setTransition(transitionForSettings());
-  Display::setScrollFont(fontForSettings());
   applyTimezone();
 
   const String ip = startWifi();

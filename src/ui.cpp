@@ -28,15 +28,13 @@ int miniWidth(const String &text) {
   return max(0, w - 1);
 }
 
-int headerPeriod(const String &text) { return miniWidth(text) + HEADER_GAP; }
-
-void header(const String &text, int offset, const String &next) {
-  mini(-offset, 0, text);
-  mini(headerPeriod(text) - offset, 0, next);
-}
-
-void headerLoop(const String &text, uint32_t now) {
-  header(text, (now / HEADER_STEP_MS) % headerPeriod(text), text);
+void textHeaderLoop(const String &text, uint32_t now) {
+  const String t = Display::fontText(text);
+  const int width = Display::textWidth(t.c_str(), 0, t.length());
+  const int period = width + HEADER_GAP;
+  const int offset = (now / HEADER_STEP_MS) % period;
+  display.drawText(-offset, 0, t.c_str(), 0, t.length());
+  display.drawText(period - offset, 0, t.c_str(), 0, t.length());
 }
 
 void waiting(uint32_t now, int y) {

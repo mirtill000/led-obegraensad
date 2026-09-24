@@ -92,12 +92,12 @@ include/
   constants.h        - pins, matrix size, rotation, default text, WiFi names
   secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
   font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ; ! ? ' - %)
-  font_mini.h        - 5px-tall capitals (the "Mini" font; "Grande" is built from font_small)
+  font_mini.h        - 5px-tall capitals (only Previsioni, which has no room for 8 rows)
   display.h, modes.h, settings.h, web.h
   ui.h               - shared look of the info screens (header band, waiting dots)
 src/
   display.cpp        - shift-register driver, font renderer, brightness, transitions
-  ui.cpp             - mini-font header band, "waiting" and "no WiFi" signs
+  ui.cpp             - scrolling header band, "waiting" and "no WiFi" signs
   modes.cpp          - list of modes + switching between them
   modes/             - one file per mode
   animations/        - the animations of the "Animazioni" mode
@@ -164,11 +164,7 @@ animation menu, ...). General settings are in collapsible sections:
   free geocoding service and sends the lamp just the coordinates) and pick
   the time zone; picking a city also picks its time zone when it's in the
   list.
-- **Display** - horizontal/vertical, brightness, and the font of all
-  scrolling text: *Attuale* (proportional, 8 pixels, lowercase), *Grande* (the same font doubled with the EPX/Scale2x algorithm,
-  which keeps diagonals smooth: it fills the whole panel, for reading from
-  across the room) or *Mini 3x5* (capitals only, 5 pixels). Fixed layouts
-  like the clock digits keep their own font. Also how the lamp goes from
+- **Display** - horizontal/vertical, brightness, and how the lamp goes from
   one mode or animation to the next: *Dissolvenza* (cross-fade, 0.6 s, the
   default), *Tendina da sinistra* (the new image sweeps in, 0.5 s) or
   *Stacco netto*.
@@ -188,8 +184,7 @@ Current modes:
 
 - **Testo scorrevole** - scrolls the text set on the page, at the height
   chosen there: top, middle, bottom or variable (a different height at
-  every pass, the default), and in the font chosen there (the same setting
-  as in Display: it applies to all scrolling text)
+  every pass, the default)
 - **Frase dell'ora** - a different quote every hour, scrolling on one line
   at the chosen height (top, middle, bottom or variable, like the text).
   The built-in list is 100 motivational quotes from
@@ -198,8 +193,8 @@ Current modes:
   page you can replace it with your own (up to 16000 characters, saved in
   flash as `/quotes.txt`); "restore" brings back the built-in one. Button:
   next quote
-- **Orologio e meteo** - one screen, numbers in the mini font like
-  Previsioni: on top the temperature with a
+- **Orologio e meteo** - one screen, numbers in the text font: on top the
+  temperature with a
   one-pixel degree sign and an animated weather icon (falling rain or snow,
   flashing lightning, drifting clouds, ...), below the time (hours without a
   leading zero, then the minutes), and a dot gliding round the border for the
@@ -256,13 +251,16 @@ Current modes:
   the lamp while you draw; you can also import a photo or an animated GIF
   (cropped to a square, turned into grayscale, contrast stretched). Up to
   60 drawings are saved in flash
-- **Conto alla rovescia** - laid out like Previsioni: the event and when
-  ("VACANZE  TRA 12 GIORNI") scroll along the top, the days left sit below
-  in big digits (hours and minutes on the day itself)
+- **Conto alla rovescia** - the event and when ("Vacanze  tra 12
+  giorni") scroll along the top, the days left sit below in big digits
+  (hours and minutes on the day itself)
 - **Spento** - all LEDs off
 
-The information screens share one look (`include/ui.h`): a header band in
-the mini font along the top (Previsioni, Conto alla rovescia), everything
+All text and numbers use one font (A: proportional, 8 rows, lowercase,
+"Morbido" digits) in every mode; only Previsioni, where 8-row text leaves
+no room for the minimum and maximum, uses the 5-row mini font (same
+rounded shapes). The information screens share one look (`include/ui.h`):
+a header band along the top (Conto alla rovescia), everything
 at full brightness, and the same sign while data is missing - three dots
 filling in, or a blinking WiFi symbol when the lamp is offline.
 
