@@ -229,9 +229,8 @@ Current modes:
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
   40-150 generations; when the board dies, freezes or loops a new game
   starts; button: restart
-- **Super Mario** - side-scrolling platformer (Mario is a 5x7 lit
-  silhouette - cap, face, overalls, shoes - with the eye and moustache left
-  dark) with pipes, pits, goombas
+- **Super Mario** - side-scrolling platformer (Mario is a 5x7 sprite in
+  grayscale: cap, face and moustache, overalls, shoes) with pipes, pits, goombas
   (stomp them) and coins. In demo mode an autopilot simulates the next
   moves and jumps at the best moment; otherwise you jump. At game over it
   shows the score and starts again; button: restart
@@ -244,16 +243,9 @@ Current modes:
     surface; **Snake** - in demo mode it takes the shortest way to the food
     only if it can still reach its tail afterwards; **Pong** - you against
     the computer, first to 5; **Breakout** - 3 lives, faster at each level;
-    **Flappy Bird**; **Space Invaders** - waves that get faster; **Pac-Man** - one pixel
-    per cell on a 16x16 maze with a side tunnel (the dots trace the
-    corridors, Pac-Man is steady, the ghosts blink slowly), three ghosts (one chases,
-    one cuts ahead, one wanders), power pellets that make them edible for
-    7 s, 3 lives; in demo mode Pac-Man goes for the nearest dot along paths
-    the ghosts can't reach first, runs when they close in and hunts them
-    while they're frightened; **Labirinto 3D** - a first-person
-    maze drawn by raycasting (one ray per column; walls shaded by
-    distance with a fixed dot pattern, their edges lit): find the solid
-    block at the far end. The
+    **Flappy Bird**; **Space Invaders** - waves that get faster; **Labirinto 3D** - a first-person
+    maze drawn by raycasting (one ray per column, walls shaded by
+    distance, a faint floor): find the pulsing block at the far end. The
     map is shown at the start; in demo mode the computer keeps its right
     hand on the wall, which always finds the exit
   - *Orologi*: binary (one
@@ -284,11 +276,11 @@ filling in, or a blinking WiFi symbol when the lamp is offline.
 
 ### Games and demo mode
 
-All games (and Super Mario) draw LEDs only fully on or off. In-between
-brightness is made by switching LEDs on and off very fast, which can show
-as a slight flicker; games have lots of small moving shapes, so they
-don't use it. Where depth or a second shade matters, a fixed dot pattern
-(Labirinto 3D) or a slow deliberate blink (Pac-Man's ghosts) stands in.
+The arcade games (Tetris, Snake, Pong, Breakout, Flappy Bird, Space
+Invaders) draw LEDs only fully on or off: in-between brightness is made
+by switching LEDs on and off very fast, which can show as a slight
+flicker. Super Mario and Labirinto 3D keep their shades of gray, which
+their look depends on.
 
 Super Mario and all the games in the animations have a **Modalità demo** checkbox (on by
 default), shown on the page while the game is on the panel:
@@ -299,8 +291,7 @@ default), shown on the page while the game is on the panel:
   Tetris moves with left/right, rotates with up, drops with down or space;
   Snake uses the arrows; Pong up/down; Breakout left/right; Flappy
   Bird flies with *Vola*, space or up; Space Invaders moves with left/right
-  and shoots with *Spara* or space; Pac-Man turns with the arrows (a
-  press just before a junction is remembered); in Labirinto 3D up/down walk a step,
+  and shoots with *Spara* or space; in Labirinto 3D up/down walk a step,
   left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow
   down keeps moving.
 
