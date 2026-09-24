@@ -2,7 +2,7 @@
 
 #include "font_small.h"
 
-// Compact variant of the text font, for the "Testo scorrevole" mode: every
+// Compact variant of the text font, for "Testo scorrevole" and "Dal web": every
 // letter one pixel narrower where the shape allows it (3 pixels instead of
 // 4), with the same rounded look as the digits. Letters that are already
 // narrow or can't lose a column (I M N T W Y i l m t w), digits (3 pixels,

@@ -28,6 +28,7 @@ void WebMode::showNext() {
   waitSince_ = millis();
   if (waiting_) return;
   if (line.length() == 0) line = "Scegli cosa mostrare nella pagina";
+  scroller_.setCompact(true);  // the same letters as Testo scorrevole
   scroller_.start(line);
   row_ = Scroller::rowFor(settings.webPosition, row_);
   scroller_.setRow(row_);

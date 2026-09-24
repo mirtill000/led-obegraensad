@@ -222,7 +222,9 @@ Current modes:
 - **Dal web** - in turn: the word of the day (built-in list), an "on this
   day" event from Italian Wikipedia, and the next event of your calendar
   (paste its secret iCal link, e.g. from Google Calendar; recurring events
-  aren't supported). Choose the sources and the height on the page. Until
+  aren't supported). Choose the sources and the height on the page. The
+  text uses the same letters as Testo scorrevole (the compact variant of
+  *Attuale*). Until
   the first data arrives it shows the waiting dots
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small

@@ -152,7 +152,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="big">Grande (tutto il pannello)</option>
       <option value="mini">Mini 3×5 (solo maiuscole)</option>
     </select>
-    <p class="hint">È lo stesso font di Display: vale per tutto il testo che scorre. Qui, con «Attuale», le lettere sono strette di un pixel. Con il Grande l'altezza non conta.</p>
+    <p class="hint">È lo stesso font di Display: vale per tutto il testo che scorre. Qui e in «Dal web», con «Attuale», le lettere sono strette di un pixel. Con il Grande l'altezza non conta.</p>
   </section>
 
   <section data-mode="quotes" hidden>
