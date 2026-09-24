@@ -104,6 +104,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   <section>
     <h2>Modalità</h2>
     <div class="modes" id="modes"></div>
+    <p class="hint" id="override" hidden></p>
     <button class="action" id="action" hidden></button>
     <div id="speedBox" hidden>
       <label for="speed">Velocità</label>
@@ -383,21 +384,36 @@ function render() {
   else if (s.playlistPos >= 0) info.push('playlist');
   $('info').textContent = info.join(' · ');
 
-  // Modes: the one being shown is highlighted.
+  // Modes: the one picked is highlighted (with the playlist on, the one
+  // it is showing). The night schedule or the alarm may show something
+  // else for a while: that is said below the list.
+  const selected = s.playlistPos >= 0 ? s.active : s.mode;
   const box = $('modes');
   box.innerHTML = '';
   for (const m of s.modes) {
     const b = document.createElement('button');
-    b.className = m.id === s.active ? 'on' : '';
+    b.className = m.id === selected ? 'on' : '';
     b.textContent = m.name;
-    if (m.id === s.active && (s.night || s.playlistPos >= 0)) {
+    if (m.id === selected && s.playlistPos >= 0) {
       const tag = document.createElement('small');
-      tag.textContent = s.night ? 'notte' : 'playlist';
+      tag.textContent = 'playlist';
       b.appendChild(tag);
     }
     b.onclick = () => post('/api/mode', { id: m.id }).then(() => status(m.name)).catch(fail);
     box.appendChild(b);
   }
+  const override = $('override');
+  override.hidden = s.active === selected;
+  if (s.active === 'sunrise') {
+    override.textContent = 'Sveglia in corso: la lampada mostra l\'alba. «' + modeName(selected) + '» torna dopo.';
+  } else if (s.night) {
+    const until = s.nightSun && s.weather && s.weather.sunrise >= 0 ? clock(s.weather.sunrise) : clock(s.nightEnd);
+    const what = s.active === 'off' ? 'è spenta' : s.active === 'ambient' ? 'mostra le stelle' : 'mostra «' + s.activeMode.name + '»';
+    override.textContent = 'Modalità notte fino alle ' + until + ': la lampada ' + what + '. «' + modeName(selected) + '» torna dopo (orari in «Giorno e notte»).';
+  } else {
+    override.textContent = 'Sulla lampada ora: «' + s.activeMode.name + '».';
+  }
+
   const active = s.activeMode;  // may be a hidden mode (the alarm's sunrise)
   $('action').hidden = !active.action;
   $('action').textContent = active.action || '';
@@ -407,8 +423,8 @@ function render() {
   renderGame();
   renderExtras();
 
-  // Only the active mode's own settings.
-  for (const sec of document.querySelectorAll('section[data-mode]')) sec.hidden = sec.dataset.mode !== s.active;
+  // Only the picked mode's own settings.
+  for (const sec of document.querySelectorAll('section[data-mode]')) sec.hidden = sec.dataset.mode !== selected;
 
   if (!editing('text')) $('text').value = s.text;
   $('textPos').value = s.textPos;
@@ -561,9 +577,10 @@ function renderExtras() {
   $('skyInfo').textContent = (s.weather && s.weather.sunrise >= 0 ? 'Oggi alba ' + clock(s.weather.sunrise) + ', tramonto ' + clock(s.weather.sunset) + ' · ' : '') +
     s.moon.name + ' (illuminata al ' + s.moon.lit + '%)';
 
-  if (s.active === 'gallery' && !galleryLoaded) loadGallery();
+  const picked = s.playlistPos >= 0 ? s.active : s.mode;
+  if (picked === 'gallery' && !galleryLoaded) loadGallery();
   // The editor opens on the drawing the lamp is showing, not a blank page.
-  if (s.active === 'gallery' && ed.pristine && s.galleryCurrent) {
+  if (picked === 'gallery' && ed.pristine && s.galleryCurrent) {
     ed.pristine = false;
     openDrawing(s.galleryCurrent, false);
   }
