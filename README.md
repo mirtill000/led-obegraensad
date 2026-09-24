@@ -184,7 +184,8 @@ Current modes:
 
 - **Testo scorrevole** - scrolls the text set on the page, at the height
   chosen there: top, middle, bottom or variable (a different height at
-  every pass, the default)
+  every pass, the default), and in the font chosen there (the same setting
+  as in Display: it applies to all scrolling text)
 - **Frase dell'ora** - a different quote every hour, scrolling on one line
   at the chosen height (top, middle, bottom or variable, like the text).
   The list is edited on the page (one per line); "restore" brings back the

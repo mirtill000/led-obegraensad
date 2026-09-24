@@ -146,6 +146,13 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="middle">Al centro</option>
       <option value="bottom">In basso</option>
     </select>
+    <label for="textFontText">Font</label>
+    <select id="textFontText">
+      <option value="small">Attuale (8 pixel)</option>
+      <option value="big">Grande (tutto il pannello)</option>
+      <option value="mini">Mini 3×5 (solo maiuscole)</option>
+    </select>
+    <p class="hint">È lo stesso font di Display: vale per tutto il testo che scorre. Con il Grande l'altezza non conta.</p>
   </section>
 
   <section data-mode="quotes" hidden>
@@ -494,6 +501,7 @@ function render() {
   for (const b of $('orientation').children) b.classList.toggle('on', b.dataset.vertical === (s.vertical ? '1' : '0'));
   if (!editing('brightness')) $('brightness').value = s.brightness;
   $('textFont').value = s.textFont;
+  $('textFontText').value = s.textFont;
   $('transition').value = s.transition;
   $('fwVersion').textContent = s.version;
 }
@@ -964,8 +972,13 @@ for (const b of $('orientation').children) {
   b.onclick = () => post('/api/settings', { vertical: b.dataset.vertical })
     .then(() => status('Orientamento: ' + b.textContent.toLowerCase())).catch(fail);
 }
-$('textFont').onchange = (e) => post('/api/settings', { textFont: e.target.value })
-  .then(() => status('Font cambiato')).catch(fail);
+// The font can be picked in Display and in the scrolling text's section.
+for (const id of ['textFont', 'textFontText']) {
+  $(id).onchange = (e) => {
+    $('textFont').value = $('textFontText').value = e.target.value;
+    post('/api/settings', { textFont: e.target.value }).then(() => status('Font cambiato')).catch(fail);
+  };
+}
 $('transition').onchange = (e) => post('/api/settings', { transition: e.target.value })
   .then(() => status('Passaggio: ' + e.target.selectedOptions[0].textContent.toLowerCase())).catch(fail);
 $('brightness').onchange = (e) => post('/api/settings', { brightness: e.target.value }).catch(fail);
