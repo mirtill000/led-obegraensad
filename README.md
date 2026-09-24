@@ -186,8 +186,8 @@ Current modes:
   refreshed every 15 min; until the first reading arrives the clock uses
   big digits. Button: refresh weather
 - **Previsioni** - today at a glance: the city and date ("MILANO  MER 24
-  SET") scroll along the top; below, the day's weather icon, a thin
-  separator, and today's minimum (a little dimmer) over the maximum, each
+  SET") scroll along the top; below, the day's weather icon, a
+  separator, and today's minimum over the maximum, each
   with a degree dot. The web page still shows the hourly chart. The clock
   also shows an umbrella next to the weather icon when rain is likely
   (>= 60%) within 2 hours

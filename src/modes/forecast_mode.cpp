@@ -106,8 +106,7 @@ static void drawTemperature(int y, float celsius, uint8_t level) {
 //   rows 6-15   icon x0-5 (rows 7-13) | line x6 | min x7-13 rows 6-10, ° x15
 //                                                 max x7-13 rows 11-15, ° x15
 //
-// There is no room for a gap on both sides of the line, so it is dim to
-// keep it apart from the digits next to it.
+// Everything is at full brightness.
 void ForecastMode::update(uint32_t now) {
   if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
@@ -115,7 +114,7 @@ void ForecastMode::update(uint32_t now) {
   display.clear();
   drawHeader(now);
   if (!w.valid || !w.hasDaily) {
-    for (int i = 0; i < 3; i++) display.setLevel(5 + i * 3, 10, 120);  // waiting: "..."
+    for (int i = 0; i < 3; i++) display.setLevel(5 + i * 3, 10, 255);  // waiting: "..."
     display.render();
     return;
   }
@@ -125,10 +124,9 @@ void ForecastMode::update(uint32_t now) {
   const AnimatedIcon &icon = w.todayCode >= 0 ? iconFor(w.todayCode, true) : iconFor(w.code, w.isDay);
   display.drawBitmap(0, 7, icon.frames[(now / icon.frameMs) % icon.frameCount], 6, 7);
 
-  for (int y = 6; y < ROWS; y++) display.setLevel(6, y, 60);  // separator
+  for (int y = 6; y < ROWS; y++) display.setLevel(6, y, 255);  // separator
 
-  // The two numbers touch, so the minimum is a little dimmer.
-  drawTemperature(6, w.todayMin, 150);
+  drawTemperature(6, w.todayMin, 255);
   drawTemperature(11, w.todayMax, 255);
   display.render();
 }
