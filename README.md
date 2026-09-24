@@ -198,10 +198,11 @@ Current modes:
   page you can replace it with your own (up to 16000 characters, saved in
   flash as `/quotes.txt`); "restore" brings back the built-in one. Button:
   next quote
-- **Orologio e meteo** - one screen: hours and minutes on the left, an
-  animated weather icon (falling rain or snow, flashing lightning, drifting
-  clouds, ...) and the temperature with a one-pixel degree sign on the
-  right, and a dot running round the border for the seconds. Weather is
+- **Orologio e meteo** - one screen: on top the temperature with a
+  one-pixel degree sign and an animated weather icon (falling rain or snow,
+  flashing lightning, drifting clouds, ...), below the time (hours and
+  minutes side by side), and a dot running round the border for the
+  seconds. Weather is
   refreshed every 15 min; until the first reading arrives the clock uses
   big digits, and until the time is known it shows the waiting dots (see
   below). Button: refresh weather
