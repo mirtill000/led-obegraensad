@@ -201,8 +201,9 @@ Current modes:
 - **Orologio e meteo** - one screen: on top the temperature with a
   one-pixel degree sign and an animated weather icon (falling rain or snow,
   flashing lightning, drifting clouds, ...), below the time (hours and
-  minutes side by side), and a dot running round the border for the
-  seconds. Weather is
+  minutes side by side), and a dot gliding round the border for the
+  seconds (it moves continuously, its light shared between neighbouring
+  pixels, with a short fading trail). Weather is
   refreshed every 15 min; until the first reading arrives the clock uses
   big digits, and until the time is known it shows the waiting dots (see
   below). Button: refresh weather

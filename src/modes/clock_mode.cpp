@@ -85,6 +85,37 @@ static void drawTemperature(int y, float celsius) {
   display.setPixel(7, y, true);
 }
 
+// Seconds with a fractional part: milliseconds since the second last
+// changed, so the dot can glide between border pixels.
+static float smoothSeconds(int sec) {
+  static int lastSec = -1;
+  static uint32_t secStart = 0;
+  if (sec != lastSec) {
+    lastSec = sec;
+    secStart = millis();
+  }
+  return sec + min(999u, (unsigned)(millis() - secStart)) / 1000.0f;
+}
+
+// The seconds dot, gliding round the border: its light is shared between
+// the two pixels it is between (so it moves smoothly instead of jumping
+// once a second) and it leaves a trail that fades over 3 pixels.
+static void drawSeconds(int sec) {
+  static const float TRAIL = 3.0f;
+  const float pos = smoothSeconds(sec);
+  const int head = (int)floorf(pos);
+  for (int i = head + 1; i >= head - (int)TRAIL; i--) {
+    const float d = pos - i;  // how far behind the dot this pixel is
+    float v = d < 0 ? 1 + d : 1 - d / TRAIL;  // d < 0: the pixel it is entering
+    if (v <= 0) continue;
+    v = v * v;  // falls off quickly behind the head
+    int x, y;
+    borderPixel(((i % 60) + 60) % 60, x, y);
+    const uint8_t level = (uint8_t)(v * 255 + 0.5f);
+    if (level > display.getLevel(x, y)) display.setLevel(x, y, level);  // never dims a digit
+  }
+}
+
 void ClockMode::start() { lastDraw_ = 0; }
 
 void ClockMode::update(uint32_t now) {
@@ -115,13 +146,7 @@ void ClockMode::update(uint32_t now) {
     display.drawBitmap(2, 9, BIG_DIGITS[t.tm_min / 10], 5, 6);
     display.drawBitmap(8, 9, BIG_DIGITS[t.tm_min % 10], 5, 6);
   }
-  // Seconds dot with a short fading trail.
-  static const uint8_t TRAIL[3] = {255, 70, 20};
-  for (int i = 2; i >= 0; i--) {
-    int x, y;
-    borderPixel((t.tm_sec - i + 60) % 60, x, y);
-    display.setLevel(x, y, TRAIL[i]);
-  }
+  drawSeconds(t.tm_sec);
   display.render();
 }
 
