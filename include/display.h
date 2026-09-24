@@ -16,7 +16,8 @@
 //  Big   - the same font doubled with EPX/Scale2x: 16 rows, the whole panel
 //  Mini  - 5-row capitals, about 4 letters at a time
 //  Compact - Small with letters one pixel narrower (font_compact.h); only
-//            "Testo scorrevole" and "Dal web" ask for it, see Scroller
+//            "Testo scorrevole", "Frase dell'ora" and "Dal web" ask for
+//            it, see Scroller
 enum class TextFont : uint8_t { Small, Big, Mini, Compact };
 
 // How the panel goes from one mode to the next (see beginTransition()).

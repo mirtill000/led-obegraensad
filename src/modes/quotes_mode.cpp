@@ -49,6 +49,7 @@ void QuotesMode::start() {
   shown_ = currentIndex(count);
   String quote;
   quoteLine(list, shown_, &quote);
+  scroller_.setCompact(true);  // the same letters as Testo scorrevole
   scroller_.start(quote);
   nextRow();
 }

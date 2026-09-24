@@ -202,7 +202,8 @@ Current modes:
   turns it into a header at every build, so edit the text file). On the
   page you can replace it with your own (up to 16000 characters, saved in
   flash as `/quotes.txt`); "restore" brings back the built-in one. Button:
-  next quote
+  next quote. The quotes use the same letters as Testo scorrevole (the
+  compact variant of *Attuale*)
 - **Orologio e meteo** - one screen, numbers in the text font: on top the
   temperature with a
   one-pixel degree sign and an animated weather icon (falling rain or snow,
