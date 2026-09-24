@@ -2,10 +2,10 @@
 
 #include "display.h"
 #include "font_mini.h"
+#include "settings.h"
+#include "timekeeping.h"
 #include "weather.h"
-
-static const uint32_t SUN_SWITCH_MS = 4000;  // sunrise <-> sunset
-static const int RAIN_LIKELY = 50;           // % for the drop to show
+#include "weather_icons.h"
 
 static String clock(int minutes) { return String(minutes / 60) + ":" + (minutes % 60 < 10 ? "0" : "") + (minutes % 60); }
 
@@ -50,67 +50,85 @@ static int miniWidth(const String &text) {
   return w - 1;
 }
 
-// H:MM centred, the colon as two dim dots in the gap after the hour (a
-// separate colon column would not fit "19:25" in 16 pixels).
-static void drawTime(int y, int minutes) {
-  const String h(minutes / 60);
-  const String m = String(minutes % 60 < 10 ? "0" : "") + (minutes % 60);
-  const int width = miniWidth(h) + 1 + miniWidth(m);
-  int x = (COLS - width) / 2;
-  x = drawMini(x, y, h, 255);
-  display.setLevel(x - 1, y + 1, 110);
-  display.setLevel(x - 1, y + 3, 110);
-  drawMini(x, y, m, 255);
+static const uint32_t HEADER_STEP_MS = 90;  // header scroll: 1 pixel per step
+static const int HEADER_GAP = 8;             // blank pixels between repeats
+
+static const char *const DAYS[] = {"DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"};
+static const char *const MONTHS[] = {"GEN", "FEB", "MAR", "APR", "MAG", "GIU",
+                                     "LUG", "AGO", "SET", "OTT", "NOV", "DIC"};
+
+// "MILANO  MER 24 SET" (city only until the clock is set).
+static String header() {
+  String s = Display::fontText(settings.city);
+  struct tm t;
+  if (localTime(t)) s += String("  ") + DAYS[t.tm_wday] + " " + t.tm_mday + " " + MONTHS[t.tm_mon];
+  return s;
 }
 
-// Sun half above the horizon (rows 0-3) with a triangle: up = sunrise,
-// down = sunset.
-static void drawSunIcon(bool rising) {
-  static const char *SUN[3] = {"..###..", ".#####.", "#######"};
-  for (int y = 0; y < 3; y++) {
-    for (int x = 0; x < 7; x++) {
-      if (SUN[y][x] == '#') display.setLevel(5 + x, y, 255);
-    }
+// Mini-font text limited to rows 0-4, scrolling in a loop when it's wider
+// than the display, centred otherwise.
+static void drawHeader(uint32_t now) {
+  const String text = header();
+  const int width = miniWidth(text);
+  if (width <= COLS) {
+    drawMini((COLS - width) / 2, 0, text, 255);
+    return;
   }
-  for (int x = 0; x < COLS - 1; x++) display.setLevel(x, 3, 55);  // horizon
-  const int top = rising ? 0 : 1;
-  if (rising) {
-    display.setLevel(2, top, 170);
-    for (int x = 1; x <= 3; x++) display.setLevel(x, top + 1, 170);
-  } else {
-    for (int x = 1; x <= 3; x++) display.setLevel(x, top, 170);
-    display.setLevel(2, top + 1, 170);
-  }
+  const int period = width + HEADER_GAP;
+  const int x = -(int)((now / HEADER_STEP_MS) % period);
+  drawMini(x, 0, text, 255);
+  drawMini(x + period, 0, text, 255);
 }
 
+// Temperature ending at column 13, then a gap and a one-pixel degree sign
+// at x15. The minus is 2 pixels wide. Values that don't fit (-10 and
+// below) drop the degree and cover the separator if needed.
+static void drawTemperature(int y, float celsius, uint8_t level) {
+  const int t = (int)lroundf(celsius);
+  const String digits(abs(t));
+  const int width = miniWidth(digits) + (t < 0 ? 3 : 0);
+  int x = width <= 7 ? 14 - width : max(0, 16 - width);
+  if (x < 7) {
+    for (int r = 0; r < MINI_HEIGHT; r++) display.setLevel(6, y + r, 0);
+  }
+  if (t < 0) {
+    display.setLevel(x, y + 2, level);
+    display.setLevel(x + 1, y + 2, level);
+    x += 3;
+  }
+  drawMini(x, y, digits, level);
+  if (width <= 7) display.setLevel(15, y, level);
+}
+
+// Layout, as in the mockup:
+//
+//   rows 0-4    city and date, scrolling
+//   rows 6-15   icon x0-5 (rows 7-13) | line x6 | min x7-13 rows 6-10, ° x15
+//                                                 max x7-13 rows 11-15, ° x15
+//
+// There is no room for a gap on both sides of the line, so it is dim to
+// keep it apart from the digits next to it.
 void ForecastMode::update(uint32_t now) {
-  if (now - lastDraw_ < 100) return;
+  if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
   const Weather w = weatherNow();
   display.clear();
-  if (!w.valid || w.sunrise < 0 || w.sunset < 0 || !w.hasDaily) {
-    for (int i = 0; i < 3; i++) display.setLevel(5 + i * 3, 8, 120);  // waiting: "..."
+  drawHeader(now);
+  if (!w.valid || !w.hasDaily) {
+    for (int i = 0; i < 3; i++) display.setLevel(5 + i * 3, 10, 120);  // waiting: "..."
     display.render();
     return;
   }
 
-  const bool rising = (now / SUN_SWITCH_MS) % 2 == 0;
-  drawSunIcon(rising);
-  drawTime(5, rising ? w.sunrise : w.sunset);
+  // The day's weather (daytime icon); the current one if the API didn't
+  // send it.
+  const AnimatedIcon &icon = w.todayCode >= 0 ? iconFor(w.todayCode, true) : iconFor(w.code, w.isDay);
+  display.drawBitmap(0, 7, icon.frames[(now / icon.frameMs) % icon.frameCount], 6, 7);
 
-  // Minimum (dimmer) and maximum, bottom left.
-  int x = drawMini(0, 11, String((int)lroundf(w.todayMin)), 110);
-  drawMini(x + 1, 11, String((int)lroundf(w.todayMax)), 255);
+  for (int y = 6; y < ROWS; y++) display.setLevel(6, y, 60);  // separator
 
-  // Rain likely today: a drop falling in the bottom-right corner.
-  if (w.todayRain >= RAIN_LIKELY) {
-    static const char *DROP[] = {".#.", "###", "###", ".#."};
-    const int y0 = 11 + (now / 300) % 2;
-    for (int y = 0; y < 4; y++) {
-      for (int c = 0; c < 3; c++) {
-        if (DROP[y][c] == '#') display.setLevel(13 + c, y0 + y, 200);
-      }
-    }
-  }
+  // The two numbers touch, so the minimum is a little dimmer.
+  drawTemperature(6, w.todayMin, 150);
+  drawTemperature(11, w.todayMax, 255);
   display.render();
 }

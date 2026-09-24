@@ -28,6 +28,7 @@ struct Weather {
   bool hasDaily = false;
   float todayMin = 0, todayMax = 0;
   uint8_t todayRain = 0;  // highest precipitation probability of the day, %
+  int todayCode = -1;     // WMO code for the day as a whole; -1 unknown
 };
 
 // A consistent copy of the latest data (safe to call from any task).

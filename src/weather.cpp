@@ -93,6 +93,8 @@ bool parseWeather(const String &json, Weather &out) {
       if (readNumbers(json, valueStart(json, "precipitation_probability_max", daily), &rain, 1)) {
         out.todayRain = (uint8_t)constrain((int)rain, 0, 100);
       }
+      float code;
+      if (readNumbers(json, valueStart(json, "weather_code", daily), &code, 1)) out.todayCode = (int)code;
     }
   }
   return true;
@@ -116,7 +118,7 @@ void weatherTick() {
                      "&longitude=" + String(settings.longitude, 4) +
                      "&current=temperature_2m,weather_code,is_day"
                      "&hourly=temperature_2m,precipitation_probability&forecast_hours=12"
-                     "&daily=sunrise,sunset,temperature_2m_min,temperature_2m_max,precipitation_probability_max"
+                     "&daily=weather_code,sunrise,sunset,temperature_2m_min,temperature_2m_max,precipitation_probability_max"
                      "&forecast_days=1&timezone=auto";
   if (!http.begin(client, url)) return;
   if (http.GET() == HTTP_CODE_OK) {
