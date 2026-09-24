@@ -1,7 +1,8 @@
-// Arcade games: Pong, Breakout, Flappy Bird and Space Invaders. In
+// Arcade games: Pong, Breakout, Flappy Bird, Space Invaders and Pac-Man. In
 // demo mode each is played by a simple computer player; otherwise it takes
 // the page's controls. At game over they scroll the score and start again.
 #include <math.h>
+#include <string.h>
 
 #include "animation.h"
 #include "display.h"
@@ -567,6 +568,298 @@ class InvadersGame : public ArcadeGame {
   uint32_t tick_ = 0;
 };
 
+// ---------------------------------------------------------------------------
+// Pac-Man: one pixel per cell on a 16x16 maze with a tunnel on row 6. Walls
+// are faint, dots dim, the four power pellets blink; Pac-Man is steady and
+// full, the ghosts flicker (and pulse dimly while they can be eaten). Eat
+// every dot to clear the level; 3 lives. In demo mode Pac-Man heads for the
+// nearest dot along paths that keep clear of the ghosts, runs from them
+// when they get close and hunts them while they are frightened.
+class PacManGame : public ArcadeGame {
+ public:
+  const char *id() const override { return "pacman"; }
+  const char *name() const override { return "Pac-Man"; }
+  uint16_t frameMs() const override { return 50; }
+
+  void start() override {
+    lives_ = 3;
+    points_ = 0;
+    level_ = 0;
+    newLevel();
+  }
+
+  void input(char key) override {
+    for (int d = 0; d < 4; d++) {
+      if (key == "RDLU"[d]) wanted_ = d;
+    }
+  }
+
+ protected:
+  void tick(uint32_t) override {
+    tick_++;
+    if (flash_ > 0) {  // level cleared: the maze flashes, then a new one
+      if (--flash_ == 0) newLevel();
+      draw();
+      return;
+    }
+    if (pause_ > 0) {  // after losing a life
+      pause_--;
+      draw();
+      return;
+    }
+
+    // Pac-Man: a cell every 3 frames.
+    if (tick_ % 3 == 0) {
+      if (demo_) wanted_ = autopilot();
+      if (canMove(px_, py_, wanted_)) dir_ = wanted_;
+      if (canMove(px_, py_, dir_)) step(px_, py_, dir_);
+      eat();
+    }
+    if (frightened_ > 0) frightened_--;
+
+    // Ghosts: a cell every 4 frames (slower while frightened), a bit faster
+    // at each level.
+    const int every = frightened_ > 0 ? 7 : max(3, 4 - level_ / 2);
+    for (int i = 0; i < GHOSTS; i++) {
+      Ghost &g = ghosts_[i];
+      if (tick_ < g.release) continue;
+      if (tick_ % every == (uint32_t)i % every) moveGhost(i);
+    }
+    collide();
+    draw();
+  }
+
+ private:
+  static const int GHOSTS = 3;
+  static const int FRIGHT_FRAMES = 140;  // 7 s
+  struct Ghost {
+    int x, y, dir;
+    uint32_t release;  // frame it may leave the pen
+  };
+
+  // '#' wall, '.' dot, 'o' power pellet, ' ' empty (the ghosts' pen).
+  static const char *const MAZE[ROWS];
+
+  static int dx(int d) { return d == 0 ? 1 : d == 2 ? -1 : 0; }  // 0 right, 1 down, 2 left, 3 up
+  static int dy(int d) { return d == 1 ? 1 : d == 3 ? -1 : 0; }
+  static int wrap(int x) { return (x + COLS) % COLS; }  // the tunnel
+
+  bool wall(int x, int y) const { return y < 0 || y >= ROWS || MAZE[y][wrap(x)] == '#'; }
+  bool canMove(int x, int y, int d) const { return d >= 0 && !wall(x + dx(d), y + dy(d)); }
+  static void step(int &x, int &y, int d) {
+    x = wrap(x + dx(d));
+    y += dy(d);
+  }
+
+  void newLevel() {
+    dotsLeft_ = 0;
+    for (int y = 0; y < ROWS; y++) {
+      for (int x = 0; x < COLS; x++) {
+        const char c = MAZE[y][x];
+        food_[y][x] = c == '.' ? 1 : c == 'o' ? 2 : 0;
+        if (food_[y][x]) dotsLeft_++;
+      }
+    }
+    resetPositions();
+  }
+
+  void resetPositions() {
+    px_ = 7;
+    py_ = 13;
+    dir_ = wanted_ = 2;
+    frightened_ = 0;
+    const int startX[GHOSTS] = {7, 8, 7};
+    const int startY[GHOSTS] = {7, 7, 8};
+    for (int i = 0; i < GHOSTS; i++) ghosts_[i] = {startX[i], startY[i], 3, tick_ + 20 + i * 60};
+    pause_ = 20;
+  }
+
+  void eat() {
+    uint8_t &f = food_[py_][px_];
+    if (!f) return;
+    if (f == 2) {
+      frightened_ = FRIGHT_FRAMES;
+      eatenInFright_ = 0;
+      for (Ghost &g : ghosts_) g.dir = (g.dir + 2) % 4;  // they turn round
+      points_ += 50;
+    } else {
+      points_ += 10;
+    }
+    f = 0;
+    if (--dotsLeft_ == 0) {
+      level_++;
+      flash_ = 30;
+    }
+  }
+
+  // Ghosts never turn back; at a junction they pick the exit closest to
+  // their target (Pac-Man, a spot ahead of him, or a random cell for the
+  // third), or a random one while frightened.
+  void moveGhost(int i) {
+    Ghost &g = ghosts_[i];
+    int tx = px_, ty = py_;
+    if (i == 1) {
+      tx = px_ + 3 * dx(dir_);
+      ty = py_ + 3 * dy(dir_);
+    } else if (i == 2 && (tick_ / 100) % 2) {
+      tx = esp_random() % COLS;
+      ty = esp_random() % ROWS;
+    }
+    int best = -1, bestDist = 1 << 30;
+    for (int d = 0; d < 4; d++) {
+      if (d == (g.dir + 2) % 4 || !canMove(g.x, g.y, d)) continue;
+      int nx = g.x, ny = g.y;
+      step(nx, ny, d);
+      const int dist = frightened_ > 0 ? (int)(esp_random() % 100) : (nx - tx) * (nx - tx) + (ny - ty) * (ny - ty);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = d;
+      }
+    }
+    if (best < 0) best = (g.dir + 2) % 4;  // dead end: back
+    g.dir = best;
+    step(g.x, g.y, best);
+  }
+
+  void collide() {
+    for (int i = 0; i < GHOSTS; i++) {
+      Ghost &g = ghosts_[i];
+      if (g.x != px_ || g.y != py_) continue;
+      if (frightened_ > 0) {
+        points_ += 200 << min(eatenInFright_++, 3);
+        g = {7 + i % 2, 7, 3, tick_ + 60};  // back to the pen
+        continue;
+      }
+      if (--lives_ <= 0) {
+        gameOver(points_);
+        return;
+      }
+      resetPositions();
+      return;
+    }
+  }
+
+  // Distance from every cell to the nearest ghost (breadth-first), for the
+  // autopilot.
+  void ghostDistances(uint8_t dist[ROWS][COLS]) const {
+    memset(dist, 255, ROWS * COLS);
+    uint8_t qx[ROWS * COLS], qy[ROWS * COLS];
+    int head = 0, tail = 0;
+    for (const Ghost &g : ghosts_) {
+      if (tick_ < g.release) continue;
+      dist[g.y][g.x] = 0;
+      qx[tail] = g.x;
+      qy[tail++] = g.y;
+    }
+    while (head < tail) {
+      const int x = qx[head], y = qy[head++];
+      for (int d = 0; d < 4; d++) {
+        int nx = x, ny = y;
+        if (!canMove(x, y, d)) continue;
+        step(nx, ny, d);
+        if (dist[ny][nx] != 255) continue;
+        dist[ny][nx] = dist[y][x] + 1;
+        qx[tail] = nx;
+        qy[tail++] = ny;
+      }
+    }
+  }
+
+  // Breadth-first search from Pac-Man to the nearest wanted cell (a dot,
+  // or a ghost while they are frightened), avoiding cells a ghost could
+  // reach first; returns the first step, or -1.
+  int autopilot() {
+    uint8_t ghostDist[ROWS][COLS];
+    ghostDistances(ghostDist);
+    const bool hunting = frightened_ > 20;
+    int8_t first[ROWS][COLS];
+    uint8_t depth[ROWS][COLS];
+    memset(first, -1, sizeof(first));
+    uint8_t qx[ROWS * COLS], qy[ROWS * COLS];
+    int head = 0, tail = 0;
+    qx[tail] = px_;
+    qy[tail++] = py_;
+    first[py_][px_] = 4;
+    depth[py_][px_] = 0;
+    while (head < tail) {
+      const int x = qx[head], y = qy[head++];
+      const bool target = hunting ? ghostDist[y][x] == 0 : food_[y][x] != 0;
+      if (target && (x != px_ || y != py_)) return first[y][x];
+      for (int d = 0; d < 4; d++) {
+        int nx = x, ny = y;
+        if (!canMove(x, y, d)) continue;
+        step(nx, ny, d);
+        if (first[ny][nx] != -1) continue;
+        const int reach = depth[y][x] + 1;
+        // Unsafe: a ghost is as close to that cell as we are (with margin).
+        if (!hunting && ghostDist[ny][nx] <= reach + 1) continue;
+        first[ny][nx] = first[y][x] == 4 ? d : first[y][x];
+        depth[ny][nx] = reach;
+        qx[tail] = nx;
+        qy[tail++] = ny;
+      }
+    }
+    // Nothing safe to go for: move to the neighbour furthest from the ghosts.
+    int best = dir_, bestDist = -1;
+    for (int d = 0; d < 4; d++) {
+      int nx = px_, ny = py_;
+      if (!canMove(px_, py_, d)) continue;
+      step(nx, ny, d);
+      if (ghostDist[ny][nx] > bestDist) {
+        bestDist = ghostDist[ny][nx];
+        best = d;
+      }
+    }
+    return best;
+  }
+
+  void draw() {
+    display.clear();
+    const bool flashOn = flash_ > 0 && (flash_ / 4) % 2;
+    for (int y = 0; y < ROWS; y++) {
+      for (int x = 0; x < COLS; x++) {
+        if (MAZE[y][x] == '#') display.setLevel(x, y, flashOn ? 255 : 35);
+        else if (food_[y][x] == 1) display.setLevel(x, y, 90);
+        else if (food_[y][x] == 2 && (tick_ / 5) % 2) display.setLevel(x, y, 255);
+      }
+    }
+    if (flash_ > 0) return;
+    for (const Ghost &g : ghosts_) {
+      const uint8_t level = frightened_ > 0 ? (frightened_ < 40 && (tick_ / 3) % 2 ? 200 : 110)
+                                            : ((tick_ / 2) % 2 ? 255 : 150);
+      display.setLevel(g.x, g.y, level);
+    }
+    if (pause_ == 0 || (tick_ / 3) % 2) display.setLevel(px_, py_, 255);
+    for (int i = 0; i < lives_ - 1; i++) display.setLevel(COLS - 1 - i, 0, 0);  // spare lives: gaps in the top wall
+  }
+
+  uint8_t food_[ROWS][COLS];  // 0 none, 1 dot, 2 power pellet
+  Ghost ghosts_[GHOSTS];
+  int px_ = 7, py_ = 13, dir_ = 2, wanted_ = 2;
+  int lives_ = 3, points_ = 0, level_ = 0, dotsLeft_ = 0;
+  int frightened_ = 0, eatenInFright_ = 0, flash_ = 0, pause_ = 0;
+  uint32_t tick_ = 0;
+};
+
+const char *const PacManGame::MAZE[ROWS] = {
+    "################",
+    "#......##......#",
+    "#o##.#....#.##o#",
+    "#.##.#.##.#.##.#",
+    "#..............#",
+    "##.##.####.##.##",
+    "...#........#...",
+    "##.#.#    #.#.##",
+    "##.#.#    #.#.##",
+    "#..............#",
+    "#.##.######.##.#",
+    "#o.#........#.o#",
+    "##.#.#.##.#.#.##",
+    "#....#....#....#",
+    "#..............#",
+    "################",
+};
+
 static PongGame pong;
 extern Animation *const pongAnimation = &pong;
 static BreakoutGame breakout;
@@ -575,3 +868,5 @@ static FlappyGame flappy;
 extern Animation *const flappyAnimation = &flappy;
 static InvadersGame invaders;
 extern Animation *const invadersAnimation = &invaders;
+static PacManGame pacman;
+extern Animation *const pacmanAnimation = &pacman;

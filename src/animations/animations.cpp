@@ -11,6 +11,7 @@ extern Animation *const pongAnimation;
 extern Animation *const breakoutAnimation;
 extern Animation *const flappyAnimation;
 extern Animation *const invadersAnimation;
+extern Animation *const pacmanAnimation;
 extern Animation *const maze3dAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
@@ -31,6 +32,7 @@ Animation *const ANIMATIONS[] = {
     breakoutAnimation,
     flappyAnimation,
     invadersAnimation,
+    pacmanAnimation,
     maze3dAnimation,
     binaryClockAnimation,
     wordClockAnimation,

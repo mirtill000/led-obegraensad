@@ -233,7 +233,12 @@ Current modes:
     surface; **Snake** - in demo mode it takes the shortest way to the food
     only if it can still reach its tail afterwards; **Pong** - you against
     the computer, first to 5; **Breakout** - 3 lives, faster at each level;
-    **Flappy Bird**; **Space Invaders** - waves that get faster; **Labirinto 3D** - a first-person
+    **Flappy Bird**; **Space Invaders** - waves that get faster; **Pac-Man** - one pixel
+    per cell on a 16x16 maze with a side tunnel, three ghosts (one chases,
+    one cuts ahead, one wanders), power pellets that make them edible for
+    7 s, 3 lives; in demo mode Pac-Man goes for the nearest dot along paths
+    the ghosts can't reach first, runs when they close in and hunts them
+    while they're frightened; **Labirinto 3D** - a first-person
     maze drawn by raycasting (one ray per column, walls shaded by
     distance, a faint floor): find the pulsing block at the far end. The
     map is shown at the start; in demo mode the computer keeps its right
@@ -275,7 +280,8 @@ default), shown on the page while the game is on the panel:
   Tetris moves with left/right, rotates with up, drops with down or space;
   Snake uses the arrows; Pong up/down; Breakout left/right; Flappy
   Bird flies with *Vola*, space or up; Space Invaders moves with left/right
-  and shoots with *Spara* or space; in Labirinto 3D up/down walk a step,
+  and shoots with *Spara* or space; Pac-Man turns with the arrows (a
+  press just before a junction is remembered); in Labirinto 3D up/down walk a step,
   left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow
   down keeps moving.
 
