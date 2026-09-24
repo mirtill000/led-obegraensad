@@ -1,9 +1,11 @@
 #include "web.h"
 
+#include <Update.h>
 #include <WebServer.h>
 #include <mbedtls/base64.h>
 
 #include "animation.h"
+#include "build_info.h"
 #include "display.h"
 #include "modes.h"
 #include "modes/ambient_mode.h"
@@ -324,6 +326,16 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <p class="hint">Vale per testo scorrevole, frasi, dati dal web, previsioni, conto alla rovescia e orologio a parole. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
   </details>
 
+  <details id="updateBox">
+    <summary>Aggiornamento firmware</summary>
+    <p class="hint">Versione installata: <b id="fwVersion"></b></p>
+    <label for="fwFile">File del firmware</label>
+    <input type="file" id="fwFile" accept=".bin">
+    <p class="hint">Dopo <code>pio run</code>, carica <code>.pio/build/xhs3e/firmware.bin</code> (non <i>firmware.factory.bin</i>). La lampada lo verifica, si riavvia con il nuovo firmware e tiene tutte le impostazioni; se qualcosa va storto resta quello di prima.</p>
+    <button class="save" id="fwUpload" disabled>Aggiorna</button>
+    <progress id="fwProgress" max="100" value="0" hidden style="width:100%;margin-top:12px"></progress>
+  </details>
+
   <p id="status"></p>
 </main>
 <script>
@@ -469,6 +481,7 @@ function render() {
   for (const b of $('orientation').children) b.classList.toggle('on', b.dataset.vertical === (s.vertical ? '1' : '0'));
   if (!editing('brightness')) $('brightness').value = s.brightness;
   $('textFont').value = s.textFont;
+  $('fwVersion').textContent = s.version;
 }
 
 // Game box: demo checkbox and, when the player is in control, the pad.
@@ -936,6 +949,49 @@ $('textFont').onchange = (e) => post('/api/settings', { textFont: e.target.value
   .then(() => status('Font cambiato')).catch(fail);
 $('brightness').onchange = (e) => post('/api/settings', { brightness: e.target.value }).catch(fail);
 
+// Firmware update: upload with progress, then wait for the lamp to come
+// back with the new version.
+$('fwFile').onchange = () => { $('fwUpload').disabled = !$('fwFile').files.length; };
+$('fwUpload').onclick = () => {
+  const file = $('fwFile').files[0];
+  if (!file) return;
+  if (!/\.bin$/i.test(file.name) || /factory/i.test(file.name)) {
+    status('Scegli il file firmware.bin (non firmware.factory.bin)');
+    return;
+  }
+  const before = state.version;
+  const bar = $('fwProgress');
+  bar.hidden = false; bar.value = 0;
+  $('fwUpload').disabled = true;
+  const form = new FormData();
+  form.append('firmware', file, file.name);
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/update');
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) { bar.value = Math.round(e.loaded * 100 / e.total); status('Caricamento ' + bar.value + '%'); }
+  };
+  xhr.onload = () => {
+    if (xhr.status !== 200) {
+      status(xhr.responseText || 'Aggiornamento non riuscito');
+      $('fwUpload').disabled = false; bar.hidden = true;
+      return;
+    }
+    status('Firmware caricato: la lampada si riavvia...');
+    const started = Date.now();
+    const wait = setInterval(() => {
+      fetch('/api/state').then((r) => r.json()).then((s) => {
+        clearInterval(wait);
+        state = s; render(); bar.hidden = true; $('fwFile').value = ''; $('fwUpload').disabled = true;
+        status(s.version !== before ? 'Aggiornamento completato: versione ' + s.version : 'La lampada è ripartita');
+      }).catch(() => {
+        if (Date.now() - started > 90000) { clearInterval(wait); status('La lampada non risponde: controlla che sia accesa e connessa'); }
+      });
+    }, 2000);
+  };
+  xhr.onerror = () => { status('Caricamento interrotto: riprova'); $('fwUpload').disabled = false; bar.hidden = true; };
+  xhr.send(form);
+};
+
 function refresh() { return fetch('/api/state').then((r) => r.json()).then((s) => { state = s; render(); }); }
 refresh().catch(() => status('Lampada non raggiungibile'));
 setInterval(() => refresh().catch(() => {}), 15000);
@@ -1037,6 +1093,7 @@ static void sendState() {
   const float phase = moonPhase(time(nullptr));
   json += ",\"moon\":{\"name\":" + jsonString(moonPhaseName(phase)) + ",\"lit\":" +
           String((int)lroundf(moonIllumination(phase) * 100)) + "}";
+  json += ",\"version\":" + jsonString(String(FIRMWARE_COMMIT) + " del " + FIRMWARE_BUILT);
   json += ",\"galleryCurrent\":" + jsonString(galleryMode().currentId());
   json += ",\"galleryShow\":" + jsonString(settings.galleryShow) + ",\"nightSun\":" + jsonBool(settings.nightSun);
 
@@ -1367,6 +1424,69 @@ static void handleDraw() {
   server.send(204);
 }
 
+// --- Firmware update (OTA) -----------------------------------------------------
+// The new image goes into the spare app partition; only if it verifies does
+// the lamp boot from it, so a bad upload leaves the running firmware alone.
+
+static String updateError;
+
+static void showUpdateProgress(size_t done, size_t total) {
+  display.clear();
+  const float filled = total ? (float)done / total * COLS : 0;
+  for (int x = 0; x < COLS; x++) {
+    display.setLevel(x, 7, 40);
+    display.setLevel(x, 8, 40);
+    const float f = filled - x;
+    if (f > 0) {
+      display.setLevel(x, 7, 40 + 215 * fminf(f, 1));
+      display.setLevel(x, 8, 40 + 215 * fminf(f, 1));
+    }
+  }
+  display.render();
+}
+
+static void handleUpdateUpload() {
+  HTTPUpload &up = server.upload();
+  const size_t total = server.clientContentLength();
+  switch (up.status) {
+    case UPLOAD_FILE_START:
+      updateError = "";
+      if (!up.filename.endsWith(".bin") || up.filename.indexOf("factory") >= 0) {
+        updateError = "serve il file firmware.bin";
+      } else if (!Update.begin(UPDATE_SIZE_UNKNOWN, U_FLASH)) {
+        updateError = Update.errorString();
+      }
+      showUpdateProgress(0, total);
+      break;
+    case UPLOAD_FILE_WRITE:
+      if (updateError.length() == 0 && Update.write(up.buf, up.currentSize) != up.currentSize) {
+        updateError = Update.errorString();  // e.g. "Wrong Magic Byte": not an ESP32 firmware
+      }
+      showUpdateProgress(up.totalSize + up.currentSize, total);
+      break;
+    case UPLOAD_FILE_END:
+      if (updateError.length() == 0 && !Update.end(true)) updateError = Update.errorString();
+      break;
+    case UPLOAD_FILE_ABORTED:
+      Update.abort();
+      updateError = "caricamento interrotto";
+      break;
+  }
+}
+
+static void handleUpdateDone() {
+  if (updateError.length() || Update.hasError()) {
+    if (Update.isRunning()) Update.abort();
+    server.send(400, "text/plain", "Aggiornamento non riuscito: " + updateError);
+    restartMode();  // back to what was on the panel
+    return;
+  }
+  server.sendHeader("Connection", "close");
+  server.send(200, "text/plain", "ok");
+  delay(500);  // let the answer reach the browser
+  ESP.restart();
+}
+
 void webBegin() {
   server.on("/", HTTP_GET, [] { server.send_P(200, "text/html; charset=utf-8", PAGE); });
   server.on("/api/state", HTTP_GET, sendState);
@@ -1391,6 +1511,7 @@ void webBegin() {
   server.on("/api/gallery/delete", HTTP_POST, handleGalleryDelete);
   server.on("/api/gallery/show", HTTP_POST, handleGalleryShow);
   server.on("/api/draw", HTTP_POST, handleDraw);
+  server.on("/api/update", HTTP_POST, handleUpdateDone, handleUpdateUpload);
   server.onNotFound([] { server.send(404, "text/plain", "Not found"); });
   server.begin();
 }

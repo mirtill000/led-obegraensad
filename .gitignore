@@ -1,3 +1,4 @@
 .pio/
 .vscode/
 include/secrets.h
+include/build_info.h
