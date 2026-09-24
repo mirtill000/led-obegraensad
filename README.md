@@ -287,6 +287,17 @@ password, so anyone on your network could do this.
 `scripts/build_info.py` (run by PlatformIO before each build) writes the
 version into `include/build_info.h`.
 
+From the command line, the `ota` environment builds and uploads in one go:
+
+```bash
+pio run -e ota -t upload                              # to obegransad.local
+pio run -e ota -t upload --upload-port 192.168.1.50   # or by IP
+```
+
+It sends `firmware.bin` with curl, like the page does
+(`curl -F "firmware=@firmware.bin" http://obegransad.local/api/update`), and
+fails if the lamp rejects it.
+
 ## Build & flash
 
 Requires [PlatformIO](https://platformio.org/) (VS Code extension or the
