@@ -9,9 +9,12 @@
 // Layout (the outer border is the seconds track):
 //
 //   +----------------+
-//   |HH      icon    |   hours      x1-7,  rows 1-6   weather icon x9-14, rows 1-7
-//   |MM         °    |   minutes    x1-7,  rows 8-13  degree sign  x14,   row 8
-//   |        temp    |                                temperature  x9-14, rows 9-14
+//   |HH      icon °  |   hours      x1-7,  rows 1-6   weather icon x9-14, rows 1-7
+//   |MM      temp    |   minutes    x1-7,  rows 8-13  temperature  x9-14, rows 8-13
+//   |                |                                degree sign  x14,   row 7
+//
+// The degree sign sits on the icon's last row, in a corner no icon frame
+// uses; its neighbours there are kept dark so it never merges with a drop.
 //   +----------------+
 //
 // Until there is weather data the clock uses big digits over the whole
@@ -179,8 +182,10 @@ void ClockMode::update(uint32_t now) {
     const AnimatedIcon &icon = umbrella ? ICON_UMBRELLA : iconFor(weather.code, weather.isDay);
     const uint8_t frame = (now / icon.frameMs) % icon.frameCount;
     display.drawBitmap(9, 1, icon.frames[frame], 6, 7);
-    drawTemperature(9, weather.temperature);
-    display.setPixel(14, 8, true);  // degree sign, above the temperature
+    drawTemperature(8, weather.temperature);  // aligned with the minutes
+    display.setPixel(13, 7, false);
+    display.setPixel(14, 6, false);
+    display.setPixel(14, 7, true);  // degree sign, just above the temperature
   } else {
     display.drawBitmap(2, 1, BIG_DIGITS[t.tm_hour / 10], 5, 6);
     display.drawBitmap(8, 1, BIG_DIGITS[t.tm_hour % 10], 5, 6);
