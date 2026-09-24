@@ -80,31 +80,33 @@ static void drawHeader(uint32_t now) {
   drawMini(x + period, 0, text, 255);
 }
 
-// Temperature ending at column 13, then a gap and a one-pixel degree sign
-// at x15. The minus is 2 pixels wide. Values that don't fit (-10 and
-// below) drop the degree and cover the separator if needed.
+// Temperature with the units at x12-14, the tens at x9-11 and a one-pixel
+// degree sign at x15. The minus is 2 pixels wide, just left of the first
+// digit; at -10 and below it takes x6-7 and the separator is cleared there.
 static void drawTemperature(int y, float celsius, uint8_t level) {
-  const int t = (int)lroundf(celsius);
-  const String digits(abs(t));
-  const int width = miniWidth(digits) + (t < 0 ? 3 : 0);
-  int x = width <= 7 ? 14 - width : max(0, 16 - width);
-  if (x < 7) {
-    for (int r = 0; r < MINI_HEIGHT; r++) display.setLevel(6, y + r, 0);
+  const int t = constrain((int)lroundf(celsius), -99, 99);
+  const int value = abs(t);
+  int left = 12;
+  if (value >= 10) {
+    drawMini(9, y, String(value / 10), level);
+    left = 9;
   }
+  drawMini(12, y, String(value % 10), level);
   if (t < 0) {
-    display.setLevel(x, y + 2, level);
-    display.setLevel(x + 1, y + 2, level);
-    x += 3;
+    if (left == 9) {
+      for (int r = 0; r < MINI_HEIGHT; r++) display.setLevel(8, y + r, 0);
+    }
+    display.setLevel(left - 3, y + 2, level);
+    display.setLevel(left - 2, y + 2, level);
   }
-  drawMini(x, y, digits, level);
-  if (width <= 7) display.setLevel(15, y, level);
+  display.setLevel(15, y, level);
 }
 
 // Layout, as in the mockup:
 //
 //   rows 0-4    city and date, scrolling
-//   rows 6-15   icon x0-5 (rows 7-13) | line x6 | min x7-13 rows 6-10, ° x15
-//                                                 max x7-13 rows 11-15, ° x15
+//   rows 6-15   icon x0-5 (rows 7-13) | line x8 | min x9-14 rows 6-10, ° x15
+//                                                 max x9-14 rows 11-15, ° x15
 //
 // Everything is at full brightness.
 void ForecastMode::update(uint32_t now) {
@@ -124,7 +126,7 @@ void ForecastMode::update(uint32_t now) {
   const AnimatedIcon &icon = w.todayCode >= 0 ? iconFor(w.todayCode, true) : iconFor(w.code, w.isDay);
   display.drawBitmap(0, 7, icon.frames[(now / icon.frameMs) % icon.frameCount], 6, 7);
 
-  for (int y = 6; y < ROWS; y++) display.setLevel(6, y, 255);  // separator
+  for (int y = 6; y < ROWS; y++) display.setLevel(8, y, 255);  // separator
 
   drawTemperature(6, w.todayMin, 255);
   drawTemperature(11, w.todayMax, 255);
