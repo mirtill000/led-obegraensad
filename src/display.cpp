@@ -1,6 +1,7 @@
 #include "display.h"
 
 #include <SPI.h>
+#include <driver/gptimer.h>
 #include <esp_timer.h>
 #include <math.h>
 #include <string.h>
@@ -42,45 +43,126 @@ static const uint8_t positions[TOTAL_PIXELS] = {
 // ---------------------------------------------------------------------------
 // Grayscale refresh (binary code modulation).
 //
-// render() turns the frame into PLANES bit planes: plane p holds bit p of
-// every pixel's 5-bit level. A one-shot esp_timer pushes plane p to the
-// panel and re-arms itself for PLANE_US[p], so over one cycle each LED is
-// lit for a time proportional to its level. Three buffers let render()
-// hand over a new frame without ever touching the one being displayed.
+// The panel's driver chips only know on or off per LED, so gray levels are
+// made in time: render() turns the frame into PLANES bit planes (plane p
+// holds bit p of every pixel's 5-bit level) and plane p is shown for
+// 2^p time units, so over one cycle each LED is lit for a time
+// proportional to its level. Three buffers let render() hand over a new
+// frame without ever touching the one being displayed.
+//
+// With REFRESH_HW_TIMER a hardware timer (gptimer) ticks every TICK_US on
+// core 1, away from WiFi on core 0. When a plane's time is up its
+// interrupt wakes a top-priority task on core 1, which first latches the
+// plane already shifted into the registers - so the plane changes exactly
+// on the tick - and then shifts in the next one while it is shown. The
+// older path (esp_timer, core 0) is kept behind the switch.
 // ---------------------------------------------------------------------------
 static const int PLANES = 5;
-static const uint32_t PLANE_US[PLANES] = {120, 240, 480, 960, 1920};  // ~3.7 ms per cycle
+static const uint32_t PLANE_US[PLANES] = {120, 240, 480, 960, 1920};  // esp_timer path: ~3.7 ms per cycle
+static const uint32_t TICK_US = 100;                                   // hardware path: 3.1 ms per cycle
+static DRAM_ATTR const uint8_t PLANE_TICKS[PLANES] = {1, 2, 4, 8, 16};
 static const int FRAME_BYTES = TOTAL_PIXELS / 8;
 
 struct PlaneSet {
   uint8_t bits[PLANES][FRAME_BYTES];
 };
 static PlaneSet planeSets[3];
-static volatile int8_t frontSet = 0;     // being displayed by the timer
+static volatile int8_t frontSet = 0;     // being displayed by the refresh
 static volatile int8_t pendingSet = -1;  // next frame, picked up at cycle start
 static portMUX_TYPE setLock = portMUX_INITIALIZER_UNLOCKED;
-static esp_timer_handle_t refreshTimer;
 static uint8_t gammaTable[256];  // level 0-255 -> 0-31 on-time units
 
-static void pushBits(const uint8_t *bits) {
-  digitalWrite(PIN_LATCH, LOW);
-  SPI.writeBytes(bits, FRAME_BYTES);
+static void shiftBits(const uint8_t *bits) { SPI.writeBytes(bits, FRAME_BYTES); }
+// The registers' outputs take what was shifted in on the latch's rising edge.
+static void latch() {
   digitalWrite(PIN_LATCH, HIGH);
+  digitalWrite(PIN_LATCH, LOW);
 }
+static void pushBits(const uint8_t *bits) {
+  shiftBits(bits);
+  latch();
+}
+
+// At the start of a cycle, take the newest frame if render() left one.
+static void takePendingFrame() {
+  portENTER_CRITICAL(&setLock);
+  if (pendingSet >= 0) {
+    frontSet = pendingSet;
+    pendingSet = -1;
+  }
+  portEXIT_CRITICAL(&setLock);
+}
+
+// --- hardware timer path ---------------------------------------------------
+static gptimer_handle_t tickTimer;
+static TaskHandle_t refreshTask;
+static volatile uint8_t isrPlane = PLANES - 1;  // plane being shown
+static volatile uint8_t isrTicks = 0;
+
+static bool IRAM_ATTR onTick(gptimer_handle_t, const gptimer_alarm_event_data_t *, void *) {
+  const uint8_t ticks = isrTicks + 1;
+  if (ticks < PLANE_TICKS[isrPlane]) {
+    isrTicks = ticks;
+    return false;
+  }
+  isrTicks = 0;
+  isrPlane = isrPlane + 1 == PLANES ? 0 : isrPlane + 1;
+  BaseType_t woken = pdFALSE;
+  vTaskNotifyGiveFromISR(refreshTask, &woken);
+  return woken == pdTRUE;  // switch to the refresh task right away
+}
+
+static void refreshLoop(void *) {
+  shiftBits(planeSets[frontSet].bits[0]);
+  for (;;) {
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    latch();  // plane isrPlane (shifted in last time) is shown from now
+    const uint8_t next = isrPlane + 1 == PLANES ? 0 : isrPlane + 1;
+    if (next == 0) takePendingFrame();
+    shiftBits(planeSets[frontSet].bits[next]);
+  }
+}
+
+static void startHardwareRefresh() {
+  xTaskCreatePinnedToCore(refreshLoop, "display", 3072, nullptr, configMAX_PRIORITIES - 1, &refreshTask, 1);
+  const gptimer_config_t config = {
+      .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+      .direction = GPTIMER_COUNT_UP,
+      .resolution_hz = 1000000,  // 1 us
+  };
+  gptimer_new_timer(&config, &tickTimer);
+  const gptimer_event_callbacks_t callbacks = {.on_alarm = onTick};
+  gptimer_register_event_callbacks(tickTimer, &callbacks, nullptr);  // interrupt on this core (1)
+  gptimer_alarm_config_t alarm = {};
+  alarm.alarm_count = TICK_US;
+  alarm.reload_count = 0;
+  alarm.flags.auto_reload_on_alarm = true;
+  gptimer_set_alarm_action(tickTimer, &alarm);
+  gptimer_enable(tickTimer);
+  gptimer_start(tickTimer);
+}
+
+// --- esp_timer path (REFRESH_HW_TIMER false) -------------------------------
+static esp_timer_handle_t refreshTimer;
 
 static void refreshTick(void *) {
   static uint8_t plane = 0;
-  if (plane == 0) {
-    portENTER_CRITICAL(&setLock);
-    if (pendingSet >= 0) {
-      frontSet = pendingSet;
-      pendingSet = -1;
-    }
-    portEXIT_CRITICAL(&setLock);
-  }
+  if (plane == 0) takePendingFrame();
   pushBits(planeSets[frontSet].bits[plane]);
   esp_timer_start_once(refreshTimer, PLANE_US[plane]);
   plane = (plane + 1) % PLANES;
+}
+
+static void startTimerRefresh() {
+  const esp_timer_create_args_t args = {
+      .callback = refreshTick,
+      .arg = nullptr,
+      .dispatch_method = ESP_TIMER_TASK,
+      .name = "display",
+      .skip_unhandled_events = true,
+  };
+  esp_timer_create(&args, &refreshTimer);
+  esp_timer_start_once(refreshTimer, PLANE_US[0]);
 }
 
 void Display::begin() {
@@ -103,15 +185,8 @@ void Display::begin() {
   render();
 
   if (GRAYSCALE) {
-    const esp_timer_create_args_t args = {
-        .callback = refreshTick,
-        .arg = nullptr,
-        .dispatch_method = ESP_TIMER_TASK,
-        .name = "display",
-        .skip_unhandled_events = true,
-    };
-    esp_timer_create(&args, &refreshTimer);
-    esp_timer_start_once(refreshTimer, PLANE_US[0]);
+    if (REFRESH_HW_TIMER) startHardwareRefresh();
+    else startTimerRefresh();
   }
 }
 

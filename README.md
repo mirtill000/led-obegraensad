@@ -28,13 +28,24 @@ Because the registers hold their state, the MCU only needs to push a new
 
 ### Grayscale
 
-To get levels in between, the firmware uses binary code modulation: each
-pixel's brightness (0-255, gamma-corrected to 32 steps) is split into 5 bit
-planes, and a hardware timer keeps pushing them in a loop, holding plane
-*n* for 2^n x 120 us. A full cycle takes 3.7 ms (~270 Hz, no visible
-flicker) and costs a few percent of one CPU core. The animations use it for
-fading trails, fire, twinkling stars and soft edges. Set `GRAYSCALE` to
-`false` in `include/constants.h` to go back to plain on/off pixels.
+The panel's driver chips only know on or off for each LED (the one EN pin
+dims the whole panel at once), so levels in between are made in time,
+with binary code modulation: each pixel's brightness (0-255,
+gamma-corrected to 32 steps) is split into 5 bit planes that are shown in
+a loop, plane *n* for 2^n x 100 us. A full cycle takes 3.1 ms (~320 Hz).
+The animations use it for fading trails, fire, twinkling stars and soft
+edges.
+
+Each plane has to change at exactly the right moment, or the LEDs visibly
+tremble. A hardware timer (gptimer) ticks every 100 us on CPU core 1 -
+WiFi runs on core 0 - and when a plane's time is up its interrupt wakes a
+top-priority task on the same core, which latches the plane already
+shifted into the registers and then shifts in the next one while it is
+shown: the switch happens on the tick, whatever the network is doing. It
+costs a few percent of core 1. `REFRESH_HW_TIMER` in
+`include/constants.h` switches back to the older timing (an esp_timer
+callback on core 0, which WiFi traffic can delay); `GRAYSCALE false` goes
+back to plain on/off pixels.
 
 ## Wiring
 

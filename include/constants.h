@@ -30,6 +30,11 @@
 // code modulation). Set to false for plain on/off pixels, pushed only when
 // the image changes.
 #define GRAYSCALE true
+// How the grayscale bit planes are timed: true = a hardware timer on core 1
+// wakes a top-priority task that latches each plane (steady even under WiFi
+// traffic); false = the older esp_timer callback, which runs on core 0
+// next to WiFi and can be delayed by it (visible as flicker).
+#define REFRESH_HW_TIMER true
 
 // Clockwise rotation (0, 90, 180, 270) applied to the image for each way
 // the lamp can hang; the orientation itself is picked on the web page.
