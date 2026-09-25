@@ -245,6 +245,18 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <div class="gallery" id="gallery"></div>
   </section>
 
+  <section data-mode="demo" hidden>
+    <h2>Demo</h2>
+    <label for="demoStyle">Come mostrare le frasi</label>
+    <select id="demoStyle">
+      <option value="auto">A turno: uno stile per frase</option>
+      <option value="rows3">3 righe che scorrono insieme (font 4 pixel)</option>
+      <option value="pages">A pagine: 3 righe ferme alla volta (font 4 pixel)</option>
+      <option value="rows2">2 righe che scorrono insieme (Mini 5 pixel)</option>
+    </select>
+    <p class="hint">Le frasi dell'ora, per confrontare come si legge un testo lungo su 16×16 LED. La velocità regola lo scorrimento e il tempo di ogni pagina.</p>
+  </section>
+
   <section data-mode="countdown" hidden>
     <h2>Conto alla rovescia</h2>
     <label for="cdLabel">Evento</label>
@@ -467,6 +479,7 @@ function render() {
   if (!editing('text')) $('text').value = s.text;
   $('textPos').value = s.textPos;
   $('quotesPos').value = s.quotesPos;
+  $('demoStyle').value = s.demoStyle;
   if (selected === 'quotes' && !quotesLoaded) loadQuotes().catch(() => {});
   $('clockInfo').textContent = 'Meteo per ' + s.city + ' (' + s.lat.toFixed(2) + ', ' + s.lon.toFixed(2) + '), fuso ' + s.tzName + '.';
 
@@ -951,6 +964,8 @@ $('saveQuotes').onclick = () => post('/api/quotes', { quotes: $('quotes').value 
 $('resetQuotes').onclick = () => post('/api/quotes', { quotes: '' })
   .then(() => { dirty.quotes = false; return loadQuotes(); }).then(() => status('Frasi predefinite ripristinate')).catch(fail);
 $('openPlace').onclick = () => { $('placeBox').open = true; $('placeBox').scrollIntoView({ behavior: 'smooth' }); };
+$('demoStyle').onchange = (e) => post('/api/settings', { demoStyle: e.target.value })
+  .then(() => status('Stile cambiato')).catch(fail);
 $('ambient').onchange = (e) => post('/api/settings', { ambient: e.target.value }).then(() => status('Animazione cambiata')).catch(fail);
 
 $('playlistOn').onchange = () => { dirty.playlist = true; };
@@ -1192,6 +1207,7 @@ static void sendState() {
           String((int)lroundf(moonIllumination(phase) * 100)) + "}";
   json += ",\"version\":" + jsonString(String(FIRMWARE_COMMIT) + " del " + FIRMWARE_BUILT);
   json += ",\"galleryCurrent\":" + jsonString(galleryMode().currentId());
+  json += ",\"demoStyle\":" + jsonString(settings.demoStyle);
   json += ",\"galleryShow\":" + jsonString(settings.galleryShow) + ",\"nightSun\":" + jsonBool(settings.nightSun);
 
   json += ",\"playlistOn\":" + jsonBool(settings.playlistOn) + ",\"playlist\":" + jsonString(settings.playlist);
@@ -1351,6 +1367,12 @@ static void handleSettings() {
     (strcmp(key, "textPos") == 0 ? settings.textPosition : settings.quotesPosition) = pos;
     const char *mode = strcmp(key, "textPos") == 0 ? "text" : "quotes";
     if (strcmp(currentMode()->id(), mode) == 0) restartMode();  // show it at the new height now
+  }
+  if (server.hasArg("demoStyle")) {
+    const String style = server.arg("demoStyle");
+    if (style != "auto" && style != "rows3" && style != "pages" && style != "rows2") return badRequest("Stile sconosciuto");
+    settings.demoStyle = style;
+    if (strcmp(currentMode()->id(), "demo") == 0) restartMode();  // a new quote in the new style
   }
   if (server.hasArg("ambient")) {
     const String id = server.arg("ambient");

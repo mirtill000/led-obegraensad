@@ -105,6 +105,7 @@ include/
   font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ; ! ? ' - %)
   font_mini.h        - 5px-tall capitals (Previsioni and the "Mini" choice; "Grande" is built from font_small)
   font_compact.h     - font_small with letters one pixel narrower (Testo scorrevole)
+  font_tiny.h        - 4px-tall capitals (the Demo mode's three lines)
   display.h, modes.h, settings.h, web.h
   ui.h               - shared look of the info screens (header band, waiting dots)
 src/
@@ -279,6 +280,16 @@ Current modes:
 - **Conto alla rovescia** - the event and when ("Vacanze  tra 12
   giorni") scroll along the top, the days left sit below in big digits
   (hours and minutes on the day itself)
+- **Demo** - the hourly quotes shown three ways, to compare how a long
+  text reads on 16x16 LEDs (a whole quote never fits one screen: they
+  average 79 characters, a screen holds 12-16): *3 righe* - split into
+  three lines of about the same length that scroll together, in the
+  4-row Tiny font (`include/font_tiny.h`, capitals, the smallest that
+  stays readable: 4+1+4+1+4 rows), a third of the scrolling; *A pagine* -
+  still screens of three lines, words kept whole where they fit, one
+  every 2.5 s; *2 righe* - two lines scrolling together in the Mini font.
+  "A turno" changes style at every quote; button: next quote; the speed
+  slider sets the scrolling and the page time
 - **Spento** - all LEDs off
 
 Fixed layouts use font A (proportional, 8 rows, lowercase, "Morbido"

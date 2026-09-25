@@ -34,6 +34,7 @@ struct Settings {
   String webPosition;
   String quotes;        // one quote per line; empty = built-in list (see loadQuotes)
   String galleryShow;   // drawing shown by the "Disegni" mode, or "all"
+  String demoStyle;     // "Demo" mode: "auto", "rows3", "pages" or "rows2"
 
   // Playlist: modes shown in turn, "id:minutes,id:minutes,...".
   bool playlistOn;

@@ -70,6 +70,13 @@ void QuotesMode::update(uint32_t now) {
 
 uint16_t QuotesMode::count() { return quoteLine(activeList(), UINT16_MAX, nullptr); }
 
+String QuotesMode::quoteAt(uint16_t index) {
+  String quote;
+  const uint16_t n = count();
+  if (n) quoteLine(activeList(), index % n, &quote);
+  return quote;
+}
+
 void QuotesMode::action() {
   skip_++;
   start();

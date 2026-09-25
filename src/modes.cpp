@@ -4,6 +4,7 @@
 #include "modes/ambient_mode.h"
 #include "modes/clock_mode.h"
 #include "modes/countdown_mode.h"
+#include "modes/demo_mode.h"
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
 #include "modes/life_mode.h"
@@ -25,11 +26,12 @@ static LifeMode lifeMode;
 static AmbientMode ambientMode;
 static GalleryMode galleryModeInstance;
 static CountdownMode countdownMode;
+static DemoMode demoModeInstance;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
 Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &ambientMode, &galleryModeInstance,
-                        &countdownMode, &offMode, &sunriseMode};
+                        &countdownMode, &demoModeInstance, &offMode, &sunriseMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 
 static uint8_t current = 0;       // index of the mode being shown

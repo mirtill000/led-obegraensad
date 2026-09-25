@@ -20,6 +20,8 @@ class QuotesMode : public Mode {
   static const char *defaultQuotes();
   // How many quotes the list in use has.
   static uint16_t count();
+  // Quote number `index` (wrapping round) of the list in use, UTF-8.
+  static String quoteAt(uint16_t index);
 
  private:
   // Index of the quote for the current hour (plus any skips).
