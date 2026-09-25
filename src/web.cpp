@@ -162,14 +162,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   <section data-mode="quotes" hidden>
     <h2>Frasi</h2>
     <textarea id="quotes" spellcheck="false"></textarea>
-    <p class="hint">Una frase per riga: ogni ora ne scorre una diversa. <span id="quotesInfo"></span></p>
-    <label for="quotesPos">Altezza</label>
-    <select id="quotesPos">
-      <option value="random">Variabile (cambia a ogni passaggio)</option>
-      <option value="top">In alto</option>
-      <option value="middle">Al centro</option>
-      <option value="bottom">In basso</option>
-    </select>
+    <p class="hint">Una frase per riga: ogni ora ne compare una diversa, a pagine di 3 righe ferme (font 4 pixel, solo maiuscole). La velocità regola quanto resta ogni pagina. <span id="quotesInfo"></span></p>
     <div class="row">
       <button class="save" id="saveQuotes">Salva frasi</button>
       <button class="link" id="resetQuotes">Ripristina quelle predefinite</button>
@@ -355,7 +348,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="big">Grande (tutto il pannello)</option>
       <option value="mini">Mini 3×5 (solo maiuscole)</option>
     </select>
-    <p class="hint">Vale per tutto il testo che scorre: testo, frasi, dati dal web, orologio a parole e punteggi dei giochi. Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
+    <p class="hint">Vale per tutto il testo che scorre: testo, dati dal web, orologio a parole e punteggi dei giochi (le frasi dell'ora hanno le loro pagine a 3 righe). Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
     <label for="transition">Passaggio tra modalità e animazioni</label>
     <select id="transition">
       <option value="fade">Dissolvenza</option>
@@ -478,7 +471,6 @@ function render() {
 
   if (!editing('text')) $('text').value = s.text;
   $('textPos').value = s.textPos;
-  $('quotesPos').value = s.quotesPos;
   $('demoStyle').value = s.demoStyle;
   if (selected === 'quotes' && !quotesLoaded) loadQuotes().catch(() => {});
   $('clockInfo').textContent = 'Meteo per ' + s.city + ' (' + s.lat.toFixed(2) + ', ' + s.lon.toFixed(2) + '), fuso ' + s.tzName + '.';
@@ -946,7 +938,7 @@ $('speed').onchange = (e) => post('/api/speed', { id: state.active, level: e.tar
 
 $('saveText').onclick = () => post('/api/text', { text: $('text').value }).then(() => status('Testo aggiornato')).catch(fail);
 $('quotes').oninput = () => { dirty.quotes = true; };
-for (const id of ['textPos', 'quotesPos']) {
+for (const id of ['textPos']) {
   $(id).onchange = (e) => post('/api/settings', { [id]: e.target.value }).then(() => status('Altezza cambiata')).catch(fail);
 }
 // The list can be long, so it isn't part of the state: it is fetched when
@@ -1158,7 +1150,7 @@ static void sendState() {
   json += "],\"activeMode\":" + modeJson(currentMode());
 
   json += ",\"text\":" + jsonString(settings.text) + ",\"textFont\":" + jsonString(settings.textFont);
-  json += ",\"textPos\":" + jsonString(settings.textPosition) + ",\"quotesPos\":" + jsonString(settings.quotesPosition);
+  json += ",\"textPos\":" + jsonString(settings.textPosition);
   json += ",\"brightness\":" + String(settings.brightness) + ",\"vertical\":" + jsonBool(settings.vertical);
   json += ",\"transition\":" + jsonString(settings.transition);
   json += ",\"lat\":" + String(settings.latitude, 4) + ",\"lon\":" + String(settings.longitude, 4);
@@ -1360,13 +1352,11 @@ static void handleSettings() {
     display.setRotation(rotationForSettings());
     restartMode();  // redraw straight away in the new orientation
   }
-  for (const char *key : {"textPos", "quotesPos"}) {
-    if (!server.hasArg(key)) continue;
-    const String pos = server.arg(key);
+  if (server.hasArg("textPos")) {
+    const String pos = server.arg("textPos");
     if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom") return badRequest("Altezza non valida");
-    (strcmp(key, "textPos") == 0 ? settings.textPosition : settings.quotesPosition) = pos;
-    const char *mode = strcmp(key, "textPos") == 0 ? "text" : "quotes";
-    if (strcmp(currentMode()->id(), mode) == 0) restartMode();  // show it at the new height now
+    settings.textPosition = pos;
+    if (strcmp(currentMode()->id(), "text") == 0) restartMode();  // show it at the new height now
   }
   if (server.hasArg("demoStyle")) {
     const String style = server.arg("demoStyle");

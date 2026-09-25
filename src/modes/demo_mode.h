@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "modes.h"
+#include "pager.h"
 
 // "Demo": the hourly quotes shown three ways, to compare how a long text
 // reads on 16x16 LEDs (settings.demoStyle, or "auto" for each in turn):
@@ -25,18 +26,17 @@ class DemoMode : public Mode {
   enum Style : uint8_t { ROWS3, PAGES, ROWS2, STYLES };
 
   void next();       // the next quote (and, in "auto", the next style)
-  void layout();     // splits quote_ into lines_ / pages_ for style_
+  void layout();     // splits quote_ into lines_ for the scrolling styles
   void drawScroll();
-  void drawPage();
 
   String quote_;           // in the font's single-byte characters
   uint16_t index_ = 0;     // quote number
   Style style_ = ROWS3;
   uint8_t autoStyle_ = 0;
-  std::vector<String> lines_;  // rows3 / rows2: the lines; pages: 3 per page
+  std::vector<String> lines_;  // rows3 / rows2: the lines
+  Pager pager_;                // pages
   int offset_ = 0;             // scrolling position
   int width_ = 0;              // widest line, pixels
-  size_t page_ = 0;
   uint32_t lastStep_ = 0;
   bool started_ = false;
 };

@@ -105,7 +105,7 @@ include/
   font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ; ! ? ' - %)
   font_mini.h        - 5px-tall capitals (Previsioni and the "Mini" choice; "Grande" is built from font_small)
   font_compact.h     - font_small with letters one pixel narrower (Testo scorrevole)
-  font_tiny.h        - 4px-tall capitals (the Demo mode's three lines)
+  font_tiny.h        - 4px-tall capitals (Frase dell'ora and Demo: three lines)
   display.h, modes.h, settings.h, web.h
   ui.h               - shared look of the info screens (header band, waiting dots)
 src/
@@ -203,13 +203,16 @@ Current modes:
 - **Testo scorrevole** - scrolls the text set on the page, at the height
   chosen there: top, middle, bottom or variable (a different height at
   every pass, the default), in the font chosen there (the same setting as
-  in Display). With *Attuale*, this and all other scrolling text (quotes,
-  web info, word clock, game scores, the countdown's header) use its
+  in Display). With *Attuale*, this and all other scrolling text (web info, word clock, game scores, the countdown's header) use its
   compact variant (`include/font_compact.h`): letters one pixel narrower -
   3 instead of 4 - where the shape allows it, so more text fits; the
   digits are already 3 pixels wide, the narrowest that stays readable
-- **Frase dell'ora** - a different quote every hour, scrolling on one line
-  at the chosen height (top, middle, bottom or variable, like the text).
+- **Frase dell'ora** - a different quote every hour, shown as still pages
+  of three lines in the 4-row Tiny font (words kept whole where they fit,
+  split by Italian syllables where they don't - CO / ME, CON / SAPE / VO /
+  LEZ / ZA -,
+  2.5 s a page, set by the speed slider; the same as the Demo mode's "A
+  pagine"), over and over until the hour changes.
   The built-in list is 100 motivational quotes from
   `content/frasi_dell_ora.txt` (one per line, UTF-8; `scripts/quotes.py`
   turns it into a header at every build, so edit the text file). On the

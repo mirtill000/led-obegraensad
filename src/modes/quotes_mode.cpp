@@ -43,28 +43,24 @@ uint16_t QuotesMode::currentIndex(uint16_t count) const {
   return count ? (hour + skip_) % count : 0;
 }
 
+static const uint32_t PAGE_MS = 2500;  // each page (scaled by the speed setting)
+
 void QuotesMode::start() {
   const String &list = activeList();
   const uint16_t count = quoteLine(list, 0xFFFF, nullptr);
   shown_ = currentIndex(count);
-  String quote;
-  quoteLine(list, shown_, &quote);
-  scroller_.start(quote);
-  nextRow();
-}
-
-// New height for the next pass (if set to vary).
-void QuotesMode::nextRow() {
-  row_ = Scroller::rowFor(settings.quotesPosition, row_);
-  scroller_.setRow(row_);
+  quote_ = "";
+  quoteLine(list, shown_, &quote_);
+  pager_.start(quote_);
 }
 
 void QuotesMode::update(uint32_t now) {
-  if (!scroller_.update(now, interval(SCROLL_DELAY_MS))) return;
+  if (!pager_.update(now, interval(PAGE_MS))) return;
+  // The quote is over: the next one if the hour has changed, else again.
   if (currentIndex(quoteLine(activeList(), 0xFFFF, nullptr)) != shown_) {
     start();
   } else {
-    nextRow();
+    pager_.start(quote_);
   }
 }
 

@@ -73,34 +73,6 @@ static std::vector<String> balancedLines(Font f, const String &text, int count) 
   return lines;
 }
 
-// Lines up to COLS pixels wide, words kept whole unless one alone is too
-// wide (then it is cut where it has to be).
-static std::vector<String> wrappedLines(Font f, const String &text) {
-  std::vector<String> lines;
-  String line;
-  for (String word : words(text)) {
-    while (textWidth(f, word) > COLS) {  // too long for any line: cut it
-      if (line.length()) {
-        lines.push_back(line);
-        line = "";
-      }
-      unsigned n = 1;
-      while (n < word.length() && textWidth(f, word.substring(0, n + 1)) <= COLS) n++;
-      lines.push_back(word.substring(0, n));
-      word = word.substring(n);
-    }
-    const String with = line.length() ? line + " " + word : word;
-    if (textWidth(f, with) <= COLS) {
-      line = with;
-    } else {
-      lines.push_back(line);
-      line = word;
-    }
-  }
-  if (line.length()) lines.push_back(line);
-  return lines;
-}
-
 // --- the mode -----------------------------------------------------------------
 
 void DemoMode::start() {
@@ -111,28 +83,26 @@ void DemoMode::next() {
   const uint16_t count = QuotesMode::count();
   if (!started_) index_ = count ? esp_random() % count : 0;
   started_ = true;
-  quote_ = Display::fontText(QuotesMode::quoteAt(index_++));
+  const String quote = QuotesMode::quoteAt(index_++);
+  quote_ = Display::fontText(quote);
 
   if (settings.demoStyle == "rows3") style_ = ROWS3;
   else if (settings.demoStyle == "pages") style_ = PAGES;
   else if (settings.demoStyle == "rows2") style_ = ROWS2;
   else style_ = (Style)(autoStyle_++ % STYLES);
 
+  if (style_ == PAGES) {
+    pager_.start(quote);
+    return;
+  }
   layout();
   offset_ = -COLS;
-  page_ = 0;
   lastStep_ = millis();
   display.beginTransition();
-  if (style_ == PAGES) drawPage();
-  else drawScroll();
+  drawScroll();
 }
 
 void DemoMode::layout() {
-  if (style_ == PAGES) {
-    lines_ = wrappedLines(Font::Tiny, quote_);
-    width_ = 0;
-    return;
-  }
   const Font f = style_ == ROWS3 ? Font::Tiny : Font::Mini;
   lines_ = balancedLines(f, quote_, style_ == ROWS3 ? 3 : 2);
   width_ = 0;
@@ -149,30 +119,10 @@ void DemoMode::drawScroll() {
   display.render();
 }
 
-// Pages: up to three lines, each centred, the block centred vertically.
-void DemoMode::drawPage() {
-  display.clear();
-  const size_t first = page_ * 3;
-  const int n = min((int)(lines_.size() - first), 3);
-  const int height = n * TINY_HEIGHT + (n - 1);
-  int y = (ROWS - height) / 2;
-  for (int i = 0; i < n; i++) {
-    const String &l = lines_[first + i];
-    drawText(Font::Tiny, (COLS - textWidth(Font::Tiny, l)) / 2, y, l);
-    y += TINY_HEIGHT + 1;
-  }
-  display.render();
-}
-
 void DemoMode::update(uint32_t now) {
   if (!started_) return next();
   if (style_ == PAGES) {
-    if (now - lastStep_ < interval(PAGE_MS)) return;
-    lastStep_ = now;
-    page_++;
-    if (page_ * 3 >= lines_.size()) return next();
-    display.beginTransition();
-    drawPage();
+    if (pager_.update(now, interval(PAGE_MS))) next();
     return;
   }
   if (now - lastStep_ < interval(SCROLL_DELAY_MS)) return;

@@ -92,7 +92,6 @@ void loadSettings() {
   settings.text = prefs.getString("text", MESSAGE);
   settings.textFont = prefs.getString("scrollFont", "small");
   settings.textPosition = prefs.getString("textPos", "random");
-  settings.quotesPosition = prefs.getString("quotesPos", "random");
   settings.brightness = prefs.getUChar("brightness", 255);
   settings.vertical = prefs.getBool("vertical", false);
   settings.transition = prefs.getString("transition", "fade");
@@ -143,7 +142,6 @@ void saveSettings() {
   prefs.putString("text", settings.text);
   prefs.putString("scrollFont", settings.textFont);
   prefs.putString("textPos", settings.textPosition);
-  prefs.putString("quotesPos", settings.quotesPosition);
   prefs.putUChar("brightness", settings.brightness);
   prefs.putBool("vertical", settings.vertical);
   prefs.putString("transition", settings.transition);
