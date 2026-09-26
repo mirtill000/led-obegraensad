@@ -128,6 +128,7 @@ void loadSettings() {
   settings.countdownLabel = prefs.getString("cdLabel", "Vacanze");
   settings.countdownDate = prefs.getString("cdDate", "");
   settings.countdownTime = prefs.getString("cdTime", "00:00");
+  settings.hourglassMinutes = constrain(prefs.getUChar("hgMin", 5), 1, 120);
   settings.alarmOn = prefs.getBool("alarmOn", false);
   settings.alarmTime = prefs.getUShort("alarmTime", 7 * 60);
   settings.alarmDays = prefs.getUChar("alarmDays", 0x1F);  // Monday-Friday
@@ -174,6 +175,7 @@ void saveSettings() {
   prefs.putString("cdLabel", settings.countdownLabel);
   prefs.putString("cdDate", settings.countdownDate);
   prefs.putString("cdTime", settings.countdownTime);
+  prefs.putUChar("hgMin", settings.hourglassMinutes);
   prefs.putBool("alarmOn", settings.alarmOn);
   prefs.putUShort("alarmTime", settings.alarmTime);
   prefs.putUChar("alarmDays", settings.alarmDays);

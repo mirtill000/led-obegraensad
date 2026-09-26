@@ -15,6 +15,7 @@
 #include "modes/countdown_mode.h"
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
+#include "modes/hourglass_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
 #include "moon.h"
@@ -272,6 +273,24 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     </div>
     <button class="save" id="saveCd">Salva</button>
     <p class="hint" id="cdInfo"></p>
+  </section>
+
+  <section data-mode="hourglass" hidden>
+    <h2>Clessidra</h2>
+    <label for="hgMin">Durata</label>
+    <select id="hgMin">
+      <option value="1">1 minuto</option>
+      <option value="3">3 minuti</option>
+      <option value="5">5 minuti</option>
+      <option value="10">10 minuti</option>
+      <option value="15">15 minuti</option>
+      <option value="25">25 minuti</option>
+      <option value="30">30 minuti</option>
+      <option value="60">1 ora</option>
+    </select>
+    <button class="save" id="hgStart">Ricomincia</button>
+    <p class="hint" id="hgInfo"></p>
+    <p class="hint">Ogni granello è un LED e cade davvero: la sabbia si ammucchia, scivola e lascia un cratere in alto. «Gira» la capovolge come una vera clessidra (il tempo che resta è quello già trascorso); alla fine la sabbia pulsa per qualche secondo.</p>
   </section>
 
   <section data-mode="ambient" hidden>
@@ -673,6 +692,10 @@ function renderExtras() {
 
   if (!dirty.cd) { $('cdLabel').value = s.countdown.label; $('cdDate').value = s.countdown.date; $('cdTime').value = s.countdown.time; }
   $('cdInfo').textContent = s.countdown.sentence;
+  if (!editing('hgMin')) $('hgMin').value = String(s.hourglass.minutes);
+  const hl = s.hourglass.left;
+  $('hgInfo').textContent = s.active !== 'hourglass' ? '' : !s.hourglass.running ? 'Tempo scaduto.'
+    : 'Resta ' + (hl >= 60 ? Math.floor(hl / 60) + ' min ' : '') + (hl % 60) + ' s circa.';
 
   const days = $('alarmDays');
   if (!days.children.length) {
@@ -713,6 +736,8 @@ $('saveWeb').onclick = () => post('/api/web', {
 }).then(() => { dirty.web = false; render(); status('Salvato: i dati arrivano in qualche secondo'); }).catch(fail);
 
 for (const id of ['cdLabel', 'cdDate', 'cdTime']) $(id).addEventListener('input', () => { dirty.cd = true; });
+$('hgMin').onchange = () => post('/api/hourglass', { minutes: $('hgMin').value });
+$('hgStart').onclick = () => post('/api/hourglass', { minutes: $('hgMin').value, start: 1 });
 $('saveCd').onclick = () => post('/api/countdown', { label: $('cdLabel').value, date: $('cdDate').value, time: $('cdTime').value || '00:00' })
   .then(() => { dirty.cd = false; render(); status('Conto alla rovescia salvato'); }).catch(fail);
 
@@ -1331,6 +1356,8 @@ static String stateJson() {
   json += ",\"countdown\":{\"label\":" + jsonString(settings.countdownLabel) + ",\"date\":" +
           jsonString(settings.countdownDate) + ",\"time\":" + jsonString(settings.countdownTime) +
           ",\"sentence\":" + jsonString(CountdownMode::sentence()) + "}";
+  json += ",\"hourglass\":{\"minutes\":" + String(settings.hourglassMinutes) + ",\"left\":" +
+          String(HourglassMode::secondsLeft()) + ",\"running\":" + jsonBool(HourglassMode::running()) + "}";
   json += ",\"alarm\":{\"on\":" + jsonBool(settings.alarmOn) + ",\"time\":" + String(settings.alarmTime) +
           ",\"days\":" + String(settings.alarmDays) + ",\"ramp\":" + String(settings.alarmRamp) +
           ",\"hold\":" + String(settings.alarmHold) + "}";
@@ -1689,6 +1716,21 @@ static void handleCountdown() {
   sendState();
 }
 
+static void handleHourglass() {
+  const int minutes = server.arg("minutes").toInt();
+  if (minutes < 1 || minutes > 120) return badRequest("Durata non valida");
+  const bool changed = minutes != settings.hourglassMinutes;
+  settings.hourglassMinutes = minutes;
+  if (server.arg("start") == "1") {
+    if (strcmp(currentMode()->id(), "hourglass") == 0) restartMode();
+    else setMode("hourglass");
+  } else if (changed && strcmp(currentMode()->id(), "hourglass") == 0) {
+    restartMode();
+  }
+  saveSettings();
+  sendState();
+}
+
 static void handleAlarm() {
   const String cmd = server.arg("cmd");
   if (cmd == "stop") {
@@ -1882,6 +1924,7 @@ void webBegin() {
   server.on("/api/night", HTTP_POST, handleNight);
   server.on("/api/web", HTTP_POST, handleWeb);
   server.on("/api/countdown", HTTP_POST, handleCountdown);
+  server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/alarm", HTTP_POST, handleAlarm);
   server.on("/api/gallery", HTTP_GET, handleGalleryList);
   server.on("/api/gallery/item", HTTP_GET, handleGalleryItem);

@@ -321,6 +321,14 @@ Current modes:
 - **Conto alla rovescia** - the event and when ("Vacanze  tra 12
   giorni") scroll along the top, the days left sit below in big digits
   (hours and minutes on the day itself)
+- **Clessidra** - a sand timer (1 minute to 1 hour, set on the page;
+  *Ricomincia* starts it again). 44 grains, one LED each, with real
+  falling-sand physics: they pile up in a cone, slide down the slopes and
+  open a crater in the top bulb; the neck lets one grain through at a time,
+  at the pace that empties the top in the time chosen. *Gira* turns it
+  over like a real one (the time left becomes the time that had run); at
+  the end the sand pulses for a few seconds. The page shows the time left
+  (`POST /api/hourglass` with `minutes` and `start=1`)
 - **Demo** - the hourly quotes shown three ways, to compare how a long
   text reads on 16x16 LEDs (a whole quote never fits one screen: they
   average 79 characters, a screen holds 12-16): *3 righe* - split into
