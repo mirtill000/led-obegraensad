@@ -4,6 +4,7 @@
 #include <Preferences.h>
 #include <math.h>
 
+#include "animation.h"
 #include "constants.h"
 
 Settings settings;
@@ -112,6 +113,7 @@ void loadSettings() {
   settings.timezone = prefs.getString("tz", TIMEZONE);
   settings.timezoneName = prefs.getString("tzName", TIMEZONE_NAME);
   settings.ambient = prefs.getString("ambient", "auto");
+  settings.game = prefs.getString("game", "auto");
   settings.infoWord = prefs.getBool("infoWord", true);
   settings.infoHistory = prefs.getBool("infoHistory", true);
   settings.infoCalendar = prefs.getBool("infoCal", false);
@@ -131,10 +133,17 @@ void loadSettings() {
                                     "2300|25|clock:30");
   // Super Mario used to be a mode of its own; it is now one of the games.
   if (settings.mode == "mario") {
-    settings.mode = "ambient";
-    settings.ambient = "mario";
+    settings.mode = "games";
+    settings.game = "mario";
   }
-  settings.playlist.replace("mario:", "ambient:");
+  settings.playlist.replace("mario:", "games:");
+  // The games used to be among the animations; they have a mode of their own.
+  const Animation *picked = findAnimation(settings.ambient);
+  if (picked && picked->isGame()) {
+    settings.game = settings.ambient;
+    settings.ambient = "auto";
+    if (settings.mode == "ambient") settings.mode = "games";
+  }
   settings.demoOff = prefs.getString("demoOff", "");
   settings.countdownLabel = prefs.getString("cdLabel", "Vacanze");
   settings.countdownDate = prefs.getString("cdDate", "");
@@ -171,6 +180,7 @@ void saveSettings() {
   prefs.putString("tz", settings.timezone);
   prefs.putString("tzName", settings.timezoneName);
   prefs.putString("ambient", settings.ambient);
+  prefs.putString("game", settings.game);
   prefs.putBool("infoWord", settings.infoWord);
   prefs.putBool("infoHistory", settings.infoHistory);
   prefs.putBool("infoCal", settings.infoCalendar);

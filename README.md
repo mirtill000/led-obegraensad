@@ -114,7 +114,7 @@ src/
   ui.cpp             - scrolling header band, "waiting" and "no WiFi" signs
   modes.cpp          - list of modes + switching between them
   modes/             - one file per mode
-  animations/        - the animations of the "Animazioni" mode
+  animations/        - the animations and games ("Animazioni", "Giochi")
   settings.cpp       - settings saved in flash (NVS)
   timekeeping.cpp    - NTP time sync (time zone: TIMEZONE in constants.h)
   net.cpp            - background task for everything downloaded
@@ -297,40 +297,9 @@ Current modes:
   40-150 generations; when the board dies, freezes or loops a new game
   starts; button: restart
 - **Animazioni** - one animation, or "automatic" (a different one every 5
-  minutes); button: next animation. The animations, in
-  `src/animations/`:
+  minutes); button: next animation. The animations (the games have their
+  own mode, below), in `src/animations/`:
   - *Atmosfere*: digital rain, fire, stars, waves
-  - *Giochi*: **Super Mario** - side-scrolling platformer (Mario is a
-    5x7 sprite in grayscale: cap, face and moustache, overalls, shoes)
-    with pipes, pits, goombas (stomp them) and coins; in demo mode an
-    autopilot simulates the next moves and jumps at the best moment,
-    otherwise you jump. At game over it shows the score and starts again
-    (it used to be a mode of its own: a saved choice moves here by
-    itself); **Tetris** - a well 10 columns wide, 14 (the whole panel) with the lamp vertical; in demo mode, for each piece the computer tries
-    every rotation and column and picks the best by stack height, holes and
-    surface; **Snake** - in demo mode it takes the shortest way to the food
-    only if it can still reach its tail afterwards; **Pong** - you against
-    the computer, first to 5; **Breakout** - 3 lives, faster at each level;
-    **Flappy Bird**; **Space Invaders** - waves that get faster; **Labirinto 3D** - a first-person
-    maze drawn by raycasting (one ray per column, walls shaded by
-    distance, a faint floor): find the pulsing block at the far end. The
-    map is shown at the start; in demo mode the computer keeps its right
-    hand on the wall, which always finds the exit; **Dino** - the
-    runner of Chrome's offline page: cacti and pterodactyls (low: jump,
-    middle: duck, high: run under) faster and faster; in demo mode the
-    computer simulates running, jumping and ducking and picks the first
-    that keeps it alive; **Donkey Kong** - four floors and three ladders,
-    Donkey Kong throwing barrels that roll down in a zigzag (and sometimes
-    down a ladder), Mario climbing up to Pauline; 3 lives, each rescue makes
-    the next round faster; in demo mode Mario jumps the barrels, waits on
-    the ladder while one passes the top and dodges those coming down;
-    **Doom** - a first-person shooter drawn like Labirinto 3D (walls
-    shaded by distance): imps standing in the level, hidden behind walls
-    and bigger as they come, throw fireballs you can see coming; a gun at
-    the bottom of the view and the health bar on the bottom row. Kill them
-    all for the next level (more imps, some health back); the score is 100
-    per imp and 500 per level. In demo mode the computer turns to the
-    nearest imp in sight and shoots, or walks the shortest way to one
   - *Icone geek*: a walking Space Invader, Pac-Man chased by a ghost, a
     terminal (four lines in a 3x3 font) typing commands whose answers are
     the lamp's own - `ls` its files, `w` the time and uptime, `ip` its
@@ -343,6 +312,39 @@ Current modes:
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
     into the Mandelbrot set
+- **Giochi** - one game, or "automatic" (a different one every 5
+  minutes, always as a demo); button: next game. The games, also in
+  `src/animations/`: **Super Mario** - side-scrolling platformer (Mario is a
+  5x7 sprite in grayscale: cap, face and moustache, overalls, shoes)
+  with pipes, pits, goombas (stomp them) and coins; in demo mode an
+  autopilot simulates the next moves and jumps at the best moment,
+  otherwise you jump. At game over it shows the score and starts again
+  (it used to be a mode of its own: a saved choice moves here by
+  itself); **Tetris** - a well 10 columns wide, 14 (the whole panel) with the lamp vertical; in demo mode, for each piece the computer tries
+  every rotation and column and picks the best by stack height, holes and
+  surface; **Snake** - in demo mode it takes the shortest way to the food
+  only if it can still reach its tail afterwards; **Pong** - you against
+  the computer, first to 5; **Breakout** - 3 lives, faster at each level;
+  **Flappy Bird**; **Space Invaders** - waves that get faster; **Labirinto 3D** - a first-person
+  maze drawn by raycasting (one ray per column, walls shaded by
+  distance, a faint floor): find the pulsing block at the far end. The
+  map is shown at the start; in demo mode the computer keeps its right
+  hand on the wall, which always finds the exit; **Dino** - the
+  runner of Chrome's offline page: cacti and pterodactyls (low: jump,
+  middle: duck, high: run under) faster and faster; in demo mode the
+  computer simulates running, jumping and ducking and picks the first
+  that keeps it alive; **Donkey Kong** - four floors and three ladders,
+  Donkey Kong throwing barrels that roll down in a zigzag (and sometimes
+  down a ladder), Mario climbing up to Pauline; 3 lives, each rescue makes
+  the next round faster; in demo mode Mario jumps the barrels, waits on
+  the ladder while one passes the top and dodges those coming down;
+  **Doom** - a first-person shooter drawn like Labirinto 3D (walls
+  shaded by distance): imps standing in the level, hidden behind walls
+  and bigger as they come, throw fireballs you can see coming; a gun at
+  the bottom of the view and the health bar on the bottom row. Kill them
+  all for the next level (more imps, some health back); the score is 100
+  per imp and 500 per level. In demo mode the computer turns to the
+  nearest imp in sight and shoots, or walks the shortest way to one
 - **Disegni** - your drawings and animations, one or all in turn; the
   gallery starts with a few examples (a beating heart, the Super Mario
   mushroom, a cat, a flower, Pac-Man, a space invader). On the page there
@@ -394,7 +396,7 @@ Breakout, Flappy Bird and Space Invaders are always sharp; Doom always
 uses shades of gray for its walls. In-between brightness is made by switching LEDs on and off
 very fast; if it trembles on your lamp, pick Nitida.
 
-All the games in the animations have a **Modalità demo** checkbox (on by
+All the games have a **Modalità demo** checkbox (on by
 default), shown on the page while the game is on the panel:
 
 - **on** - the game plays by itself and ignores input;
@@ -409,7 +411,7 @@ default), shown on the page while the game is on the panel:
   left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow
   down keeps moving.
 
-Games shown by the "automatic" animation rotation or by the night schedule
+Games shown by the "automatic" choice of the Giochi mode
 always run as demos. Controls go to the lamp over WiFi, so expect a small
 delay; lower the game's speed if it's too hard.
 

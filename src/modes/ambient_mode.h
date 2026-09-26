@@ -3,16 +3,19 @@
 #include "animation.h"
 #include "modes.h"
 
-// Plays one of the animations in src/animations/. settings.ambient picks
-// one, or "auto": a different one every few minutes. The night schedule can
-// force one (stars) through setOverride().
+// Plays the animations in src/animations/, in two instances: "Animazioni"
+// (everything but the games, picked by settings.ambient) and "Giochi" (only
+// the games, picked by settings.game). The setting names one, or "auto": a
+// different one every few minutes. The night schedule can force one (stars)
+// on the Animazioni instance through setOverride().
 class AmbientMode : public Mode {
  public:
-  const char *id() const override { return "ambient"; }
-  const char *name() const override { return "Animazioni"; }
+  explicit AmbientMode(bool games) : games_(games) {}
+  const char *id() const override { return games_ ? "games" : "ambient"; }
+  const char *name() const override { return games_ ? "Giochi" : "Animazioni"; }
   void start() override;
   void update(uint32_t now) override;
-  const char *actionName() const override { return "Prossima animazione"; }
+  const char *actionName() const override { return games_ ? "Prossimo gioco" : "Prossima animazione"; }
   void action() override;
 
   // Forces an animation by id (nullptr = back to the setting); returns true
@@ -29,6 +32,14 @@ class AmbientMode : public Mode {
  private:
   void play(Animation *animation);
   Animation *pickAuto();
+  // Whether `a` belongs to this instance (games or not).
+  bool mine(const Animation *a) const { return a && a->isGame() == games_; }
+  String &choice() const { return games_ ? settings.game : settings.ambient; }
+  bool autoRotation() const;
+
+  const bool games_;
+  mutable String checked_;
+  mutable bool isAuto_ = true;
 
   Animation *animation_ = nullptr;
   const char *override_ = nullptr;

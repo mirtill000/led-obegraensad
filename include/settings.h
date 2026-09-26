@@ -25,6 +25,7 @@ struct Settings {
   String timezoneName;  // IANA name (e.g. "Europe/Rome"), for the page
 
   String ambient;       // animation for the ambient mode, or "auto"
+  String game;          // game for the Giochi mode, or "auto"
 
   // "Dal web" mode: which sources to show, the iCal link, and the height.
   bool infoWord;

@@ -6,15 +6,18 @@
 
 static const uint32_t AUTO_SWITCH_MS = 5 * 60 * 1000;
 
-// Next animation in the "auto" rotation, skipping clocks until the time is
-// known.
+// Next animation in the "auto" rotation (of this instance's kind),
+// skipping clocks until the time is known.
 Animation *AmbientMode::pickAuto() {
   struct tm t;
   const bool haveTime = localTime(t);
   for (uint8_t tries = 0; tries < ANIMATION_COUNT; tries++) {
     Animation *a = ANIMATIONS[autoIndex_ % ANIMATION_COUNT];
-    if (!a->needsTime() || haveTime) return a;
+    if (mine(a) && (!a->needsTime() || haveTime)) return a;
     autoIndex_++;
+  }
+  for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
+    if (mine(ANIMATIONS[i])) return ANIMATIONS[i];
   }
   return ANIMATIONS[0];
 }
@@ -28,21 +31,19 @@ void AmbientMode::play(Animation *animation) {
   animation_->start();
 }
 
-// "auto" (or an animation that no longer exists): the animations take
+// "auto" (or an id that no longer exists, or of the other kind): they take
 // turns. Asked on every loop(), so the lookup is redone only when the
 // setting changes.
-static bool autoRotation() {
-  static String checked;
-  static bool isAuto = true;
-  if (checked != settings.ambient) {
-    checked = settings.ambient;
-    isAuto = !findAnimation(checked);
+bool AmbientMode::autoRotation() const {
+  if (checked_ != choice()) {
+    checked_ = choice();
+    isAuto_ = !mine(findAnimation(checked_));
   }
-  return isAuto;
+  return isAuto_;
 }
 
 void AmbientMode::start() {
-  Animation *chosen = override_ ? findAnimation(override_) : findAnimation(settings.ambient);
+  Animation *chosen = override_ ? findAnimation(override_) : autoRotation() ? nullptr : findAnimation(choice());
   play(chosen ? chosen : pickAuto());
 }
 
@@ -60,11 +61,15 @@ void AmbientMode::action() {
     play(pickAuto());
     return;
   }
-  // A fixed animation was chosen: move the choice on to the next one.
+  // A fixed one was chosen: move the choice on to the next of its kind.
   uint8_t i = 0;
   while (i < ANIMATION_COUNT && ANIMATIONS[i] != animation_) i++;
-  Animation *next = ANIMATIONS[(i + 1) % ANIMATION_COUNT];
-  settings.ambient = next->id();
+  Animation *next = animation_;
+  for (uint8_t k = 1; k <= ANIMATION_COUNT; k++) {
+    next = ANIMATIONS[(i + k) % ANIMATION_COUNT];
+    if (mine(next)) break;
+  }
+  choice() = next->id();
   saveSettings();
   play(next);
 }

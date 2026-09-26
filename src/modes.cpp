@@ -25,7 +25,8 @@ static ClockMode clockMode;
 static ForecastMode forecastMode;
 static WebMode webMode;
 static LifeMode lifeMode;
-static AmbientMode ambientMode;
+static AmbientMode ambientMode(false);
+static AmbientMode gamesMode(true);
 static GalleryMode galleryModeInstance;
 static CountdownMode countdownMode;
 static HourglassMode hourglassMode;
@@ -34,7 +35,7 @@ static DemoMode demoModeInstance;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
-Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &ambientMode, &galleryModeInstance,
+Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance,
                         &countdownMode, &hourglassMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 

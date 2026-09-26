@@ -300,6 +300,12 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <p class="hint" id="ambientInfo"></p>
   </section>
 
+  <section data-mode="games" hidden>
+    <h2>Giochi</h2>
+    <select id="games"></select>
+    <p class="hint" id="gamesInfo"></p>
+  </section>
+
   <!-- General settings -->
   <details id="playlistBox">
     <summary>Playlist</summary>
@@ -553,18 +559,23 @@ function render() {
   if (selected === 'quotes' && !quotesLoaded) loadQuotes().catch(() => {});
   $('clockInfo').textContent = 'Meteo per ' + s.city + ' (' + s.lat.toFixed(2) + ', ' + s.lon.toFixed(2) + '), fuso ' + s.tzName + '.';
 
-  const sel = $('ambient');
+  // Animazioni (grouped) and Giochi: the same list, split by kind.
+  const sel = $('ambient'), gsel = $('games');
   if (!sel.options.length) {
     sel.add(new Option('Automatica (cambia ogni 5 minuti)', 'auto'));
+    gsel.add(new Option('Automatica (cambia ogni 5 minuti, in demo)', 'auto'));
     let group = null;
     for (const a of s.animations) {
+      if (a.game) { gsel.add(new Option(a.name, a.id)); continue; }
       if (!group || group.label !== a.group) { group = document.createElement('optgroup'); group.label = a.group; sel.appendChild(group); }
       group.appendChild(new Option(a.name, a.id));
     }
   }
   sel.value = s.ambient;
+  gsel.value = s.games;
   const playing = s.animations.find((a) => a.id === s.animation);
-  $('ambientInfo').textContent = playing ? 'In riproduzione: ' + playing.name + (s.night ? ' (modalità notte)' : '') : '';
+  $('ambientInfo').textContent = playing && s.active === 'ambient' ? 'In riproduzione: ' + playing.name + (s.night ? ' (modalità notte)' : '') : '';
+  $('gamesInfo').textContent = playing && s.active === 'games' ? 'In gioco: ' + playing.name : '';
 
   if (!dirty.playlist) {
     $('playlistOn').checked = s.playlistOn;
@@ -631,7 +642,7 @@ function renderGame() {
   $('demo').checked = g.demo;
   $('demo').disabled = g.forced;
   $('demoHint').textContent = g.forced
-    ? 'In «Automatica» e di notte i giochi vanno sempre in demo: sceglilo nel menu delle animazioni per giocare.'
+    ? 'In «Automatica» i giochi vanno sempre in demo: scegline uno nel menu dei giochi per giocare.'
     : g.demo ? 'Togli la spunta per giocare tu.' : '';
   const pad = PADS[g.id];
   $('pad').hidden = g.demo || !pad;
@@ -1075,6 +1086,7 @@ $('openPlace').onclick = () => { $('placeBox').open = true; $('placeBox').scroll
 $('demoStyle').onchange = (e) => post('/api/settings', { demoStyle: e.target.value })
   .then(() => status('Stile cambiato')).catch(fail);
 $('ambient').onchange = (e) => post('/api/settings', { ambient: e.target.value }).then(() => status('Animazione cambiata')).catch(fail);
+$('games').onchange = (e) => post('/api/settings', { games: e.target.value }).then(() => status('Gioco cambiato')).catch(fail);
 
 $('playlistOn').onchange = () => { dirty.playlist = true; };
 // Time slots: start time, brightness (0 = as in Display) and their own list.
@@ -1374,21 +1386,20 @@ static String stateJson() {
   for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
     if (i) json += ',';
     json += "{\"id\":" + jsonString(ANIMATIONS[i]->id()) + ",\"name\":" + jsonString(ANIMATIONS[i]->name()) +
-            ",\"group\":" + jsonString(ANIMATIONS[i]->group()) + "}";
+            ",\"group\":" + jsonString(ANIMATIONS[i]->group()) + ",\"game\":" + jsonBool(ANIMATIONS[i]->isGame()) + "}";
   }
-  json += "]";
-  const AmbientMode *ambient = nullptr;
-  for (uint8_t i = 0; i < MODE_COUNT; i++) {
-    if (strcmp(MODES[i]->id(), "ambient") == 0) ambient = static_cast<const AmbientMode *>(MODES[i]);
-  }
-  const Animation *playing = ambient && currentMode() == ambient ? ambient->playing() : nullptr;
+  json += "],\"games\":" + jsonString(settings.game);
+  // The animation or game on the panel (Animazioni or Giochi mode).
+  const bool player = strcmp(currentMode()->id(), "ambient") == 0 || strcmp(currentMode()->id(), "games") == 0;
+  const AmbientMode *ambient = player ? static_cast<const AmbientMode *>(currentMode()) : nullptr;
+  const Animation *playing = ambient ? ambient->playing() : nullptr;
   json += ",\"animation\":" + (playing ? jsonString(playing->id()) : String("null"));
 
-  // The game on the panel (Super Mario, or a game animation) and its demo mode.
+  // The game on the panel and its demo mode.
   const char *game = currentMode()->gameId();
   if (game) {
-    const bool forced = currentMode() == ambient && ambient->demoForced();
-    const char *gameName = currentMode() == ambient && playing ? playing->name() : currentMode()->name();
+    const bool forced = ambient && ambient->demoForced();
+    const char *gameName = playing ? playing->name() : currentMode()->name();
     json += ",\"game\":{\"id\":" + jsonString(game) + ",\"name\":" + jsonString(gameName) +
             ",\"demo\":" + jsonBool(forced || demoMode(game)) + ",\"forced\":" + jsonBool(forced) + "}";
   } else {
@@ -1642,9 +1653,17 @@ static void handleSettings() {
   if (server.hasArg("notifyNight")) settings.notifyNight = server.arg("notifyNight") == "1";
   if (server.hasArg("ambient")) {
     const String id = server.arg("ambient");
-    if (id != "auto" && !findAnimation(id)) return badRequest("Animazione sconosciuta");
+    const Animation *a = findAnimation(id);
+    if (id != "auto" && !(a && !a->isGame())) return badRequest("Animazione sconosciuta");
     settings.ambient = id;
     setMode("ambient");
+  }
+  if (server.hasArg("games")) {
+    const String id = server.arg("games");
+    const Animation *a = findAnimation(id);
+    if (id != "auto" && !(a && a->isGame())) return badRequest("Gioco sconosciuto");
+    settings.game = id;
+    setMode("games");
   }
   saveSettings();
   refreshModes();
