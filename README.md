@@ -306,7 +306,7 @@ Current modes:
     autopilot simulates the next moves and jumps at the best moment,
     otherwise you jump. At game over it shows the score and starts again
     (it used to be a mode of its own: a saved choice moves here by
-    itself); **Tetris** - in demo mode, for each piece the computer tries
+    itself); **Tetris** - a well 10 columns wide, 14 (the whole panel) with the lamp vertical; in demo mode, for each piece the computer tries
     every rotation and column and picks the best by stack height, holes and
     surface; **Snake** - in demo mode it takes the shortest way to the food
     only if it can still reach its tail afterwards; **Pong** - you against

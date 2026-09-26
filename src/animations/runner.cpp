@@ -19,13 +19,14 @@ const uint32_t DUCK_MS = 350;     // one press ducks this long (hold = repeat)
 
 // Sprites, top row first ('#' lit). The dino stands on the row above the
 // ground; its feet alternate while running.
+// The little arm is the lone pixel reaching forward under the head.
 const char *const DINO_RUN[2][7] = {
-    {"...###", "...#.#", "...###", "#.###.", "####..", ".###..", ".#..#."},
-    {"...###", "...#.#", "...###", "#.###.", "####..", ".###..", "..##.."},
+    {"...###", "...#.#", "...###", "#.###.", "####.#", ".###..", ".#..#."},
+    {"...###", "...#.#", "...###", "#.###.", "####.#", ".###..", "..##.."},
 };
 const char *const DINO_DUCK[2][4] = {
-    {"....##", "######", ".####.", ".#..#."},
-    {"....##", "######", ".####.", "..##.."},
+    {"....##", "######", ".#####", ".#..#."},
+    {"....##", "######", ".#####", "..##.."},
 };
 const char *const CACTUS[3][5] = {
     {".#.", "##.", ".##", ".#.", ".#."},       // 3 wide, 5 tall

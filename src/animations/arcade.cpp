@@ -17,6 +17,15 @@ static float random01() { return (esp_random() & 0xFFFF) / 65535.0f; }
 // A dot at a fractional position, on the nearest pixel.
 static void dot(float x, float y) { display.setPixel((int)lroundf(x), (int)lroundf(y), true); }
 
+// A ball in the "sfumata" style: one sharp, fully lit pixel, with a faint
+// pixel behind it (the way it came) to show the motion.
+static void ball(float x, float y, float vx, float vy) {
+  const int bx = (int)lroundf(x), by = (int)lroundf(y);
+  const int tx = bx - (vx > 0.05f) + (vx < -0.05f), ty = by - (vy > 0.05f) + (vy < -0.05f);
+  if (tx != bx || ty != by) gfx::plot(tx, ty, 0.12f);
+  display.setLevel(bx, by, 255);
+}
+
 // The same spread over the 4 nearest pixels, so it glides.
 static void softDot(float x, float y, float v = 1) {
   const int x0 = (int)floorf(x), y0 = (int)floorf(y);
@@ -126,7 +135,7 @@ class PongGame : public ArcadeGame {
       gfx::plot(0, (int)roundf(left_) + i, 1);
       gfx::plot(COLS - 1, (int)roundf(right_) + i, 1);
     }
-    softDot(x_, y_);
+    ball(x_, y_, vx_, vy_);
   }
 
   void drawScore() {
@@ -276,7 +285,7 @@ class BreakoutGame : public ArcadeGame {
     for (int i = 0; i < lives_ - 1; i++) display.setLevel(i * 2, 0, 50);  // spare balls
     const int p = (int)roundf(paddle_);
     for (int i = 0; i < PADDLE; i++) display.setLevel(p + i, ROWS - 1, 200);
-    softDot(x_, y_);
+    ball(x_, y_, vx_, vy_);
   }
 
   bool bricks_[BRICK_ROWS][COLS / BRICK_W];

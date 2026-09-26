@@ -41,12 +41,15 @@ class TetrisAnimation : public Animation {
   }
 
   void start() override {
+    W = settings.vertical ? MAXW : 10;
+    LEFT = (COLS - W) / 2;
     memset(board_, 0, sizeof(board_));
     phase_ = DROPPING;
     spawn();
   }
 
   void frame(uint32_t) override {
+    if (W != (settings.vertical ? MAXW : 10)) start();  // the lamp was turned
     tick_++;
     switch (phase_) {
       case DROPPING: fall(); break;
@@ -64,7 +67,10 @@ class TetrisAnimation : public Animation {
   }
 
  private:
-  static const int W = 10, H = ROWS, LEFT = 3;  // well at columns 3-12
+  // The well: 10 columns (3-12) with the lamp horizontal, 14 (1-14, the
+  // whole width inside the walls) when it hangs vertically.
+  static const int H = ROWS, MAXW = 14;
+  int W = 10, LEFT = 3;
   enum Phase { DROPPING, CLEARING, GAME_OVER };
   struct Cell {
     int8_t x, y;
@@ -104,7 +110,7 @@ class TetrisAnimation : public Animation {
     }
   }
 
-  static bool fits(const uint8_t b[H][W], int piece, int rotation, int px, int py) {
+  bool fits(const uint8_t b[H][MAXW], int piece, int rotation, int px, int py) const {
     Cell c[4];
     cells(piece, rotation, c);
     for (const Cell &k : c) {
@@ -117,11 +123,11 @@ class TetrisAnimation : public Animation {
 
   // Score of the board after dropping `piece` at (rotation, column); false
   // if it doesn't fit at all.
-  static bool evaluate(const uint8_t b[H][W], int piece, int rotation, int px, float &score) {
+  bool evaluate(const uint8_t b[H][MAXW], int piece, int rotation, int px, float &score) const {
     if (!fits(b, piece, rotation, px, 0)) return false;
     int py = 0;
     while (fits(b, piece, rotation, px, py + 1)) py++;
-    uint8_t t[H][W];
+    uint8_t t[H][MAXW];
     memcpy(t, b, sizeof(t));
     Cell c[4];
     cells(piece, rotation, c);
@@ -137,7 +143,7 @@ class TetrisAnimation : public Animation {
         memset(t[0], 0, W);
       }
     }
-    int heights[W], total = 0, holes = 0, bumps = 0;
+    int heights[MAXW], total = 0, holes = 0, bumps = 0;
     for (int x = 0; x < W; x++) {
       int y = 0;
       while (y < H && !t[y][x]) y++;
@@ -154,7 +160,7 @@ class TetrisAnimation : public Animation {
   void spawn() {
     piece_ = esp_random() % 7;
     rotation_ = 0;
-    x_ = 3;
+    x_ = W / 2 - 2;
     y_ = 0;
     phaseFrames_ = 0;
     if (!fits(board_, piece_, rotation_, x_, y_)) {
@@ -272,7 +278,7 @@ class TetrisAnimation : public Animation {
     }
   }
 
-  uint8_t board_[H][W];
+  uint8_t board_[H][MAXW];
   Phase phase_ = DROPPING;
   int piece_ = 0, rotation_ = 0, x_ = 0, y_ = 0;
   int targetRotation_ = 0, targetX_ = 0;
