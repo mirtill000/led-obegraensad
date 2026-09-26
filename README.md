@@ -202,6 +202,21 @@ animation menu, ...). General settings are in collapsible sections:
   default), *Tendina da sinistra* (the new image sweeps in, 0.5 s) or
   *Stacco netto*.
 
+- **Notifiche dal telefono** - anything that can open a web address can
+  send the lamp a notification: `http://<lamp>/api/notify?text=Lavatrice%20finita&icon=check`
+  (GET, form POST, or POST JSON `{"text":"...","icon":"..."}`; text up to
+  200 characters, accents welcome; icons `bell`, `mail`, `check`, `alert`,
+  `heart`, `phone`, `home`, `star`, or none). An icon drops in and moves
+  (the bell swings, the phone shakes, the heart beats, the others glow),
+  then the text shows as still pages, then the lamp goes back to what it
+  was doing and carries on from where it was (a game or the sand timer
+  isn't restarted). Up to 4 wait in a queue; only the sunrise alarm wins
+  over them, and at night they're ignored unless *Anche di notte* is on.
+  The section has a test form and the address to copy: on an iPhone, an
+  automation in the Shortcuts app ("when an email from ... arrives", "when
+  I leave home", a time) with the action *Get contents of URL*; on Android
+  HTTP Shortcuts, Tasker or MacroDroid. Cloud services such as IFTTT call
+  from the Internet, so they need a port forward or a tunnel to the lamp.
 - **Diagnostica** - uptime and why the lamp last restarted, free memory,
   chip temperature, firmware; WiFi signal and address; the last weather,
   Wikipedia and calendar fetches; the pages connected live; and how steady the grayscale refresh is:

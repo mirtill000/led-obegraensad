@@ -16,6 +16,7 @@
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
 #include "modes/hourglass_mode.h"
+#include "modes/notify_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
 #include "moon.h"
@@ -400,6 +401,33 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     </select>
   </details>
 
+  <details id="notifyBox">
+    <summary>Notifiche dal telefono</summary>
+    <p class="hint" style="margin-top:0">La lampada mostra un'icona animata, poi il testo a pagine, poi torna a quello che stava facendo. Si mandano con un indirizzo:</p>
+    <p class="hint"><code id="notifyUrl"></code></p>
+    <div class="row">
+      <div><label for="notifyText">Testo</label><input type="text" id="notifyText" maxlength="200" value="Lavatrice finita"></div>
+      <div><label for="notifyIcon">Icona</label>
+        <select id="notifyIcon">
+          <option value="">nessuna</option>
+          <option value="bell">campanella</option>
+          <option value="mail">busta</option>
+          <option value="check">spunta</option>
+          <option value="alert">attenzione</option>
+          <option value="heart">cuore</option>
+          <option value="phone">telefono</option>
+          <option value="home">casa</option>
+          <option value="star">stella</option>
+        </select></div>
+    </div>
+    <button class="save" id="notifySend">Prova</button>
+    <label class="check"><input type="checkbox" id="notifyNight"> Anche di notte (altrimenti di notte vengono ignorate)</label>
+    <p class="hint"><b>iPhone</b>: app Comandi → Automazione (es. «Quando arriva un'email da…», «Quando esco di casa», un orario) → azione «Ottieni contenuto dell'URL» con l'indirizzo qui sopra. Funziona quando il telefono è sulla rete di casa.<br>
+      <b>Android</b>: app come HTTP Shortcuts, Tasker o MacroDroid, con lo stesso indirizzo.<br>
+      <b>IFTTT</b> e altri servizi su Internet chiamano dall'esterno: servono l'inoltro di una porta sul router o un tunnel verso la lampada.<br>
+      Parametri: <code>text</code> (fino a 200 caratteri, anche accentati) e <code>icon</code> (bell, mail, check, alert, heart, phone, home, star); con GET, POST da modulo o POST JSON <code>{"text":"…","icon":"…"}</code>. Fino a 4 notifiche aspettano in coda.</p>
+  </details>
+
   <details id="diagBox">
     <summary>Diagnostica</summary>
     <table class="diag" id="diag"></table>
@@ -693,6 +721,7 @@ function renderExtras() {
   if (!dirty.cd) { $('cdLabel').value = s.countdown.label; $('cdDate').value = s.countdown.date; $('cdTime').value = s.countdown.time; }
   $('cdInfo').textContent = s.countdown.sentence;
   if (!editing('hgMin')) $('hgMin').value = String(s.hourglass.minutes);
+  $('notifyNight').checked = s.notifyNight;
   const hl = s.hourglass.left;
   $('hgInfo').textContent = s.active !== 'hourglass' ? '' : !s.hourglass.running ? 'Tempo scaduto.'
     : 'Resta ' + (hl >= 60 ? Math.floor(hl / 60) + ' min ' : '') + (hl % 60) + ' s circa.';
@@ -736,6 +765,17 @@ $('saveWeb').onclick = () => post('/api/web', {
 }).then(() => { dirty.web = false; render(); status('Salvato: i dati arrivano in qualche secondo'); }).catch(fail);
 
 for (const id of ['cdLabel', 'cdDate', 'cdTime']) $(id).addEventListener('input', () => { dirty.cd = true; });
+function notifyAddress() {
+  return 'http://' + location.host + '/api/notify?text=' + encodeURIComponent($('notifyText').value) +
+    ($('notifyIcon').value ? '&icon=' + $('notifyIcon').value : '');
+}
+for (const id of ['notifyText', 'notifyIcon']) $(id).addEventListener('input', () => { $('notifyUrl').textContent = notifyAddress(); });
+$('notifyUrl').textContent = notifyAddress();
+$('notifySend').onclick = () => fetch('/api/notify', { method: 'POST', body: new URLSearchParams({ text: $('notifyText').value, icon: $('notifyIcon').value }) })
+  .then((r) => r.ok ? r.json() : r.text().then((t) => { throw new Error(t); }))
+  .then((j) => status(j.ok ? 'Notifica inviata' : 'Ignorata: è notte'))
+  .catch(fail);
+$('notifyNight').onchange = () => post('/api/settings', { notifyNight: $('notifyNight').checked ? 1 : 0 }).catch(fail);
 $('hgMin').onchange = () => post('/api/hourglass', { minutes: $('hgMin').value });
 $('hgStart').onclick = () => post('/api/hourglass', { minutes: $('hgMin').value, start: 1 });
 $('saveCd').onclick = () => post('/api/countdown', { label: $('cdLabel').value, date: $('cdDate').value, time: $('cdTime').value || '00:00' })
@@ -1358,6 +1398,7 @@ static String stateJson() {
           ",\"sentence\":" + jsonString(CountdownMode::sentence()) + "}";
   json += ",\"hourglass\":{\"minutes\":" + String(settings.hourglassMinutes) + ",\"left\":" +
           String(HourglassMode::secondsLeft()) + ",\"running\":" + jsonBool(HourglassMode::running()) + "}";
+  json += ",\"notifyNight\":" + jsonBool(settings.notifyNight) + ",\"notifyPending\":" + String(NotifyMode::pending());
   json += ",\"alarm\":{\"on\":" + jsonBool(settings.alarmOn) + ",\"time\":" + String(settings.alarmTime) +
           ",\"days\":" + String(settings.alarmDays) + ",\"ramp\":" + String(settings.alarmRamp) +
           ",\"hold\":" + String(settings.alarmHold) + "}";
@@ -1580,6 +1621,7 @@ static void handleSettings() {
     settings.demoStyle = style;
     if (strcmp(currentMode()->id(), "demo") == 0) restartMode();  // a new quote in the new style
   }
+  if (server.hasArg("notifyNight")) settings.notifyNight = server.arg("notifyNight") == "1";
   if (server.hasArg("ambient")) {
     const String id = server.arg("ambient");
     if (id != "auto" && !findAnimation(id)) return badRequest("Animazione sconosciuta");
@@ -1729,6 +1771,46 @@ static void handleHourglass() {
   }
   saveSettings();
   sendState();
+}
+
+// Value of "key" in a flat JSON object (strings only), for callers that
+// POST JSON (IFTTT webhooks, some automation apps).
+static String jsonField(const String &body, const char *key) {
+  const int k = body.indexOf(String("\"") + key + "\"");
+  if (k < 0) return "";
+  int i = body.indexOf(':', k);
+  if (i < 0) return "";
+  i = body.indexOf('"', i);
+  if (i < 0) return "";
+  String out;
+  for (i++; i < (int)body.length() && body[i] != '"'; i++) {
+    char c = body[i];
+    if (c == '\\' && i + 1 < (int)body.length()) {
+      c = body[++i];
+      if (c == 'n') c = ' ';
+    }
+    out += c;
+  }
+  return out;
+}
+
+// Notification from the phone: GET or POST with text and icon (form or
+// JSON). Answers {"ok":true,"queued":n}, or ok:false at night.
+static void handleNotify() {
+  String text = server.arg("text"), icon = server.arg("icon");
+  if (!server.hasArg("text") && !server.hasArg("icon") && server.hasArg("plain")) {
+    text = jsonField(server.arg("plain"), "text");
+    icon = jsonField(server.arg("plain"), "icon");
+  }
+  icon.trim();
+  icon.toLowerCase();
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  if (isNight() && !settings.notifyNight) {
+    server.send(200, "application/json", "{\"ok\":false,\"reason\":\"night\"}");
+    return;
+  }
+  if (!NotifyMode::push(text, icon)) return badRequest("Serve un testo o un'icona conosciuta (bell, mail, check, alert, heart, phone, home, star)");
+  server.send(200, "application/json", "{\"ok\":true,\"queued\":" + String(NotifyMode::pending()) + "}");
 }
 
 static void handleAlarm() {
@@ -1925,6 +2007,7 @@ void webBegin() {
   server.on("/api/web", HTTP_POST, handleWeb);
   server.on("/api/countdown", HTTP_POST, handleCountdown);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
+  server.on("/api/notify", HTTP_ANY, handleNotify);
   server.on("/api/alarm", HTTP_POST, handleAlarm);
   server.on("/api/gallery", HTTP_GET, handleGalleryList);
   server.on("/api/gallery/item", HTTP_GET, handleGalleryItem);

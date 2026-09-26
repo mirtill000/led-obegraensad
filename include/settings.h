@@ -56,6 +56,7 @@ struct Settings {
   String countdownDate;  // "YYYY-MM-DD"
   String countdownTime;  // "HH:MM"
   uint8_t hourglassMinutes;  // the sand timer's time (1-120)
+  bool notifyNight;          // show phone notifications during the night too
   bool alarmOn;
   uint16_t alarmTime;    // minutes after midnight
   uint8_t alarmDays;     // bit 0 = Monday ... bit 6 = Sunday

@@ -5,6 +5,7 @@
 #include "modes/clock_mode.h"
 #include "modes/countdown_mode.h"
 #include "modes/hourglass_mode.h"
+#include "modes/notify_mode.h"
 #include "modes/demo_mode.h"
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
@@ -28,12 +29,13 @@ static AmbientMode ambientMode;
 static GalleryMode galleryModeInstance;
 static CountdownMode countdownMode;
 static HourglassMode hourglassMode;
+static NotifyMode notifyMode;
 static DemoMode demoModeInstance;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
 Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &ambientMode, &galleryModeInstance,
-                        &countdownMode, &hourglassMode, &demoModeInstance, &offMode, &sunriseMode};
+                        &countdownMode, &hourglassMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 
 static uint8_t current = 0;       // index of the mode being shown
@@ -185,6 +187,10 @@ static void evaluate(uint32_t now) {
   }
   if (night && settings.nightMode == "dim") brightness = settings.nightBrightness;
 
+  // Notifications from the phone come next (at night only if allowed).
+  if (night && !settings.notifyNight) NotifyMode::clear();
+  if (NotifyMode::pending()) wanted = indexOf("notify");
+
   // The sunrise alarm wins over everything, and sets its own brightness.
   const float sunrise = SunriseMode::alarmProgress();
   if (sunrise >= 0) {
@@ -197,10 +203,32 @@ static void evaluate(uint32_t now) {
   }
 
   if (!started || wanted != current || (overrideChanged && wanted == indexOf("ambient"))) {
+    // A notification interrupts the mode on show; afterwards that mode
+    // carries on where it was (its picture put back) instead of starting
+    // over.
+    static int resumeTo = -1;
+    static uint8_t saved[ROWS][COLS];
+    const int notify = indexOf("notify");
+    const bool resume = started && current == notify && wanted == resumeTo && !overrideChanged;
+    if (wanted == notify && started && current != notify) {
+      resumeTo = current;
+      for (int y = 0; y < ROWS; y++) {
+        for (int x = 0; x < COLS; x++) saved[y][x] = display.getLevel(x, y);
+      }
+    } else if (wanted != notify) {
+      resumeTo = -1;
+    }
     current = wanted;
     started = true;
     display.beginTransition();
-    MODES[current]->start();
+    if (resume) {
+      for (int y = 0; y < ROWS; y++) {
+        for (int x = 0; x < COLS; x++) display.setLevel(x, y, saved[y][x]);
+      }
+      display.render();
+    } else {
+      MODES[current]->start();
+    }
   }
 }
 
@@ -231,7 +259,9 @@ void refreshModes() { evaluate(millis()); }
 
 void updateMode() {
   const uint32_t now = millis();
-  if (!started || now - lastCheck >= 1000) {
+  // A notification arriving or ending is picked up at once.
+  const bool notifyChanged = (NotifyMode::pending() > 0) != (strcmp(MODES[current]->id(), "notify") == 0);
+  if (!started || now - lastCheck >= (notifyChanged ? 100u : 1000u)) {
     lastCheck = now;
     evaluate(now);
   }

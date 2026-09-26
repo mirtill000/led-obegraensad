@@ -137,8 +137,11 @@ void HourglassMode::action() {
 void HourglassMode::update(uint32_t now) {
   if (now - lastStep < STEP_MS) return;
   lastStep = now;
+  // One grain per interval, on schedule: after a pause (a notification on
+  // show) the overdue ones go through one per step until it has caught up.
   if (!done && now - lastRelease >= releaseMs()) {
-    if (release() || grainsOnTop() == 0) lastRelease = now;
+    if (release()) lastRelease += releaseMs();
+    else if (grainsOnTop() == 0) lastRelease = now;
   }
   const bool moved = fall();
   // Run out: nothing on top and the last grain has come to rest.
