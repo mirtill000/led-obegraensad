@@ -71,6 +71,7 @@ void setup() {
   display.begin();
   display.setBrightness(settings.brightness);
   display.setRotation(rotationForSettings());
+  Display::setVerticalText(settings.vertical);
   display.setTransition(transitionForSettings());
   Display::setScrollFont(fontForSettings());
   applyTimezone();

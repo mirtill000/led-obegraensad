@@ -167,12 +167,12 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     </select>
     <label for="textFontText">Font</label>
     <select id="textFontText">
-      <option value="small">Attuale (8 pixel)</option>
-      <option value="big">Grande (tutto il pannello)</option>
-      <option value="mini">Mini 3×5 (solo maiuscole)</option>
-      <option value="tiny">Piccolo 3 righe (4 pixel, maiuscole)</option>
+      <option value="big">Grande (16 px)</option>
+      <option value="small">Media (8 px)</option>
+      <option value="mini">Piccola (5 px, maiuscole)</option>
+      <option value="tiny">Minima (4 px, maiuscole)</option>
     </select>
-    <p class="hint">È lo stesso font di Display: vale per il testo che scorre e per le pagine (Attuale e Mini: 2 righe per pagina; Piccolo: 3 righe; col Grande il testo scorre sempre). Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza non conta.</p>
+    <p class="hint">È lo stesso font di Display: vale per il testo che scorre e per le pagine (Media e Piccola: 2 righe per pagina; Minima: 3 righe; col Grande il testo scorre sempre). Con «Media» le lettere sono strette di un pixel, e in verticale sono più basse (6 px). Con il Grande l'altezza non conta.</p>
   </section>
 
   <section data-mode="quotes" hidden>
@@ -391,12 +391,12 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <input type="range" id="brightness" min="1" max="255">
     <label for="textFont">Font del testo che scorre</label>
     <select id="textFont">
-      <option value="small">Attuale (8 pixel)</option>
-      <option value="big">Grande (tutto il pannello)</option>
-      <option value="mini">Mini 3×5 (solo maiuscole)</option>
-      <option value="tiny">Piccolo 3 righe (4 pixel, maiuscole)</option>
+      <option value="big">Grande (16 px)</option>
+      <option value="small">Media (8 px)</option>
+      <option value="mini">Piccola (5 px, maiuscole)</option>
+      <option value="tiny">Minima (4 px, maiuscole)</option>
     </select>
-    <p class="hint">Vale per il testo che scorre e per quello a pagine: testo scorrevole, frasi dell'ora, dati dal web, notifiche, orologio a parole e punteggi dei giochi. A pagine: 2 righe con Attuale e Mini, 3 con Piccolo; col Grande il testo scorre sempre (una pagina conterrebbe due lettere). Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
+    <p class="hint">Vale per il testo che scorre e per quello a pagine: testo scorrevole, frasi dell'ora, dati dal web, notifiche, orologio a parole e punteggi dei giochi. A pagine: 2 righe con Media e Piccola, 3 con Minima; col Grande il testo scorre sempre (una pagina conterrebbe due lettere). Con «Media» le lettere sono strette di un pixel, e in verticale il testo è più basso (6 px invece di 8). Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
     <label for="gameStyle">Grafica dei giochi</label>
     <select id="gameStyle">
       <option value="soft">Sfumata: più livelli di luce (profondità, scie, sfondi)</option>
@@ -1663,6 +1663,7 @@ static void handleSettings() {
   if (server.hasArg("vertical")) {
     settings.vertical = server.arg("vertical") == "1";
     display.setRotation(rotationForSettings());
+    Display::setVerticalText(settings.vertical);
     restartMode();  // redraw straight away in the new orientation
   }
   if (server.hasArg("textPos")) {

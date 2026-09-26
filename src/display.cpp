@@ -9,6 +9,7 @@
 #include "font_mini.h"
 #include "font_compact.h"
 #include "font_small.h"
+#include "font_short.h"
 #include "font_tiny.h"
 
 Display display;
@@ -414,16 +415,21 @@ String Display::fontText(const String &utf8) {
 // Fonts for scrolling text.
 
 static TextFont scrollFont_ = TextFont::Small;
+static bool verticalText_ = false;
+static TextFont scrollingFont();  // the font scrolling text is actually drawn in
 static const int GLYPH_COUNT = sizeof(FONT_GLYPHS) / sizeof(FONT_GLYPHS[0]);
 
 void Display::setScrollFont(TextFont font) { scrollFont_ = font; }
 TextFont Display::scrollFont() { return scrollFont_; }
+void Display::setVerticalText(bool vertical) { verticalText_ = vertical; }
+bool Display::verticalText() { return verticalText_; }
 
 static int fontHeight(TextFont f) {
-  return f == TextFont::Big ? 16 : f == TextFont::Mini ? MINI_HEIGHT : f == TextFont::Tiny ? TINY_HEIGHT : FONT_HEIGHT;
+  return f == TextFont::Big ? 16 : f == TextFont::Mini ? MINI_HEIGHT : f == TextFont::Tiny ? TINY_HEIGHT
+         : f == TextFont::Short ? SHORT_HEIGHT : FONT_HEIGHT;
 }
 static int fontSpacing(TextFont f) { return f == TextFont::Big ? 2 : FONT_SPACING; }
-int Display::scrollFontHeight() { return fontHeight(scrollFont_); }
+int Display::scrollFontHeight() { return fontHeight(scrollingFont()); }
 int Display::fontHeightOf(TextFont font) { return fontHeight(font); }
 int Display::fontSpacingOf(TextFont font) { return fontSpacing(font); }
 
@@ -455,6 +461,11 @@ static void buildBigFont() {
 
 // Rows of `c` in `font` (bit 15 = leftmost column); returns its width.
 static int glyphRows(TextFont font, char c, uint16_t rows[16]) {
+  if (font == TextFont::Short) {
+    const Glyph *g = findShortGlyph(c);
+    for (int r = 0; r < SHORT_HEIGHT; r++) rows[r] = g->rows[r] << 8;
+    return g->width;
+  }
   if (font == TextFont::Tiny) {
     const TinyGlyph *g = findTinyGlyph(c);
     for (int r = 0; r < TINY_HEIGHT; r++) rows[r] = g->rows[r] << 8;
@@ -508,7 +519,10 @@ int Display::textRow(const String &position, int previous) {
 
 // The font scrolling text is drawn in: Small ("Attuale") scrolls with its
 // compact letters.
-static TextFont scrollingFont() { return scrollFont_ == TextFont::Small ? TextFont::Compact : scrollFont_; }
+static TextFont scrollingFont() {
+  if (scrollFont_ != TextFont::Small) return scrollFont_;
+  return verticalText_ ? TextFont::Short : TextFont::Compact;
+}
 
 int Display::scrollWidth(const char *text) {
   const int len = strlen(text);

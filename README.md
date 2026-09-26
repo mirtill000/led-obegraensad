@@ -104,9 +104,10 @@ include/
   constants.h        - pins, matrix size, rotation, default text, WiFi names
   secrets.example.h  - template for your WiFi credentials (copy to secrets.h)
   font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ; ! ? ' - %)
-  font_mini.h        - 5px-tall capitals (Previsioni and the "Mini" choice; "Grande" is built from font_small)
-  font_compact.h     - font_small with letters one pixel narrower (Testo scorrevole)
-  font_tiny.h        - 4px-tall capitals ("Piccolo 3 righe" and Demo: three lines)
+  font_mini.h        - 5px-tall capitals (Previsioni and the "Piccola" choice; "Grande" is built from font_small)
+  font_compact.h     - font_small with letters one pixel narrower (Media, when horizontal)
+  font_short.h       - font_small folded to 6 rows, lowercase (Media, when vertical)
+  font_tiny.h        - 4px-tall capitals ("Minima" and Demo: three lines)
   display.h, modes.h, settings.h, web.h
   ui.h               - shared look of the info screens (header band, waiting dots)
 src/
@@ -205,13 +206,14 @@ animation menu, ...). General settings are in collapsible sections:
   list.
 - **Display** - horizontal/vertical, brightness, the font of all text,
   scrolling or in still pages (text, quotes, web info, notifications,
-  word clock): *Attuale* (font A: proportional, 8 pixels, lowercase; the
-  default; 2 lines a page), *Grande* (the same font doubled with the
-  EPX/Scale2x algorithm, which keeps diagonals smooth: it fills the whole
-  panel, for reading from across the room; pages would hold two letters,
-  so with it the text always scrolls), *Mini 3x5* (capitals only, 5
-  pixels; 2 lines a page) or *Piccolo 3 righe* (the 4-row Tiny capitals;
-  3 lines a page), and how the lamp goes from
+  word clock). The choices, by height: *Grande* (16 px: the small font
+  doubled with the EPX/Scale2x algorithm, which keeps diagonals smooth,
+  filling the whole panel for reading from across the room; pages would
+  hold two letters, so with it the text always scrolls), *Media* (8 px:
+  font A, proportional, lowercase; the default; 2 lines a page - and, when
+  the lamp hangs vertically, a 6-px lowercase version so the text is
+  shorter), *Piccola* (5 px, capitals only; 2 lines a page) or *Minima*
+  (4 px capitals; 3 lines a page). Also how the lamp goes from
   one mode or animation to the next: *Dissolvenza* (cross-fade, 0.6 s, the
   default), *Tendina da sinistra* (the new image sweeps in, 0.5 s) or
   *Stacco netto*.
@@ -256,13 +258,13 @@ Current modes:
   chosen there: top, middle, bottom or variable (a different height at
   every pass, the default) - or shows it as still pages like the hourly
   quote, in the font chosen there (the same setting as
-  in Display). With *Attuale*, this and all other scrolling text (web info, word clock, game scores, the countdown's header) use its
+  in Display). With *Media*, this and all other scrolling text (web info, word clock, game scores, the countdown's header) use its
   compact variant (`include/font_compact.h`): letters one pixel narrower -
   3 instead of 4 - where the shape allows it, so more text fits; the
   digits are already 3 pixels wide, the narrowest that stays readable
 - **Frase dell'ora** - a different quote every hour, shown as still pages
-  in the font chosen in Display - 2 lines a page with Attuale or Mini, 3
-  with Piccolo, scrolling with Grande - (words kept whole where they fit,
+  in the font chosen in Display - 2 lines a page with Media or Piccola, 3
+  with Minima, scrolling with Grande - (words kept whole where they fit,
   split by Italian syllables where they don't - CO / ME, CON / SAPE / VO /
   LEZ / ZA -,
   2.5 s a page, set by the speed slider; the same as the Demo mode's "A

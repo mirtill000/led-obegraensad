@@ -132,9 +132,10 @@ static std::vector<String> wrap(TextFont font, const String &text) {
 }
 
 void Pager::start(const String &text) {
-  // "Attuale" pages use its compact letters, as scrolling text does.
+  // "Attuale" pages use its compact letters, as scrolling text does - and
+  // the 6-row Short font when the lamp is vertical.
   const TextFont f = Display::scrollFont();
-  start(text, f == TextFont::Small ? TextFont::Compact : f);
+  start(text, f == TextFont::Small ? (Display::verticalText() ? TextFont::Short : TextFont::Compact) : f);
 }
 
 void Pager::start(const String &text, TextFont font) {
