@@ -187,6 +187,12 @@ animation menu, ...). General settings are in collapsible sections:
   default), *Tendina da sinistra* (the new image sweeps in, 0.5 s) or
   *Stacco netto*.
 
+- **Diagnostica** - uptime and why the lamp last restarted, free memory,
+  chip temperature, firmware; WiFi signal and address; the last weather,
+  Wikipedia and calendar fetches; and how steady the grayscale refresh is:
+  plane changes done and missed, average and worst delay after the timer
+  tick (`GET /api/diag`; refreshed every 2 s while the section is open).
+
 Everything is saved in flash, so the lamp comes back in the same state
 after a power cut.
 

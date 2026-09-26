@@ -1,6 +1,8 @@
 #include "web.h"
 
 #include <Update.h>
+#include <WiFi.h>
+#include <esp_system.h>
 #include <WebServer.h>
 #include <mbedtls/base64.h>
 
@@ -100,6 +102,10 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   .item button { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; font-size: 13px; }
   #preview { width: 100%; max-width: 220px; aspect-ratio: 1; display: block; margin: 0 auto; border-radius: 8px; background: #000; }
   #gameBox #preview { margin-top: 12px; }
+  .diag { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .diag td { padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .diag td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .diag th { text-align: left; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 12px 0 4px; }
   [hidden] { display: none !important; }
   #status { min-height: 1.4em; font-size: 14px; color: var(--muted); text-align: center; }
 </style>
@@ -363,6 +369,13 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="wipe">Tendina da sinistra</option>
       <option value="none">Stacco netto</option>
     </select>
+  </details>
+
+  <details id="diagBox">
+    <summary>Diagnostica</summary>
+    <table class="diag" id="diag"></table>
+    <button class="link" id="diagReset">Azzera le statistiche dei LED</button>
+    <p class="hint">Si aggiorna ogni 2 secondi mentre questa sezione è aperta. «Cambi di livello saltati» e «ritardo» dicono quanto è stabile la scala di grigi: se crescono mentre i LED tremano, il disturbo viene dal rinfresco.</p>
   </details>
 
   <details id="updateBox">
@@ -1110,6 +1123,48 @@ setInterval(() => {
   fetch('/api/frame').then((r) => r.text()).then(drawPreview).catch(() => {}).finally(() => { previewBusy = false; });
 }, 200);
 
+// Diagnostics: fetched every 2 s while the section is open.
+function duration(s) {
+  const d = Math.floor(s / 86400), h = Math.floor(s / 3600) % 24, m = Math.floor(s / 60) % 60;
+  return (d ? d + ' g ' : '') + (d || h ? h + ' h ' : '') + m + ' min';
+}
+function loadDiag() {
+  if (!$('diagBox').open || document.hidden) return;
+  fetch('/api/diag').then((r) => r.json()).then((d) => {
+    const kb = (b) => Math.round(b / 1024) + ' kB';
+    const ago = (s) => s < 0 ? 'mai' : s < 90 ? s + ' s fa' : duration(s) + ' fa';
+    const rows = [
+      ['Sistema'],
+      ['Acceso da', duration(d.uptime)],
+      ['Ultimo riavvio', d.reset],
+      ['Memoria libera (minima)', kb(d.heap) + ' (' + kb(d.minHeap) + ')'],
+      ['PSRAM libera', kb(d.psram)],
+      ['Temperatura del chip', d.chipTemp.toFixed(0) + ' °C'],
+      ['Firmware', d.version],
+      ['Rete'],
+      ['Wi-Fi', d.ssid + ' · ' + d.rssi + ' dBm (' + (d.rssi > -60 ? 'ottimo' : d.rssi > -70 ? 'buono' : d.rssi > -80 ? 'debole' : 'pessimo') + ')'],
+      ['Indirizzo', d.ip],
+      ['Meteo', d.weather + ' · ' + ago(d.weatherAge)],
+      ['Wikipedia', d.history || '—'],
+      ['Calendario', d.calendar || '—'],
+      ['LED (scala di grigi)'],
+    ];
+    if (d.refresh.hw) {
+      rows.push(['Rinfresco', 'timer hardware · ' + (1e6 / d.refresh.cycleUs).toFixed(0) + ' Hz']);
+      rows.push(['Cambi di livello', d.refresh.planes.toLocaleString('it-IT')]);
+      rows.push(['Cambi di livello saltati', d.refresh.missed.toLocaleString('it-IT')]);
+      rows.push(['Ritardo medio / massimo', d.refresh.avg + ' / ' + d.refresh.max + ' µs']);
+    } else {
+      rows.push(['Rinfresco', 'esp_timer (senza statistiche)']);
+    }
+    $('diag').innerHTML = rows.map((r) => r.length === 1 ? '<tr><th colspan="2">' + r[0] + '</th></tr>'
+      : '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
+  }).catch(() => {});
+}
+$('diagBox').addEventListener('toggle', loadDiag);
+setInterval(loadDiag, 2000);
+$('diagReset').onclick = () => fetch('/api/diag/reset', { method: 'POST' }).then(loadDiag).catch(fail);
+
 function refresh() { return fetch('/api/state').then((r) => r.json()).then((s) => { state = s; render(); }); }
 refresh().catch(() => status('Lampada non raggiungibile'));
 setInterval(() => refresh().catch(() => {}), 15000);
@@ -1325,6 +1380,42 @@ static void sendQuotes() {
   server.send(200, "application/json",
               "{\"custom\":" + jsonBool(custom) + ",\"count\":" + String(QuotesMode::count()) +
                   ",\"quotes\":" + jsonString(list) + "}");
+}
+
+static const char *resetReason() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: return "accensione";
+    case ESP_RST_SW: return "riavvio (aggiornamento o comando)";
+    case ESP_RST_PANIC: return "errore del firmware";
+    case ESP_RST_INT_WDT:
+    case ESP_RST_TASK_WDT:
+    case ESP_RST_WDT: return "watchdog (blocco)";
+    case ESP_RST_BROWNOUT: return "calo di tensione";
+    case ESP_RST_DEEPSLEEP: return "risveglio";
+    default: return "altro";
+  }
+}
+
+// Diagnostics: system, network, data sources and the LED refresh.
+static void handleDiag() {
+  const Weather w = weatherNow();
+  const WebInfo info = webInfoNow();
+  const Display::RefreshStats r = Display::refreshStats();
+  String json = "{\"uptime\":" + String(millis() / 1000) + ",\"reset\":" + jsonString(resetReason());
+  json += ",\"heap\":" + String(ESP.getFreeHeap()) + ",\"minHeap\":" + String(ESP.getMinFreeHeap());
+  json += ",\"psram\":" + String(ESP.getFreePsram()) + ",\"chipTemp\":" + String(temperatureRead(), 1);
+  json += ",\"version\":" + jsonString(String(FIRMWARE_COMMIT) + " del " + FIRMWARE_BUILT);
+  json += ",\"ssid\":" + jsonString(WiFi.SSID()) + ",\"rssi\":" + String(WiFi.RSSI());
+  json += ",\"ip\":" + jsonString(WiFi.localIP().toString());
+  json += ",\"weather\":" + jsonString(weatherStatus());
+  json += ",\"weatherAge\":" + String(w.valid ? (long)((millis() - w.fetchedAt) / 1000) : -1L);
+  json += ",\"history\":" + jsonString(settings.infoHistory ? info.historyStatus : String(""));
+  json += ",\"calendar\":" + jsonString(settings.infoCalendar ? info.calendarStatus : String(""));
+  json += ",\"refresh\":{\"hw\":" + jsonBool(r.hardwareTimer) + ",\"planes\":" + String(r.planes);
+  json += ",\"missed\":" + String(r.missed) + ",\"avg\":" + String(r.avgLatencyUs) + ",\"max\":" + String(r.maxLatencyUs);
+  json += ",\"cycleUs\":" + String(r.cycleUs) + "}}";
+  server.sendHeader("Cache-Control", "no-store");
+  server.send(200, "application/json", json);
 }
 
 // What the panel shows right now, for the page's preview: 256 levels as
@@ -1660,6 +1751,11 @@ void webBegin() {
   server.on("/", HTTP_GET, [] { server.send_P(200, "text/html; charset=utf-8", PAGE); });
   server.on("/api/state", HTTP_GET, sendState);
   server.on("/api/frame", HTTP_GET, handleFrame);
+  server.on("/api/diag", HTTP_GET, handleDiag);
+  server.on("/api/diag/reset", HTTP_POST, [] {
+    Display::resetRefreshStats();
+    server.send(204);
+  });
   server.on("/api/mode", HTTP_POST, handleMode);
   server.on("/api/action", HTTP_POST, handleAction);
   server.on("/api/speed", HTTP_POST, handleSpeed);

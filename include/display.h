@@ -47,6 +47,16 @@ class Display {
   void beginTransition();
   void tick(uint32_t now);
 
+  // How steady the grayscale refresh is, for the diagnostics page: plane
+  // changes done, plane changes missed (the task woke too late for one),
+  // and how long after the timer's tick the task latched a plane.
+  struct RefreshStats {
+    bool hardwareTimer;  // REFRESH_HW_TIMER in use (else no figures)
+    uint32_t planes, missed, maxLatencyUs, avgLatencyUs, cycleUs;
+  };
+  static RefreshStats refreshStats();
+  static void resetRefreshStats();
+
   // Level of logical pixel (x, y) as last sent to the panel (after any
   // transition), for the page's live preview.
   uint8_t shownLevel(int x, int y) const;

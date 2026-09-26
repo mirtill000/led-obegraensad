@@ -1,5 +1,7 @@
 #include "weather.h"
 
+#include <string.h>
+
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -8,6 +10,7 @@
 
 static Weather latest;
 static portMUX_TYPE lock = portMUX_INITIALIZER_UNLOCKED;
+static char lastStatus[32] = "";  // outcome of the last fetch, for the diagnostics
 static volatile bool requested = true;  // fetch as soon as there is WiFi
 
 static const uint32_t REFRESH_MS = 15 * 60 * 1000;
@@ -131,15 +134,38 @@ void weatherTick() {
                      "&hourly=temperature_2m,precipitation_probability&forecast_hours=12"
                      "&daily=weather_code,sunrise,sunset,temperature_2m_min,temperature_2m_max,precipitation_probability_max"
                      "&forecast_days=4&timezone=auto";
-  if (!http.begin(client, url)) return;
-  if (http.GET() == HTTP_CODE_OK) {
-    Weather fresh;
-    if (parseWeather(http.getString(), fresh)) {
-      fresh.fetchedAt = millis();
-      portENTER_CRITICAL(&lock);
-      latest = fresh;
-      portEXIT_CRITICAL(&lock);
+  String status;
+  if (!http.begin(client, url)) {
+    status = "connessione non riuscita";
+  } else {
+    const int code = http.GET();
+    if (code == HTTP_CODE_OK) {
+      Weather fresh;
+      if (parseWeather(http.getString(), fresh)) {
+        fresh.fetchedAt = millis();
+        portENTER_CRITICAL(&lock);
+        latest = fresh;
+        portEXIT_CRITICAL(&lock);
+        status = "ok";
+      } else {
+        status = "risposta non valida";
+      }
+    } else {
+      status = String("errore ") + code;
     }
+    http.end();
   }
-  http.end();
+  char buf[sizeof(lastStatus)];
+  strlcpy(buf, status.c_str(), sizeof(buf));
+  portENTER_CRITICAL(&lock);  // no heap work inside: just the bytes
+  memcpy(lastStatus, buf, sizeof(buf));
+  portEXIT_CRITICAL(&lock);
+}
+
+String weatherStatus() {
+  char buf[sizeof(lastStatus)];
+  portENTER_CRITICAL(&lock);
+  memcpy(buf, lastStatus, sizeof(buf));
+  portEXIT_CRITICAL(&lock);
+  return buf[0] ? String(buf) : String("in attesa");
 }

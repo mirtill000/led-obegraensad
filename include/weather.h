@@ -38,6 +38,8 @@ struct Weather {
 
 // A consistent copy of the latest data (safe to call from any task).
 Weather weatherNow();
+// Outcome of the last fetch ("ok", "errore 503", ...), for the diagnostics.
+String weatherStatus();
 // Asks the network task to fetch now (e.g. after the location changed).
 void requestWeatherUpdate();
 // True if rain is likely (>= 60%) within the next 2 hours but it isn't

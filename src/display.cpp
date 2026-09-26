@@ -98,6 +98,11 @@ static gptimer_handle_t tickTimer;
 static TaskHandle_t refreshTask;
 static volatile uint8_t isrPlane = PLANES - 1;  // plane being shown
 static volatile uint8_t isrTicks = 0;
+static volatile int64_t notifiedAt = 0;  // when the interrupt woke the task, us
+
+// Refresh statistics for the diagnostics page (hardware path only).
+static volatile uint32_t statPlanes = 0, statMissed = 0, statMaxLatency = 0;
+static volatile uint64_t statLatencySum = 0;
 
 static bool IRAM_ATTR onTick(gptimer_handle_t, const gptimer_alarm_event_data_t *, void *) {
   const uint8_t ticks = isrTicks + 1;
@@ -107,6 +112,7 @@ static bool IRAM_ATTR onTick(gptimer_handle_t, const gptimer_alarm_event_data_t 
   }
   isrTicks = 0;
   isrPlane = isrPlane + 1 == PLANES ? 0 : isrPlane + 1;
+  notifiedAt = esp_timer_get_time();
   BaseType_t woken = pdFALSE;
   vTaskNotifyGiveFromISR(refreshTask, &woken);
   return woken == pdTRUE;  // switch to the refresh task right away
@@ -115,8 +121,13 @@ static bool IRAM_ATTR onTick(gptimer_handle_t, const gptimer_alarm_event_data_t 
 static void refreshLoop(void *) {
   shiftBits(planeSets[frontSet].bits[0]);
   for (;;) {
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    const uint32_t wakes = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     latch();  // plane isrPlane (shifted in last time) is shown from now
+    const uint32_t latency = (uint32_t)(esp_timer_get_time() - notifiedAt);
+    statPlanes = statPlanes + 1;
+    if (wakes > 1) statMissed = statMissed + (wakes - 1);  // plane changes this task never saw
+    statLatencySum = statLatencySum + latency;
+    if (latency > statMaxLatency) statMaxLatency = latency;
     const uint8_t next = isrPlane + 1 == PLANES ? 0 : isrPlane + 1;
     if (next == 0) takePendingFrame();
     shiftBits(planeSets[frontSet].bits[next]);
@@ -140,6 +151,24 @@ static void startHardwareRefresh() {
   gptimer_set_alarm_action(tickTimer, &alarm);
   gptimer_enable(tickTimer);
   gptimer_start(tickTimer);
+}
+
+Display::RefreshStats Display::refreshStats() {
+  RefreshStats r;
+  r.hardwareTimer = GRAYSCALE && REFRESH_HW_TIMER;
+  r.planes = statPlanes;
+  r.missed = statMissed;
+  r.maxLatencyUs = statMaxLatency;
+  r.avgLatencyUs = r.planes ? (uint32_t)(statLatencySum / r.planes) : 0;
+  r.cycleUs = TICK_US * 31;
+  return r;
+}
+
+void Display::resetRefreshStats() {
+  statPlanes = 0;
+  statMissed = 0;
+  statMaxLatency = 0;
+  statLatencySum = 0;
 }
 
 // --- esp_timer path (REFRESH_HW_TIMER false) -------------------------------
