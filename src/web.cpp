@@ -102,6 +102,9 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   .item button { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: transparent; font-size: 13px; }
   #preview { width: 100%; max-width: 220px; aspect-ratio: 1; display: block; margin: 0 auto; border-radius: 8px; background: #000; }
   #gameBox #preview { margin-top: 12px; }
+  .scene { border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  .scene.on { border-color: var(--accent); }
+  .scene .row + .row { margin-top: 6px; }
   .diag { width: 100%; border-collapse: collapse; font-size: 14px; }
   .diag td { padding: 4px 0; border-bottom: 1px solid var(--line); }
   .diag td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
@@ -280,11 +283,17 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   <details id="playlistBox">
     <summary>Playlist</summary>
     <label class="check"><input type="checkbox" id="playlistOn"> Alterna le modalità da sola</label>
-    <div class="list" id="playlist"></div>
-    <div class="row">
+    <label class="check"><input type="checkbox" id="scenesOn"> Cambia per fascia oraria</label>
+    <div id="plainPlaylist">
+      <div class="list" id="playlist"></div>
       <button class="link" id="addItem">+ Aggiungi</button>
-      <button class="save" id="savePlaylist">Salva playlist</button>
     </div>
+    <div id="scenesBox" hidden>
+      <div class="list" id="scenes"></div>
+      <button class="link" id="addScene">+ Aggiungi fascia</button>
+      <p class="hint">Ogni fascia parte alla sua ora e vale fino alla successiva (l'ultima continua dopo mezzanotte), con la sua luminosità e le sue modalità. La notte e la sveglia hanno comunque la precedenza.</p>
+    </div>
+    <button class="save" id="savePlaylist">Salva playlist</button>
     <p class="hint">Scegliere una modalità a mano ferma la playlist.</p>
   </details>
 
@@ -511,8 +520,16 @@ function render() {
 
   if (!dirty.playlist) {
     $('playlistOn').checked = s.playlistOn;
+    $('scenesOn').checked = s.scenesOn;
     renderPlaylist(s.playlist.split(',').filter(Boolean).map((i) => i.split(':')));
+    $('scenes').innerHTML = '';
+    for (const scene of s.scenes.split(';').filter(Boolean)) {
+      const [hhmm, bright, items] = scene.split('|');
+      addScene(hhmm.slice(0, 2) + ':' + hhmm.slice(2), +bright, items);
+    }
+    showScenes();
   }
+  [...$('scenes').children].forEach((el, i) => el.classList.toggle('on', i === s.scene));
   if (!dirty.night) {
     $('nightOn').checked = s.nightOn;
     $('nightStart').value = hhmm(s.nightStart);
@@ -915,7 +932,7 @@ function renderPlaylist(items) {
   list.innerHTML = '';
   for (const [id, minutes] of items) addPlaylistRow(id, minutes);
 }
-function addPlaylistRow(id, minutes) {
+function addPlaylistRow(id, minutes, list = $('playlist')) {
   const row = document.createElement('div');
   row.className = 'row';
   const sel = document.createElement('select');
@@ -929,10 +946,10 @@ function addPlaylistRow(id, minutes) {
   x.onclick = () => { row.remove(); dirty.playlist = true; };
   sel.onchange = min.oninput = () => { dirty.playlist = true; };
   row.append(sel, min, x);
-  $('playlist').appendChild(row);
+  list.appendChild(row);
 }
-function playlistValue() {
-  return [...$('playlist').children].map((row) => {
+function playlistValue(list = $('playlist')) {
+  return [...list.children].map((row) => {
     const [sel, min] = row.querySelectorAll('select, input');
     return sel.value + ':' + Math.max(1, Math.min(240, parseInt(min.value) || 1));
   }).join(',');
@@ -985,8 +1002,45 @@ $('demoStyle').onchange = (e) => post('/api/settings', { demoStyle: e.target.val
 $('ambient').onchange = (e) => post('/api/settings', { ambient: e.target.value }).then(() => status('Animazione cambiata')).catch(fail);
 
 $('playlistOn').onchange = () => { dirty.playlist = true; };
+// Time slots: start time, brightness (0 = as in Display) and their own list.
+function showScenes() {
+  $('scenesBox').hidden = !$('scenesOn').checked;
+  $('plainPlaylist').hidden = $('scenesOn').checked;
+  $('addScene').hidden = $('scenes').children.length >= 4;
+}
+function addScene(time, bright, items) {
+  const box = document.createElement('div');
+  box.className = 'scene';
+  box.innerHTML = '<div class="row"><input type="time" class="st"><button class="x" title="Rimuovi fascia">✕</button></div>' +
+    '<div class="row"><label style="margin:0;flex:0 0 auto">Luce</label><input type="range" class="sb" min="0" max="255"><span class="sv narrow"></span></div>' +
+    '<div class="list items" style="margin-top:6px"></div><button class="link add">+ Aggiungi modalità</button>';
+  const list = box.querySelector('.items'), sb = box.querySelector('.sb'), sv = box.querySelector('.sv');
+  box.querySelector('.st').value = time;
+  sb.value = bright;
+  const label = () => { sv.textContent = +sb.value ? Math.round(sb.value / 2.55) + '%' : 'come Display'; };
+  label();
+  sb.oninput = () => { label(); dirty.playlist = true; };
+  box.querySelector('.st').oninput = () => { dirty.playlist = true; };
+  box.querySelector('.x').onclick = () => { box.remove(); dirty.playlist = true; showScenes(); };
+  box.querySelector('.add').onclick = () => { addPlaylistRow(state.modes[0].id, 5, list); dirty.playlist = true; };
+  for (const item of (items || '').split(',').filter(Boolean)) {
+    const [id, min] = item.split(':');
+    addPlaylistRow(id, min, list);
+  }
+  $('scenes').appendChild(box);
+  showScenes();
+}
+function scenesValue() {
+  return [...$('scenes').children].map((box) => {
+    const t = box.querySelector('.st').value || '00:00';
+    return t.replace(':', '') + '|' + box.querySelector('.sb').value + '|' + playlistValue(box.querySelector('.items'));
+  }).join(';');
+}
+$('scenesOn').onchange = () => { dirty.playlist = true; showScenes(); };
+$('addScene').onclick = () => { addScene('12:00', 0, 'clock:10'); dirty.playlist = true; };
 $('addItem').onclick = () => { addPlaylistRow(state.modes[0].id, 5); dirty.playlist = true; };
-$('savePlaylist').onclick = () => post('/api/playlist', { on: $('playlistOn').checked ? 1 : 0, items: playlistValue() })
+$('savePlaylist').onclick = () => post('/api/playlist', { on: $('playlistOn').checked ? 1 : 0, items: playlistValue(),
+    scenesOn: $('scenesOn').checked ? 1 : 0, scenes: scenesValue() })
   .then(() => { dirty.playlist = false; render(); status('Playlist salvata'); }).catch(fail);
 
 for (const id of ['nightOn', 'nightStart', 'nightEnd', 'nightMode', 'nightBrightness']) {
@@ -1271,6 +1325,8 @@ static void sendState() {
   json += ",\"galleryShow\":" + jsonString(settings.galleryShow) + ",\"nightSun\":" + jsonBool(settings.nightSun);
 
   json += ",\"playlistOn\":" + jsonBool(settings.playlistOn) + ",\"playlist\":" + jsonString(settings.playlist);
+  json += ",\"scenesOn\":" + jsonBool(settings.scenesOn) + ",\"scenes\":" + jsonString(settings.scenes) +
+          ",\"scene\":" + String(activeScene());
   json += ",\"nightOn\":" + jsonBool(settings.nightOn) + ",\"nightStart\":" + String(settings.nightStart);
   json += ",\"nightEnd\":" + String(settings.nightEnd) + ",\"nightMode\":" + jsonString(settings.nightMode);
   json += ",\"nightBrightness\":" + String(settings.nightBrightness);
@@ -1510,10 +1566,10 @@ static void handleTimezone() {
   sendState();
 }
 
-static void handlePlaylist() {
-  // Keep only well-formed "mode:minutes" items.
-  String clean;
-  const String items = server.arg("items");
+// Keeps only well-formed "mode:minutes" items (at most 12); returns how
+// many there are.
+static int cleanPlaylist(const String &items, String &clean) {
+  clean = "";
   int start = 0, count = 0;
   while (start < (int)items.length() && count < 12) {
     int end = items.indexOf(',', start);
@@ -1528,8 +1584,39 @@ static void handlePlaylist() {
     }
     start = end + 1;
   }
+  return count;
+}
+
+static void handlePlaylist() {
+  String clean;
+  const int count = cleanPlaylist(server.arg("items"), clean);
+  // Time slots: "HHMM|brightness|items" separated by ';', at most 4, each
+  // with at least one valid item.
+  String scenes;
+  int sceneCount = 0;
+  const String raw = server.arg("scenes");
+  int start = 0;
+  while (start < (int)raw.length() && sceneCount < MAX_SCENES) {
+    int end = raw.indexOf(';', start);
+    if (end < 0) end = raw.length();
+    const String scene = raw.substring(start, end);
+    start = end + 1;
+    const int a = scene.indexOf('|'), b = scene.indexOf('|', a + 1);
+    if (a != 4 || b < 0) continue;
+    const String hhmm = scene.substring(0, 4);
+    if (hhmm.substring(0, 2).toInt() > 23 || hhmm.substring(2).toInt() > 59) continue;
+    String items;
+    if (cleanPlaylist(scene.substring(b + 1), items) == 0) continue;
+    if (scenes.length()) scenes += ';';
+    scenes += hhmm + '|' + String(constrain(scene.substring(a + 1, b).toInt(), 0, 255)) + '|' + items;
+    sceneCount++;
+  }
+  if (server.hasArg("scenes")) {
+    settings.scenes = scenes;
+    settings.scenesOn = server.arg("scenesOn") == "1" && sceneCount > 0;
+  }
   settings.playlist = clean;
-  settings.playlistOn = server.arg("on") == "1" && count > 0;
+  settings.playlistOn = server.arg("on") == "1" && (count > 0 || settings.scenesOn);
   saveSettings();
   restartPlaylist();
   sendState();

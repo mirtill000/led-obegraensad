@@ -112,6 +112,12 @@ void loadSettings() {
   settings.gameStyle = prefs.getString("gameStyle", "soft");
   settings.playlistOn = prefs.getBool("plOn", false);
   settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5");
+  settings.scenesOn = prefs.getBool("scenesOn", false);
+  settings.scenes = prefs.getString("scenes",
+                                    "0700|200|clock:10,forecast:1,quotes:3;"
+                                    "1300|255|clock:10,web:3,ambient:10;"
+                                    "1900|120|quotes:3,ambient:10,clock:5;"
+                                    "2300|25|clock:30");
   // Super Mario used to be a mode of its own; it is now one of the games.
   if (settings.mode == "mario") {
     settings.mode = "ambient";
@@ -162,6 +168,8 @@ void saveSettings() {
   prefs.putString("gameStyle", settings.gameStyle);
   prefs.putBool("plOn", settings.playlistOn);
   prefs.putString("playlist", settings.playlist);
+  prefs.putBool("scenesOn", settings.scenesOn);
+  prefs.putString("scenes", settings.scenes);
   prefs.putString("demoOff", settings.demoOff);
   prefs.putString("cdLabel", settings.countdownLabel);
   prefs.putString("cdDate", settings.countdownDate);

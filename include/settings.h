@@ -40,6 +40,10 @@ struct Settings {
   // Playlist: modes shown in turn, "id:minutes,id:minutes,...".
   bool playlistOn;
   String playlist;
+  // Time slots: up to 4 "HHMM|brightness|id:min,..." separated by ';',
+  // each with its own playlist and brightness (0 = the Display setting).
+  bool scenesOn;
+  String scenes;
 
   // Night: from nightStart to nightEnd (minutes after midnight) the lamp is
   // off ("off"), shows only stars ("stars") or is dimmed ("dim").

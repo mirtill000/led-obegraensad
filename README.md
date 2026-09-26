@@ -163,8 +163,13 @@ settings of the mode being shown appear (the text, the quotes list, the
 animation menu, ...). General settings are in collapsible sections:
 
 - **Playlist** - modes shown in turn, each for the minutes you choose
-  (e.g. clock 10 min, quote 3 min, animations 5 min). Picking a mode by
-  hand stops the playlist.
+  (e.g. clock 10 min, quote 3 min, animations 5 min). With **Cambia per
+  fascia oraria** up to four time slots ("scene") each have their own
+  start time, brightness and list - e.g. mornings clock and forecast,
+  evenings quotes and animations, late at night just a dim clock; a slot
+  lasts until the next one (the last carries on past midnight) and
+  starts its list from the top. The night schedule and the alarm still
+  win. Picking a mode by hand stops the playlist.
 - **Sveglia con l'alba** - on the chosen days, from 5-60 minutes before the
   alarm a sun rises on the panel while the brightness slowly goes up; it
   stays bright for a while after. It wins over everything else; the mode
