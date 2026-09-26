@@ -480,8 +480,9 @@ the keycaps), Enter chooses, `` ` `` goes back.
 - **Telecomando giochi** - the lamp's panel in large on the left (sent by
   the lamp as it changes, at most every 150 ms); the arrows play (held
   down they repeat), Space or Enter is the main button (jump, shoot,
-  drop), `D` switches the demo off/on, `X` is the mode's button (next
-  game)
+  drop), `D` hands control to you (in "Automatica" it first pins the game
+  showing now, so `D` always gets you out of the demo; press it again to
+  put the demo back), `X` is the mode's button (next game)
 - **Giochi**, **Modalita'**, **Animazioni** - the lamp's own lists (read
   from it, so new games show up by themselves); picking a game goes
   straight to the controller

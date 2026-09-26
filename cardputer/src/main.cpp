@@ -159,7 +159,7 @@ void drawRemote() {
   canvas.drawString("`  indietro", x, 102);
   if (s.demoForced) {
     canvas.setTextColor(ACCENT);
-    canvas.drawString("Scegli un gioco", x, 116);
+    canvas.drawString("D per giocare a questo", x, 116);
   }
 }
 
@@ -267,9 +267,17 @@ void remoteKeys(const Keyboard_Class::KeysState &k, bool changed) {
   for (char c : k.word) {
     if (c == ' ') lamp::send("k A");
     if (c == 'd' || c == 'D') {
-      const lamp::State &s = lamp::state();
-      if (s.demoForced) say("In Automatica e' sempre demo: scegli un gioco");
-      else send(s.demo ? "d 0" : "d 1");
+      const lamp::State s = lamp::state();
+      if (!s.game.length()) {
+        say("Non e' un gioco");
+      } else if (s.demoForced) {
+        // "Automatica" is always a demo: pin the game showing now, then hand
+        // control over, so D still gets you out of the demo.
+        send("g " + s.game);
+        send("d 0", "Ora giochi tu");
+      } else {
+        send(s.demo ? "d 0" : "d 1", s.demo ? "Ora giochi tu" : "Demo riattivata");
+      }
     }
     if (c == 'x' || c == 'X') send("x");
     if (c == '`') screen = Screen::Menu;
