@@ -90,7 +90,7 @@ void DemoMode::next() {
   else style_ = (Style)(autoStyle_++ % STYLES);
 
   if (style_ == PAGES) {
-    pager_.start(quote);
+    pager_.start(quote, TextFont::Tiny);  // the demo compares layouts: always 3 lines
     return;
   }
   layout();

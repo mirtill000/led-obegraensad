@@ -9,6 +9,7 @@
 #include "font_mini.h"
 #include "font_compact.h"
 #include "font_small.h"
+#include "font_tiny.h"
 
 Display display;
 
@@ -418,9 +419,13 @@ static const int GLYPH_COUNT = sizeof(FONT_GLYPHS) / sizeof(FONT_GLYPHS[0]);
 void Display::setScrollFont(TextFont font) { scrollFont_ = font; }
 TextFont Display::scrollFont() { return scrollFont_; }
 
-static int fontHeight(TextFont f) { return f == TextFont::Big ? 16 : f == TextFont::Mini ? MINI_HEIGHT : FONT_HEIGHT; }
+static int fontHeight(TextFont f) {
+  return f == TextFont::Big ? 16 : f == TextFont::Mini ? MINI_HEIGHT : f == TextFont::Tiny ? TINY_HEIGHT : FONT_HEIGHT;
+}
 static int fontSpacing(TextFont f) { return f == TextFont::Big ? 2 : FONT_SPACING; }
 int Display::scrollFontHeight() { return fontHeight(scrollFont_); }
+int Display::fontHeightOf(TextFont font) { return fontHeight(font); }
+int Display::fontSpacingOf(TextFont font) { return fontSpacing(font); }
 
 // The big font: every small glyph scaled x2 with EPX (Scale2x), which keeps
 // diagonals smooth instead of doubling the steps. Built once, on first use.
@@ -450,6 +455,11 @@ static void buildBigFont() {
 
 // Rows of `c` in `font` (bit 15 = leftmost column); returns its width.
 static int glyphRows(TextFont font, char c, uint16_t rows[16]) {
+  if (font == TextFont::Tiny) {
+    const TinyGlyph *g = findTinyGlyph(c);
+    for (int r = 0; r < TINY_HEIGHT; r++) rows[r] = g->rows[r] << 8;
+    return g->width;
+  }
   if (font == TextFont::Mini) {
     const MiniGlyph *g = findMiniGlyph(c);
     for (int r = 0; r < MINI_HEIGHT; r++) rows[r] = g->rows[r] << 8;

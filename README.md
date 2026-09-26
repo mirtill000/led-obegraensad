@@ -106,7 +106,7 @@ include/
   font_small.h       - 8px-tall proportional font (a-z, A-Z, 0-9, . , : ; ! ? ' - %)
   font_mini.h        - 5px-tall capitals (Previsioni and the "Mini" choice; "Grande" is built from font_small)
   font_compact.h     - font_small with letters one pixel narrower (Testo scorrevole)
-  font_tiny.h        - 4px-tall capitals (Frase dell'ora and Demo: three lines)
+  font_tiny.h        - 4px-tall capitals ("Piccolo 3 righe" and Demo: three lines)
   display.h, modes.h, settings.h, web.h
   ui.h               - shared look of the info screens (header band, waiting dots)
 src/
@@ -182,7 +182,7 @@ settings of the mode being shown appear (the text, the quotes list, the
 animation menu, ...). General settings are in collapsible sections:
 
 - **Playlist** - modes shown in turn, each for the minutes you choose
-  (e.g. clock 10 min, quote 3 min, animations 5 min). With **Cambia per
+  (by default clock 10 min, quote 3 min, animations 5 min, games 5 min). With **Cambia per
   fascia oraria** up to four time slots ("scene") each have their own
   start time, brightness and list - e.g. mornings clock and forecast,
   evenings quotes and animations, late at night just a dim clock; a slot
@@ -201,12 +201,15 @@ animation menu, ...). General settings are in collapsible sections:
   free geocoding service and sends the lamp just the coordinates) and pick
   the time zone; picking a city also picks its time zone when it's in the
   list.
-- **Display** - horizontal/vertical, brightness, the font of all
-  scrolling text (text, quotes, web info, word clock): *Attuale* (font A:
-  proportional, 8 pixels, lowercase; the default), *Grande* (the same
-  font doubled with the EPX/Scale2x algorithm, which keeps diagonals
-  smooth: it fills the whole panel, for reading from across the room) or
-  *Mini 3x5* (capitals only, 5 pixels), and how the lamp goes from
+- **Display** - horizontal/vertical, brightness, the font of all text,
+  scrolling or in still pages (text, quotes, web info, notifications,
+  word clock): *Attuale* (font A: proportional, 8 pixels, lowercase; the
+  default; 2 lines a page), *Grande* (the same font doubled with the
+  EPX/Scale2x algorithm, which keeps diagonals smooth: it fills the whole
+  panel, for reading from across the room; pages would hold two letters,
+  so with it the text always scrolls), *Mini 3x5* (capitals only, 5
+  pixels; 2 lines a page) or *Piccolo 3 righe* (the 4-row Tiny capitals;
+  3 lines a page), and how the lamp goes from
   one mode or animation to the next: *Dissolvenza* (cross-fade, 0.6 s, the
   default), *Tendina da sinistra* (the new image sweeps in, 0.5 s) or
   *Stacco netto*.
@@ -249,14 +252,15 @@ Current modes:
 
 - **Testo scorrevole** - scrolls the text set on the page, at the height
   chosen there: top, middle, bottom or variable (a different height at
-  every pass, the default) - or shows it as still pages of three lines
-  like the hourly quote, in the font chosen there (the same setting as
+  every pass, the default) - or shows it as still pages like the hourly
+  quote, in the font chosen there (the same setting as
   in Display). With *Attuale*, this and all other scrolling text (web info, word clock, game scores, the countdown's header) use its
   compact variant (`include/font_compact.h`): letters one pixel narrower -
   3 instead of 4 - where the shape allows it, so more text fits; the
   digits are already 3 pixels wide, the narrowest that stays readable
 - **Frase dell'ora** - a different quote every hour, shown as still pages
-  of three lines in the 4-row Tiny font (words kept whole where they fit,
+  in the font chosen in Display - 2 lines a page with Attuale or Mini, 3
+  with Piccolo, scrolling with Grande - (words kept whole where they fit,
   split by Italian syllables where they don't - CO / ME, CON / SAPE / VO /
   LEZ / ZA -,
   2.5 s a page, set by the speed slider; the same as the Demo mode's "A
@@ -289,7 +293,7 @@ Current modes:
   day" event from Italian Wikipedia, and the next event of your calendar
   (paste its secret iCal link, e.g. from Google Calendar; recurring events
   aren't supported). Choose the sources and the height on the page (or
-  pages of three lines, like the hourly quote). Until
+  still pages, like the hourly quote). Until
   the first data arrives it shows the waiting dots
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small

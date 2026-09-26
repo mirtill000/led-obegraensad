@@ -124,11 +124,11 @@ void loadSettings() {
   settings.demoStyle = prefs.getString("demoStyle", "auto");
   settings.gameStyle = prefs.getString("gameStyle", "soft");
   settings.playlistOn = prefs.getBool("plOn", false);
-  settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5");
+  settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5,games:5");
   settings.scenesOn = prefs.getBool("scenesOn", false);
   settings.scenes = prefs.getString("scenes",
                                     "0700|200|clock:10,forecast:1,quotes:3;"
-                                    "1300|255|clock:10,web:3,ambient:10;"
+                                    "1300|255|clock:10,web:3,ambient:10,games:5;"
                                     "1900|120|quotes:3,ambient:10,clock:5;"
                                     "2300|25|clock:30");
   // Super Mario used to be a mode of its own; it is now one of the games.
@@ -217,6 +217,7 @@ void saveSettings() {
 TextFont fontForSettings() {
   if (settings.textFont == "big") return TextFont::Big;
   if (settings.textFont == "mini") return TextFont::Mini;
+  if (settings.textFont == "tiny") return TextFont::Tiny;
   return TextFont::Small;
 }
 

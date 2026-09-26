@@ -17,7 +17,8 @@
 //  Mini  - 5-row capitals, about 4 letters at a time
 //  Compact - Small with letters one pixel narrower (font_compact.h): what
 //            scrolling text actually uses when Small is picked
-enum class TextFont : uint8_t { Small, Big, Mini, Compact };
+//  Tiny  - 4-row capitals (font_tiny.h): three lines fit on the panel
+enum class TextFont : uint8_t { Small, Big, Mini, Compact, Tiny };
 
 // How the panel goes from one mode to the next (see beginTransition()).
 //  None - straight cut
@@ -78,6 +79,9 @@ class Display {
   static TextFont scrollFont();
   // Rows of a line of scrolling text in the current font.
   static int scrollFontHeight();
+  // Rows of a line, and blank columns between letters, in `font`.
+  static int fontHeightOf(TextFont font);
+  static int fontSpacingOf(TextFont font);
   // Top row for one line of text at a position setting: "top", "middle",
   // "bottom", or "random" - a different height from `previous` each time
   // (at least 2 rows away).

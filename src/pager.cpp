@@ -6,7 +6,13 @@
 #include <ctype.h>
 #include <string.h>
 
-static const int LINES_PER_PAGE = 3;
+// Width of `text` in `font`, without the gap after the last letter.
+static int widthIn(TextFont font, const String &text) {
+  if (!text.length()) return 0;
+  return Display::textWidthIn(font, text.c_str(), 0, text.length()) - Display::fontSpacingOf(font);
+}
+static int linesPerPage(TextFont font) { return font == TextFont::Tiny ? 3 : 2; }
+static int lineGap(TextFont font) { return font == TextFont::Tiny ? 1 : font == TextFont::Mini ? 2 : 0; }
 
 int Pager::textWidth(const String &text) {
   int w = 0;
@@ -73,18 +79,18 @@ static std::vector<bool> syllableBreaks(const String &word) {
 
 // Pieces of a word too wide for a line: as many syllables per piece as fit
 // in COLS pixels (a syllable that alone is too wide is cut).
-static std::vector<String> splitWord(const String &word) {
+static std::vector<String> splitWord(TextFont font, const String &word) {
   const std::vector<bool> ok = syllableBreaks(word);
   std::vector<String> pieces;
   unsigned start = 0;
   while (start < word.length()) {
     unsigned end = 0;
     for (unsigned p = start + 1; p <= word.length(); p++) {
-      if ((p == word.length() || ok[p]) && Pager::textWidth(word.substring(start, p)) <= COLS) end = p;
+      if ((p == word.length() || ok[p]) && widthIn(font, word.substring(start, p)) <= COLS) end = p;
     }
     if (end == 0) {  // no syllable break fits: cut at the widest that fits
       end = start + 1;
-      while (end < word.length() && Pager::textWidth(word.substring(start, end + 1)) <= COLS) end++;
+      while (end < word.length() && widthIn(font, word.substring(start, end + 1)) <= COLS) end++;
     }
     pieces.push_back(word.substring(start, end));
     start = end;
@@ -94,7 +100,7 @@ static std::vector<String> splitWord(const String &word) {
 
 // Lines up to COLS pixels wide, words kept whole where they fit and split
 // by syllables where they don't.
-static std::vector<String> wrap(const String &text) {
+static std::vector<String> wrap(TextFont font, const String &text) {
   std::vector<String> lines;
   String line;
   int start = 0;
@@ -104,17 +110,17 @@ static std::vector<String> wrap(const String &text) {
     String word = text.substring(start, end);
     start = end + 1;
     if (word.length() == 0) continue;
-    if (Pager::textWidth(word) > COLS) {  // too wide for any line: by syllables
+    if (widthIn(font, word) > COLS) {  // too wide for any line: by syllables
       if (line.length()) {
         lines.push_back(line);
         line = "";
       }
-      std::vector<String> pieces = splitWord(word);
+      std::vector<String> pieces = splitWord(font, word);
       for (size_t k = 0; k + 1 < pieces.size(); k++) lines.push_back(pieces[k]);
       word = pieces.back();  // the last piece may share a line with what follows
     }
     const String with = line.length() ? line + " " + word : word;
-    if (Pager::textWidth(with) <= COLS) {
+    if (widthIn(font, with) <= COLS) {
       line = with;
     } else {
       lines.push_back(line);
@@ -126,18 +132,42 @@ static std::vector<String> wrap(const String &text) {
 }
 
 void Pager::start(const String &text) {
-  lines_ = wrap(Display::fontText(text));
-  page_ = 0;
+  // "Attuale" pages use its compact letters, as scrolling text does.
+  const TextFont f = Display::scrollFont();
+  start(text, f == TextFont::Small ? TextFont::Compact : f);
+}
+
+void Pager::start(const String &text, TextFont font) {
+  font_ = font;
   lastStep_ = millis();
   display.beginTransition();
+  if (font_ == TextFont::Big) {
+    text_ = Display::fontText(text);
+    text_.replace('|', ' ');
+    width_ = Display::textWidthIn(TextFont::Big, text_.c_str(), 0, text_.length());
+    offset_ = -COLS;
+    lines_.clear();
+    draw();
+    return;
+  }
+  lines_ = wrap(font_, Display::fontText(text));
+  page_ = 0;
   draw();
 }
 
 bool Pager::update(uint32_t now, uint32_t pageMs) {
+  if (font_ == TextFont::Big) {
+    // Scrolls at the same pace the speed setting gives scrolling text.
+    if (now - lastStep_ < max<uint32_t>(1, pageMs * SCROLL_DELAY_MS / PAGE_MS)) return false;
+    lastStep_ = now;
+    if (++offset_ >= width_) return true;
+    draw();
+    return false;
+  }
   if (now - lastStep_ < pageMs) return false;
   lastStep_ = now;
   page_++;
-  if (page_ * LINES_PER_PAGE >= lines_.size()) return true;
+  if (page_ * linesPerPage(font_) >= lines_.size()) return true;
   display.beginTransition();
   draw();
   return false;
@@ -145,14 +175,20 @@ bool Pager::update(uint32_t now, uint32_t pageMs) {
 
 void Pager::draw() {
   display.clear();
-  const size_t first = page_ * LINES_PER_PAGE;
-  const int n = first < lines_.size() ? min((int)(lines_.size() - first), LINES_PER_PAGE) : 0;
-  const int height = n * TINY_HEIGHT + (n - 1);
-  int y = (ROWS - height) / 2;
+  if (font_ == TextFont::Big) {
+    display.drawTextIn(TextFont::Big, -offset_, 0, text_.c_str(), 0, text_.length());
+    display.render();
+    return;
+  }
+  const int per = linesPerPage(font_), h = Display::fontHeightOf(font_), gap = lineGap(font_);
+  const size_t first = page_ * per;
+  const int n = first < lines_.size() ? min((int)(lines_.size() - first), per) : 0;
+  const int height = n * h + (n - 1) * gap;
+  int y = max(0, (ROWS - height) / 2);
   for (int i = 0; i < n; i++) {
     const String &line = lines_[first + i];
-    drawText((COLS - textWidth(line)) / 2, y, line);
-    y += TINY_HEIGHT + 1;
+    display.drawTextIn(font_, (COLS - widthIn(font_, line)) / 2, y, line.c_str(), 0, line.length());
+    y += h + gap;
   }
   display.render();
 }

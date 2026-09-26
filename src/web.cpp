@@ -168,8 +168,9 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="small">Attuale (8 pixel)</option>
       <option value="big">Grande (tutto il pannello)</option>
       <option value="mini">Mini 3×5 (solo maiuscole)</option>
+      <option value="tiny">Piccolo 3 righe (4 pixel, maiuscole)</option>
     </select>
-    <p class="hint">È lo stesso font di Display: vale per tutto il testo che scorre. Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza non conta.</p>
+    <p class="hint">È lo stesso font di Display: vale per il testo che scorre e per le pagine (Attuale e Mini: 2 righe per pagina; Piccolo: 3 righe; col Grande il testo scorre sempre). Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza non conta.</p>
   </section>
 
   <section data-mode="quotes" hidden>
@@ -391,8 +392,9 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="small">Attuale (8 pixel)</option>
       <option value="big">Grande (tutto il pannello)</option>
       <option value="mini">Mini 3×5 (solo maiuscole)</option>
+      <option value="tiny">Piccolo 3 righe (4 pixel, maiuscole)</option>
     </select>
-    <p class="hint">Vale per tutto il testo che scorre: testo, dati dal web, orologio a parole e punteggi dei giochi (le frasi dell'ora hanno le loro pagine a 3 righe). Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
+    <p class="hint">Vale per il testo che scorre e per quello a pagine: testo scorrevole, frasi dell'ora, dati dal web, notifiche, orologio a parole e punteggi dei giochi. A pagine: 2 righe con Attuale e Mini, 3 con Piccolo; col Grande il testo scorre sempre (una pagina conterrebbe due lettere). Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
     <label for="gameStyle">Grafica dei giochi</label>
     <select id="gameStyle">
       <option value="soft">Sfumata: più livelli di luce (profondità, scie, sfondi)</option>
@@ -1617,7 +1619,7 @@ static void handleSettings() {
   if (server.hasArg("brightness")) settings.brightness = constrain(server.arg("brightness").toInt(), 1, 255);
   if (server.hasArg("textFont")) {
     const String font = server.arg("textFont");
-    if (font != "small" && font != "big" && font != "mini") return badRequest("Font sconosciuto");
+    if (font != "small" && font != "big" && font != "mini" && font != "tiny") return badRequest("Font sconosciuto");
     settings.textFont = font;
     Display::setScrollFont(fontForSettings());
     restartMode();  // scrolling widths depend on the font
