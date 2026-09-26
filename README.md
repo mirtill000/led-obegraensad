@@ -266,7 +266,18 @@ Current modes:
     maze drawn by raycasting (one ray per column, walls shaded by
     distance, a faint floor): find the pulsing block at the far end. The
     map is shown at the start; in demo mode the computer keeps its right
-    hand on the wall, which always finds the exit
+    hand on the wall, which always finds the exit; **Dino** - the
+    runner of Chrome's offline page: cacti and pterodactyls (low: jump,
+    middle: duck, high: run under) faster and faster; in demo mode the
+    computer simulates running, jumping and ducking and picks the first
+    that keeps it alive; **Donkey Kong** - four floors and three ladders,
+    Donkey Kong throwing barrels that roll down in a zigzag (and sometimes
+    down a ladder), Mario climbing up to Pauline; 3 lives, each rescue makes
+    the next round faster; in demo mode Mario jumps the barrels, waits on
+    the ladder while one passes the top and dodges those coming down
+  - *Icone geek*: a walking Space Invader, Pac-Man chased by a ghost, a
+    terminal typing commands, a loading spinner, a beating 8-bit heart, a
+    rocket among the stars, a cup of coffee with steam, a charging battery
   - *Orologi*: binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
@@ -307,7 +318,7 @@ on row 10.
 ### Games and demo mode
 
 The arcade games (Tetris, Snake, Pong, Breakout, Flappy Bird, Space
-Invaders) draw LEDs only fully on or off: in-between brightness is made
+Invaders, Dino, Donkey Kong) draw LEDs only fully on or off: in-between brightness is made
 by switching LEDs on and off very fast, which can show as a slight
 flicker. Super Mario and Labirinto 3D keep their shades of gray, which
 their look depends on.
@@ -321,7 +332,9 @@ default), shown on the page while the game is on the panel:
   Tetris moves with left/right, rotates with up, drops with down or space;
   Snake uses the arrows; Pong up/down; Breakout left/right; Flappy
   Bird flies with *Vola*, space or up; Space Invaders moves with left/right
-  and shoots with *Spara* or space; in Labirinto 3D up/down walk a step,
+  and shoots with *Spara* or space; Dino jumps with up, space or *Salta*
+  and ducks with down (hold it); in Donkey Kong left/right walk, up/down
+  climb the ladders and *Salta* (space) jumps; in Labirinto 3D up/down walk a step,
   left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow
   down keeps moving.
 
