@@ -122,6 +122,7 @@ src/
   webinfo.cpp        - word of the day, Wikipedia "on this day", iCal calendar
   moon.cpp           - moon phase from the date
   gallery.cpp        - drawings saved in flash (LittleFS)
+  ble.cpp            - Bluetooth LE remote control (see "Bluetooth remote")
   web.cpp            - control page + JSON API
   main.cpp           - WiFi, button, main loop
 content/
@@ -129,6 +130,7 @@ content/
 scripts/
   build_info.py      - firmware version (git commit, build time) for the page
   quotes.py          - content/frasi_dell_ora.txt -> include/quotes_builtin.h
+cardputer/           - Bluetooth remote for the M5Stack Cardputer ADV (its own PlatformIO project)
 platformio.ini
 ```
 
@@ -447,6 +449,59 @@ text (scrolling text, quotes, web info, ...). Anything else is shown as a
 space. To
 add characters, add entries to `FONT_GLYPHS` in `include/font_small.h`
 (width in pixels + 8 rows, bit 7 = leftmost column).
+
+## Bluetooth remote (Cardputer ADV)
+
+The lamp is also a Bluetooth LE device (`src/ble.cpp`), so it can be driven
+without WiFi from a remote that pairs with it once. `cardputer/` is a
+firmware for the **M5Stack Cardputer ADV** that does it: a menu to pick
+games, modes and animations, a game controller with the lamp's picture on
+its screen, a text editor to send scrolling text and notifications, and
+brightness.
+
+**On the lamp** the **Bluetooth (telecomando)** section of the page shows
+the name (`obegransad`) and a 6-digit PIN, made at random on first boot;
+it can switch Bluetooth off and "forget the remotes", which also picks a
+new PIN (both restart the lamp). Pairing uses the PIN as a static passkey
+with bonding and MITM protection, and every characteristic needs that
+encrypted, authenticated link: a device that doesn't know the PIN can't
+read or send anything. Up to 3 remotes stay paired. The BLE stack runs on
+core 0 next to WiFi, like the network, away from the LED refresh.
+
+**On the Cardputer**:
+
+    cd cardputer
+    pio run -t upload        # hold G0 while plugging in if it doesn't start
+
+The first time it asks for the PIN (type it, Enter), then finds the lamp,
+pairs and remembers it. Keys: `;` `.` `,` `/` are the arrows (as printed on
+the keycaps), Enter chooses, `` ` `` goes back.
+
+- **Telecomando giochi** - the lamp's panel in large on the left (sent by
+  the lamp as it changes, at most every 150 ms); the arrows play (held
+  down they repeat), Space or Enter is the main button (jump, shoot,
+  drop), `D` switches the demo off/on, `X` is the mode's button (next
+  game)
+- **Giochi**, **Modalita'**, **Animazioni** - the lamp's own lists (read
+  from it, so new games show up by themselves); picking a game goes
+  straight to the controller
+- **Scrivi un testo** - type it, Enter: the lamp switches to Testo
+  scorrevole with it
+- **Notifica** - `fn` + `,` `/` pick the icon, type the text, Enter: shown
+  like a notification from `/api/notify`
+- **Luminosita'** - `,` `/` in steps of 16
+- **Impostazioni** - `F` forgets the lamp (after changing its PIN)
+
+**The protocol**, for other remotes: service
+`8f3e0000-5c1a-4a6b-9b8e-0b5e6a1d0bea` with four characteristics
+(`...0001` to `...0004`, see `include/ble.h`):
+
+| Characteristic | | |
+|---|---|---|
+| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9) |
+| state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"b":200,"t":"15:42"}`, sent when it changes |
+| frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
+| catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |
 
 ## Updating over WiFi
 

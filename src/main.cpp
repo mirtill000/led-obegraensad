@@ -4,6 +4,7 @@
 #include <esp_task_wdt.h>
 
 #include "constants.h"
+#include "ble.h"
 #include "display.h"
 #include "gallery.h"
 #include "modes.h"
@@ -79,6 +80,7 @@ void setup() {
   MDNS.addService("http", "tcp", 80);
   webBegin();
   startNetTask();
+  bleBegin();
   Serial.printf("Control page: http://%s  (http://%s.local)\n", ip.c_str(), HOSTNAME);
 
   // Show where to find the control page, then start the saved mode.
@@ -96,6 +98,7 @@ void setup() {
 void loop() {
   const uint32_t start = micros();
   webLoop();
+  bleLoop();
   checkButton();
   updateMode();
   noteLoopTime(micros() - start);

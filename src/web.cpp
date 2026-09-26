@@ -7,6 +7,7 @@
 #include <mbedtls/base64.h>
 
 #include "animation.h"
+#include "ble.h"
 #include "build_info.h"
 #include "display.h"
 #include "modes.h"
@@ -436,6 +437,14 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       Parametri: <code>text</code> (fino a 200 caratteri, anche accentati) e <code>icon</code> (bell, mail, check, alert, heart, phone, home, star); con GET, POST da modulo o POST JSON <code>{"text":"…","icon":"…"}</code>. Fino a 4 notifiche aspettano in coda.</p>
   </details>
 
+  <details id="bleBox">
+    <summary>Bluetooth (telecomando)</summary>
+    <label class="check"><input type="checkbox" id="bleOn"> Telecomando Bluetooth attivo</label>
+    <p class="hint" id="bleInfo"></p>
+    <button class="link" id="bleForget">Dimentica i telecomandi e cambia PIN</button>
+    <p class="hint">Un telecomando Bluetooth (per esempio il Cardputer ADV con il firmware in <code>cardputer/</code>) si abbina una volta sola scrivendo il PIN qui sopra; poi la lampada lo riconosce. Attivare o disattivare il Bluetooth e cambiare PIN riavviano la lampada.</p>
+  </details>
+
   <details id="diagBox">
     <summary>Diagnostica</summary>
     <table class="diag" id="diag"></table>
@@ -743,6 +752,9 @@ function renderExtras() {
   $('cdInfo').textContent = s.countdown.sentence;
   if (!editing('hgMin')) $('hgMin').value = String(s.hourglass.minutes);
   $('notifyNight').checked = s.notifyNight;
+  $('bleOn').checked = s.ble.on;
+  $('bleInfo').innerHTML = s.ble.on ? 'Nome: <b>obegransad</b> · PIN: <b>' + String(s.ble.pin).padStart(6, '0') + '</b> · '
+    + (s.ble.connected ? 'telecomando collegato' : 'nessun telecomando collegato') : 'Spento.';
   const hl = s.hourglass.left;
   $('hgInfo').textContent = s.active !== 'hourglass' ? '' : !s.hourglass.running ? 'Tempo scaduto.'
     : 'Resta ' + (hl >= 60 ? Math.floor(hl / 60) + ' min ' : '') + (hl % 60) + ' s circa.';
@@ -796,6 +808,16 @@ $('notifySend').onclick = () => fetch('/api/notify', { method: 'POST', body: new
   .then((r) => r.ok ? r.json() : r.text().then((t) => { throw new Error(t); }))
   .then((j) => status(j.ok ? 'Notifica inviata' : 'Ignorata: è notte'))
   .catch(fail);
+$('bleOn').onchange = () => {
+  if (!confirm('La lampada si riavvia. Continuare?')) { $('bleOn').checked = !$('bleOn').checked; return; }
+  fetch('/api/ble', { method: 'POST', body: new URLSearchParams({ on: $('bleOn').checked ? 1 : 0 }) }).catch(() => {});
+  status('Riavvio in corso…');
+};
+$('bleForget').onclick = () => {
+  if (!confirm('I telecomandi abbinati andranno riabbinati con un nuovo PIN, e la lampada si riavvia. Continuare?')) return;
+  fetch('/api/ble', { method: 'POST', body: new URLSearchParams({ forget: 1 }) }).catch(() => {});
+  status('Riavvio in corso…');
+};
 $('notifyNight').onchange = () => post('/api/settings', { notifyNight: $('notifyNight').checked ? 1 : 0 }).catch(fail);
 $('hgMin').onchange = () => post('/api/hourglass', { minutes: $('hgMin').value });
 $('hgStart').onclick = () => post('/api/hourglass', { minutes: $('hgMin').value, start: 1 });
@@ -1420,6 +1442,8 @@ static String stateJson() {
           ",\"sentence\":" + jsonString(CountdownMode::sentence()) + "}";
   json += ",\"hourglass\":{\"minutes\":" + String(settings.hourglassMinutes) + ",\"left\":" +
           String(HourglassMode::secondsLeft()) + ",\"running\":" + jsonBool(HourglassMode::running()) + "}";
+  json += ",\"ble\":{\"on\":" + jsonBool(settings.bleOn) + ",\"pin\":" + String(settings.blePin) +
+          ",\"connected\":" + jsonBool(bleConnected()) + "}";
   json += ",\"notifyNight\":" + jsonBool(settings.notifyNight) + ",\"notifyPending\":" + String(NotifyMode::pending());
   json += ",\"alarm\":{\"on\":" + jsonBool(settings.alarmOn) + ",\"time\":" + String(settings.alarmTime) +
           ",\"days\":" + String(settings.alarmDays) + ",\"ramp\":" + String(settings.alarmRamp) +
@@ -1852,6 +1876,18 @@ static void handleNotify() {
   server.send(200, "application/json", "{\"ok\":true,\"queued\":" + String(NotifyMode::pending()) + "}");
 }
 
+// Bluetooth: on/off, or forget the paired remotes (new PIN). Both restart
+// the lamp, since the BLE stack is set up once at boot.
+static void handleBle() {
+  if (server.hasArg("forget")) bleForgetRemotes();
+  if (server.hasArg("on")) settings.bleOn = server.arg("on") == "1";
+  saveSettings();
+  server.sendHeader("Connection", "close");
+  server.send(200, "application/json", "{}");
+  delay(500);  // let the answer reach the browser
+  ESP.restart();
+}
+
 static void handleAlarm() {
   const String cmd = server.arg("cmd");
   if (cmd == "stop") {
@@ -2050,6 +2086,7 @@ void webBegin() {
   server.on("/api/countdown", HTTP_POST, handleCountdown);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/notify", HTTP_ANY, handleNotify);
+  server.on("/api/ble", HTTP_POST, handleBle);
   server.on("/api/alarm", HTTP_POST, handleAlarm);
   server.on("/api/gallery", HTTP_GET, handleGalleryList);
   server.on("/api/gallery/item", HTTP_GET, handleGalleryItem);

@@ -150,6 +150,10 @@ void loadSettings() {
   settings.countdownTime = prefs.getString("cdTime", "00:00");
   settings.hourglassMinutes = constrain(prefs.getUChar("hgMin", 5), 1, 120);
   settings.notifyNight = prefs.getBool("notifyNight", false);
+  settings.bleOn = prefs.getBool("bleOn", true);
+  settings.blePin = prefs.getUInt("blePin", 0);
+  const bool newPin = settings.blePin < 100000 || settings.blePin > 999999;
+  if (newPin) settings.blePin = 100000 + esp_random() % 900000;  // first boot: a random PIN, kept
   settings.alarmOn = prefs.getBool("alarmOn", false);
   settings.alarmTime = prefs.getUShort("alarmTime", 7 * 60);
   settings.alarmDays = prefs.getUChar("alarmDays", 0x1F);  // Monday-Friday
@@ -163,6 +167,7 @@ void loadSettings() {
   settings.nightBrightness = prefs.getUChar("nightBright", 20);
   parseSpeeds(prefs.getString("speeds", ""));
   prefs.end();
+  if (newPin) saveSettings();
 }
 
 void saveSettings() {
@@ -199,6 +204,8 @@ void saveSettings() {
   prefs.putString("cdTime", settings.countdownTime);
   prefs.putUChar("hgMin", settings.hourglassMinutes);
   prefs.putBool("notifyNight", settings.notifyNight);
+  prefs.putBool("bleOn", settings.bleOn);
+  prefs.putUInt("blePin", settings.blePin);
   prefs.putBool("alarmOn", settings.alarmOn);
   prefs.putUShort("alarmTime", settings.alarmTime);
   prefs.putUChar("alarmDays", settings.alarmDays);
