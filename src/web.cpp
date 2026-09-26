@@ -567,6 +567,7 @@ const PADS = {
   flappy: { keys: ['A'], labels: { A: 'Vola' }, hint: 'Tastiera: spazio o ↑.' },
   invaders: { keys: ['L', 'R', 'A'], labels: { A: 'Spara' }, repeat: true, hint: 'Tastiera: ← → per muoverti, spazio o ↑ per sparare.' },
   dino: { keys: ['U', 'D', 'A'], labels: { U: '↑', D: '↓', A: 'Salta' }, repeat: true, hint: '↑ o Salta per saltare, ↓ per abbassarti (tienilo premuto). Tastiera: frecce e spazio.' },
+  race: { keys: ['L', 'R'], labels: {}, repeat: false, hint: '← → per cambiare corsia ed evitare il traffico. Tastiera: frecce.' },
   kong: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { U: '↑', D: '↓', A: 'Salta' }, repeat: true, hint: '← → per camminare, ↑ ↓ per le scale, Salta per scavalcare i barili. Tastiera: frecce e spazio.' },
   maze: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { L: '↶', R: '↷', U: '↑', D: '↓', A: 'Mappa' }, hint: '↑ ↓ per camminare, ← → per girarti, Mappa per vedere dove sei. Trova il blocco che pulsa. Tastiera: le frecce e la barra spaziatrice.' },
 };
