@@ -260,14 +260,14 @@ class TetrisAnimation : public Animation {
   void drawSoft() {
     display.clear();
     for (int y = 0; y < H; y++) {
-      display.setLevel(LEFT - 1, y, 30);  // walls
-      display.setLevel(LEFT + W, y, 30);
+      display.setLevel(LEFT - 1, y, 70);  // walls
+      display.setLevel(LEFT + W, y, 70);
       const bool flashing = phase_ == CLEARING && rowFull(y);
       for (int x = 0; x < W; x++) {
         if (!board_[y][x]) continue;
-        uint8_t l = 150;
-        if (flashing) l = (phaseFrames_ % 2) ? 255 : 40;
-        if (phase_ == GAME_OVER) l = 150 * (30 - phaseFrames_) / 30;  // fade out
+        uint8_t l = 215;
+        if (flashing) l = (phaseFrames_ % 2) ? 255 : 60;
+        if (phase_ == GAME_OVER) l = 215 * (30 - phaseFrames_) / 30;  // fade out
         display.setLevel(LEFT + x, y, l);
       }
     }

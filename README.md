@@ -323,10 +323,21 @@ Current modes:
     Donkey Kong throwing barrels that roll down in a zigzag (and sometimes
     down a ladder), Mario climbing up to Pauline; 3 lives, each rescue makes
     the next round faster; in demo mode Mario jumps the barrels, waits on
-    the ladder while one passes the top and dodges those coming down
+    the ladder while one passes the top and dodges those coming down;
+    **Doom** - a first-person shooter drawn like Labirinto 3D (walls
+    shaded by distance): imps standing in the level, hidden behind walls
+    and bigger as they come, throw fireballs you can see coming; a gun at
+    the bottom of the view and the health bar on the bottom row. Kill them
+    all for the next level (more imps, some health back); the score is 100
+    per imp and 500 per level. In demo mode the computer turns to the
+    nearest imp in sight and shoots, or walks the shortest way to one
   - *Icone geek*: a walking Space Invader, Pac-Man chased by a ghost, a
-    terminal typing commands, a loading spinner, a beating 8-bit heart, a
-    rocket among the stars, a cup of coffee with steam, a charging battery
+    terminal (four lines in a 3x3 font) typing commands whose answers are
+    the lamp's own - `ls` its files, `w` the time and uptime, `ip` its
+    address, `df` free flash, `top` free memory and chip temperature,
+    `pwd`, `cal` today's date -, a beating 8-bit heart, a rocket among the
+    stars, a cup of coffee with steam, a charging battery (lying down, or
+    standing up when the lamp hangs vertically)
   - *Orologi*: binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
@@ -374,12 +385,13 @@ on row 10.
 
 ### Games and demo mode
 
-All games follow **Grafica dei giochi** in the Display section:
+Most games follow **Grafica dei giochi** in the Display section:
 *Sfumata* (the default) uses shades of gray - fading snake, dimmer
-settled Tetris blocks, gliding balls, Mario's shaded sprite, the maze's
-distance-shaded walls - and *Nitida* draws every LED fully on or off
-(the maze then uses a fixed dot pattern for depth, Mario becomes a lit
-silhouette). In-between brightness is made by switching LEDs on and off
+settled Tetris blocks, Mario's shaded sprite, the maze's distance-shaded
+walls - and *Nitida* draws every LED fully on or off (the maze then uses a
+fixed dot pattern for depth, Mario becomes a lit silhouette). Pong,
+Breakout, Flappy Bird and Space Invaders are always sharp; Doom always
+uses shades of gray for its walls. In-between brightness is made by switching LEDs on and off
 very fast; if it trembles on your lamp, pick Nitida.
 
 All the games in the animations have a **Modalità demo** checkbox (on by
@@ -393,7 +405,7 @@ default), shown on the page while the game is on the panel:
   Bird flies with *Vola*, space or up; Space Invaders moves with left/right
   and shoots with *Spara* or space; Dino jumps with up, space or *Salta*
   and ducks with down (hold it); in Donkey Kong left/right walk, up/down
-  climb the ladders and *Salta* (space) jumps; in Labirinto 3D up/down walk a step,
+  climb the ladders and *Salta* (space) jumps; in Doom up/down walk, left/right turn and *Spara* (space) shoots; in Labirinto 3D up/down walk a step,
   left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow
   down keeps moving.
 

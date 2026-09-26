@@ -15,10 +15,10 @@ extern Animation *const invadersAnimation;
 extern Animation *const maze3dAnimation;
 extern Animation *const runnerAnimation;
 extern Animation *const kongAnimation;
+extern Animation *const doomAnimation;
 extern Animation *const invaderIconAnimation;
 extern Animation *const pacmanIconAnimation;
 extern Animation *const terminalIconAnimation;
-extern Animation *const spinnerIconAnimation;
 extern Animation *const heartIconAnimation;
 extern Animation *const rocketIconAnimation;
 extern Animation *const coffeeIconAnimation;
@@ -46,10 +46,10 @@ Animation *const ANIMATIONS[] = {
     maze3dAnimation,
     runnerAnimation,
     kongAnimation,
+    doomAnimation,
     invaderIconAnimation,
     pacmanIconAnimation,
     terminalIconAnimation,
-    spinnerIconAnimation,
     heartIconAnimation,
     rocketIconAnimation,
     coffeeIconAnimation,

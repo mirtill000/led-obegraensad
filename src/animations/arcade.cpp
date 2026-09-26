@@ -6,35 +6,14 @@
 
 #include "animations/arcade_game.h"
 #include "display.h"
-#include "gfx.h"
-#include "settings.h"
 
 static float random01() { return (esp_random() & 0xFFFF) / 65535.0f; }
 
-// Every game draws in the style picked on the page (softGames()): "nitida"
-// with LEDs only fully on or off, or "sfumata" with shades of gray.
+// These four always draw sharp: every LED fully on or off, whatever the
+// games' style on the page (their small moving dots read better that way).
 
 // A dot at a fractional position, on the nearest pixel.
 static void dot(float x, float y) { display.setPixel((int)lroundf(x), (int)lroundf(y), true); }
-
-// A ball in the "sfumata" style: one sharp, fully lit pixel, with a faint
-// pixel behind it (the way it came) to show the motion.
-static void ball(float x, float y, float vx, float vy) {
-  const int bx = (int)lroundf(x), by = (int)lroundf(y);
-  const int tx = bx - (vx > 0.05f) + (vx < -0.05f), ty = by - (vy > 0.05f) + (vy < -0.05f);
-  if (tx != bx || ty != by) gfx::plot(tx, ty, 0.12f);
-  display.setLevel(bx, by, 255);
-}
-
-// The same spread over the 4 nearest pixels, so it glides.
-static void softDot(float x, float y, float v = 1) {
-  const int x0 = (int)floorf(x), y0 = (int)floorf(y);
-  const float fx = x - x0, fy = y - y0;
-  gfx::plot(x0, y0, v * (1 - fx) * (1 - fy));
-  gfx::plot(x0 + 1, y0, v * fx * (1 - fy));
-  gfx::plot(x0, y0 + 1, v * (1 - fx) * fy);
-  gfx::plot(x0 + 1, y0 + 1, v * fx * fy);
-}
 
 // ---------------------------------------------------------------------------
 // Pong: you (left paddle) against the computer (right), first to 5.
@@ -118,24 +97,12 @@ class PongGame : public ArcadeGame {
   }
 
   void draw() {
-    if (softGames()) return drawSoft();
     display.clear();
     for (int i = 0; i < PADDLE; i++) {
       display.setPixel(0, (int)roundf(left_) + i, true);
       display.setPixel(COLS - 1, (int)roundf(right_) + i, true);
     }
     dot(x_, y_);
-  }
-
-  // "Sfumata": shades of gray (see softGames()).
-  void drawSoft() {
-    display.clear();
-    for (int y = 0; y < ROWS; y += 2) display.setLevel(7, y, 18);  // net
-    for (int i = 0; i < PADDLE; i++) {
-      gfx::plot(0, (int)roundf(left_) + i, 1);
-      gfx::plot(COLS - 1, (int)roundf(right_) + i, 1);
-    }
-    ball(x_, y_, vx_, vy_);
   }
 
   void drawScore() {
@@ -257,7 +224,6 @@ class BreakoutGame : public ArcadeGame {
   }
 
   void draw() {
-    if (softGames()) return drawSoft();
     display.clear();
     for (int r = 0; r < BRICK_ROWS; r++) {
       for (int c = 0; c < COLS / BRICK_W; c++) {
@@ -269,23 +235,6 @@ class BreakoutGame : public ArcadeGame {
     const int p = (int)roundf(paddle_);
     for (int i = 0; i < PADDLE; i++) display.setPixel(p + i, ROWS - 1, true);
     dot(x_, y_);
-  }
-
-  // "Sfumata": shades of gray (see softGames()).
-  void drawSoft() {
-    display.clear();
-    static const uint8_t ROW_LEVEL[BRICK_ROWS] = {255, 190, 130, 80};
-    for (int r = 0; r < BRICK_ROWS; r++) {
-      for (int c = 0; c < COLS / BRICK_W; c++) {
-        if (!bricks_[r][c]) continue;
-        display.setLevel(c * BRICK_W, TOP + r, ROW_LEVEL[r]);
-        display.setLevel(c * BRICK_W + 1, TOP + r, ROW_LEVEL[r] / 2);  // brick edges
-      }
-    }
-    for (int i = 0; i < lives_ - 1; i++) display.setLevel(i * 2, 0, 50);  // spare balls
-    const int p = (int)roundf(paddle_);
-    for (int i = 0; i < PADDLE; i++) display.setLevel(p + i, ROWS - 1, 200);
-    ball(x_, y_, vx_, vy_);
   }
 
   bool bricks_[BRICK_ROWS][COLS / BRICK_W];
@@ -397,7 +346,6 @@ class FlappyGame : public ArcadeGame {
   bool shouldFlap() const { return survival(true, 40) > survival(false, 40); }
 
   void draw() {
-    if (softGames()) return drawSoft();
     display.clear();
     for (int i = 0; i < PIPES; i++) {
       const int px = (int)floorf(pipeX_[i]);
@@ -410,23 +358,6 @@ class FlappyGame : public ArcadeGame {
     // The bird: a 2x2 block.
     const int by = (int)lroundf(y_);
     for (int k = 0; k < 4; k++) display.setPixel(BIRD_X + k % 2, by + k / 2, true);
-  }
-
-  // "Sfumata": shades of gray (see softGames()).
-  void drawSoft() {
-    display.clear();
-    for (int i = 0; i < PIPES; i++) {
-      const int px = (int)floorf(pipeX_[i]);
-      for (int y = 0; y < ROWS; y++) {
-        if (y >= pipeGap_[i] && y < pipeGap_[i] + GAP) continue;
-        display.setLevel(px, y, 110);
-        display.setLevel(px + 1, y, 70);
-      }
-    }
-    softDot(BIRD_X, y_);
-    softDot(BIRD_X + 1, y_);
-    softDot(BIRD_X, y_ + 1, 0.8f);
-    softDot(BIRD_X + 1, y_ + 1, 0.8f);
   }
 
   float y_ = 6, vy_ = 0, scroll_ = 0;
@@ -561,7 +492,6 @@ class InvadersGame : public ArcadeGame {
   }
 
   void draw() {
-    if (softGames()) return drawSoft();
     display.clear();
     for (int i = 0; i < ALIENS; i++) {
       if (!aliens_[i]) continue;
@@ -573,22 +503,6 @@ class InvadersGame : public ArcadeGame {
     display.setPixel(player_, ROWS - 2, true);
     for (int dx = -1; dx <= 1; dx++) display.setPixel(player_ + dx, ROWS - 1, true);
     for (int i = 0; i < lives_ - 1; i++) display.setPixel(COLS - 1 - i * 2, 0, true);  // spare lives
-  }
-
-  // "Sfumata": shades of gray (see softGames()).
-  void drawSoft() {
-    display.clear();
-    const bool legs = (tick_ / 8) % 2;
-    for (int i = 0; i < ALIENS; i++) {
-      if (!aliens_[i]) continue;
-      display.setLevel(alienX(i), alienY(i), legs ? 255 : 170);
-      display.setLevel(alienX(i) + 1, alienY(i), legs ? 170 : 255);
-    }
-    if (shotY_ >= 0) display.setLevel(shotX_, shotY_, 255);
-    if (bombY_ >= 0) display.setLevel(bombX_, bombY_, 120);
-    display.setLevel(player_, ROWS - 2, 255);
-    for (int dx = -1; dx <= 1; dx++) display.setLevel(player_ + dx, ROWS - 1, 200);
-    for (int i = 0; i < lives_ - 1; i++) display.setLevel(COLS - 1 - i * 2, 0, 45);  // spare lives
   }
 
   bool aliens_[ALIENS];

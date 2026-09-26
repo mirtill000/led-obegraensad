@@ -1,12 +1,17 @@
 // "Icone geek": small pixel-art loops - a Space Invader, Pac-Man with a
-// ghost, a terminal typing commands, a loading spinner, an 8-bit heart, a
-// rocket among the stars, a coffee cup, a charging battery.
+// ghost, a terminal typing commands, an 8-bit heart, a rocket among the
+// stars, a coffee cup, a charging battery.
 #include <math.h>
 
 #include "animation.h"
 #include "display.h"
 #include "gfx.h"
-#include "pager.h"
+#include "font_micro.h"
+#include "settings.h"
+#include "sysinfo.h"
+#include "timekeeping.h"
+
+#include <vector>
 
 namespace {
 
@@ -76,70 +81,167 @@ class PacManIcon : public GeekAnimation {
 };
 
 // ---------------------------------------------------------------------------
-// A terminal: a prompt, a command typed a letter at a time, a blinking
-// cursor, then "OK" and the next one.
+// A terminal in the 3x3 Micro font, four lines on screen: a command typed a
+// letter at a time after the prompt, then its output, then the next
+// command, the lines scrolling up. The answers are the lamp's own: its files,
+// time and uptime, address, free flash and memory, chip temperature, date.
 class TerminalIcon : public GeekAnimation {
  public:
   const char *id() const override { return "terminal"; }
   const char *name() const override { return "Terminale"; }
-  uint16_t frameMs() const override { return 100; }
+  uint16_t frameMs() const override { return 90; }
+  void start() override {
+    lines_.clear();
+    command_ = esp_random() % COMMAND_COUNT;
+    newPrompt();
+  }
   void frame(uint32_t) override {
-    static const char *const COMMANDS[] = {"LS", "GIT", "SSH", "VIM", "CD", "TOP", "PING"};
-    static const char *const PROMPT[4] = {"#..", ".#.", "#..", "..."};
     tick_++;
-    const String cmd = COMMANDS[command_ % (sizeof(COMMANDS) / sizeof(COMMANDS[0]))];
     const uint32_t t = tick_ - since_;
-    const unsigned typed = min<uint32_t>(cmd.length(), t > 6 ? (t - 6) / 3 : 0);
-    const bool done = typed == cmd.length() && t > 6 + cmd.length() * 3 + 8;
-    display.clear();
-    for (int x = 0; x < COLS; x++) display.setPixel(x, 0, true);  // title bar
-    display.setPixel(1, 1, true);
-    display.setPixel(3, 1, true);
-    display.setPixel(5, 1, true);
-    sprite(0, 5, PROMPT, 4);
-    const String shown = cmd.substring(0, typed);
-    Pager::drawText(4, 5, shown);
-    const int cursorX = 4 + (typed ? Pager::textWidth(shown) + 1 : 0);
-    if (done) Pager::drawText(0, 11, "OK");
-    if ((tick_ / 4) % 2 && cursorX < COLS) {
-      for (int y = 5; y < 9; y++) display.setPixel(cursorX, y, true);
+    switch (phase_) {
+      case WAIT:  // a blinking cursor on the new prompt
+        if (t >= 14) {
+          phase_ = TYPE;
+          since_ = tick_;
+        }
+        break;
+      case TYPE: {
+        const String cmd = COMMANDS[command_];
+        const unsigned typed = min<unsigned>(cmd.length(), t / 3);
+        lines_.back().text = cmd.substring(0, typed);
+        if (typed == cmd.length() && t >= cmd.length() * 3 + 5) {
+          for (const String &l : wrap(output(cmd))) pending_.push_back(l);
+          phase_ = PRINT;
+          since_ = tick_;
+        }
+        break;
+      }
+      case PRINT:  // one line of output every few frames
+        if (t % 3 == 0) {
+          if (pending_.empty()) {
+            command_ = (command_ + 1) % COMMAND_COUNT;
+            newPrompt();
+          } else {
+            push({pending_.front(), false});
+            pending_.erase(pending_.begin());
+          }
+        }
+        break;
     }
-    if (done && t > 6 + cmd.length() * 3 + 26) {
-      command_++;
-      since_ = tick_;
-    }
+    draw();
   }
 
  private:
+  struct Line {
+    String text;
+    bool prompt;
+  };
+  enum Phase : uint8_t { WAIT, TYPE, PRINT };
+  static const int VISIBLE = 4, PROMPT_W = 3;  // '>' and a gap
+  static constexpr const char *COMMANDS[] = {"LS", "W", "IP", "DF", "TOP", "PWD", "CAL"};
+  static const int COMMAND_COUNT = sizeof(COMMANDS) / sizeof(COMMANDS[0]);
+
+  static int width(const String &s) {
+    int w = 0;
+    for (unsigned i = 0; i < s.length(); i++) w += findMicroGlyph(s[i])->width + 1;
+    return w ? w - 1 : 0;
+  }
+  static void text(int x, int y, const String &s, uint8_t level) {
+    for (unsigned i = 0; i < s.length(); i++) {
+      const MicroGlyph *g = findMicroGlyph(s[i]);
+      for (int r = 0; r < MICRO_HEIGHT; r++) {
+        for (int c = 0; c < g->width; c++) {
+          if (g->rows[r] & (0x80 >> c)) display.setLevel(x + c, y + r, level);
+        }
+      }
+      x += g->width + 1;
+    }
+  }
+
+  // Output lines: split at '\n', then wrapped at the panel's edge like a
+  // terminal does (mid-word).
+  static std::vector<String> wrap(const String &out) {
+    std::vector<String> lines;
+    int start = 0;
+    while (start <= (int)out.length()) {
+      int end = out.indexOf('\n', start);
+      if (end < 0) end = out.length();
+      String rest = out.substring(start, end);
+      do {
+        unsigned n = rest.length();
+        while (n > 1 && width(rest.substring(0, n)) > COLS) n--;
+        lines.push_back(rest.substring(0, n));
+        rest = rest.substring(n);
+      } while (rest.length());
+      start = end + 1;
+    }
+    return lines;
+  }
+
+  static String uptime() {
+    const uint32_t s = millis() / 1000, d = s / 86400, h = s / 3600 % 24, m = s / 60 % 60;
+    if (d) return String(d) + "D" + h + "H";
+    if (h) return String(h) + "H" + (m < 10 ? "0" : "") + m;
+    return String(m) + "M";
+  }
+
+  static String output(const String &cmd) {
+    struct tm t;
+    const bool clock = localTime(t);
+    if (cmd == "LS") return sysinfo::files(3);
+    if (cmd == "W") {
+      char hhmm[6];
+      if (clock) strftime(hhmm, sizeof(hhmm), "%H:%M", &t);
+      return (clock ? String(hhmm) + "\n" : String()) + "UP\n" + uptime();
+    }
+    if (cmd == "IP") return sysinfo::ip();
+    if (cmd == "DF") return sysinfo::freeFlash();
+    if (cmd == "TOP") return "MEM\n" + sysinfo::freeHeap() + "\n" + sysinfo::chipTemp();
+    if (cmd == "PWD") return "/";
+    if (cmd == "CAL") {
+      if (!clock) return "?";
+      static const char *const DAYS[7] = {"DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB"};
+      return String(DAYS[t.tm_wday]) + "\n" + t.tm_mday + "/" + (t.tm_mon + 1);
+    }
+    return "?";
+  }
+
+  void push(const Line &l) {
+    lines_.push_back(l);
+    if ((int)lines_.size() > VISIBLE) lines_.erase(lines_.begin());
+  }
+  void newPrompt() {
+    push({"", true});
+    phase_ = WAIT;
+    since_ = tick_;
+  }
+
+  void draw() {
+    display.clear();
+    for (size_t i = 0; i < lines_.size(); i++) {
+      const int y = i * (MICRO_HEIGHT + 1);
+      const Line &l = lines_[i];
+      if (l.prompt) {
+        text(0, y, ">", 255);
+        text(PROMPT_W, y, l.text, 255);
+      } else {
+        text(0, y, l.text, 150);
+      }
+    }
+    // Cursor after the prompt line being typed (blinking while waiting).
+    const Line &last = lines_.back();
+    if (last.prompt && phase_ != PRINT && (phase_ == TYPE || (tick_ / 4) % 2)) {
+      const int x = PROMPT_W + (last.text.length() ? width(last.text) + 1 : 0);
+      const int y = (lines_.size() - 1) * (MICRO_HEIGHT + 1);
+      for (int r = 0; r < MICRO_HEIGHT; r++) display.setLevel(x, y + r, 200);
+    }
+  }
+
+  std::vector<Line> lines_;
+  std::vector<String> pending_;
+  Phase phase_ = WAIT;
   uint32_t tick_ = 0, since_ = 0;
   uint8_t command_ = 0;
-};
-
-// ---------------------------------------------------------------------------
-// The loading spinner: twelve dots in a ring, a bright head with a fading
-// tail going round.
-class SpinnerIcon : public GeekAnimation {
- public:
-  const char *id() const override { return "spinner"; }
-  const char *name() const override { return "Caricamento"; }
-  uint16_t frameMs() const override { return 80; }
-  void frame(uint32_t) override {
-    static const uint8_t TAIL[5] = {255, 170, 110, 60, 30};
-    tick_++;
-    display.clear();
-    for (int i = 0; i < 12; i++) {
-      const float a = i * (float)M_PI / 6;
-      const int x = (int)lroundf(7.5f + 5.5f * sinf(a) - 0.5f), y = (int)lroundf(7.5f - 5.5f * cosf(a) - 0.5f);
-      const int behind = ((int)(tick_ % 12) - i + 12) % 12;
-      display.setLevel(x, y, behind < 5 ? TAIL[behind] : 12);
-      display.setLevel(x + 1, y, behind < 5 ? TAIL[behind] : 12);
-      display.setLevel(x, y + 1, behind < 5 ? TAIL[behind] : 12);
-      display.setLevel(x + 1, y + 1, behind < 5 ? TAIL[behind] : 12);
-    }
-  }
-
- private:
-  uint32_t tick_ = 0;
 };
 
 // ---------------------------------------------------------------------------
@@ -236,7 +338,8 @@ class CoffeeIcon : public GeekAnimation {
 };
 
 // ---------------------------------------------------------------------------
-// A battery charging bar by bar, then flashing full.
+// A battery charging bar by bar, then flashing full: lying down with the
+// lamp horizontal, standing up (terminal on top) with it vertical.
 class BatteryIcon : public GeekAnimation {
  public:
   const char *id() const override { return "battery"; }
@@ -245,23 +348,29 @@ class BatteryIcon : public GeekAnimation {
   void frame(uint32_t) override {
     tick_++;
     display.clear();
-    // Outline: x0-14, rows 4-11, with the tip at x15.
+    const bool up = settings.vertical;
+    // Drawn lying down (outline x0-14, rows 4-11, terminal at x15); standing
+    // up it is the same picture turned a quarter, terminal at the top.
+    auto px = [up](int x, int y) {
+      if (up) display.setPixel(y, COLS - 1 - x, true);
+      else display.setPixel(x, y, true);
+    };
     for (int x = 0; x <= 14; x++) {
-      display.setPixel(x, 4, true);
-      display.setPixel(x, 11, true);
+      px(x, 4);
+      px(x, 11);
     }
     for (int y = 4; y <= 11; y++) {
-      display.setPixel(0, y, true);
-      display.setPixel(14, y, true);
+      px(0, y);
+      px(14, y);
     }
-    for (int y = 6; y <= 9; y++) display.setPixel(15, y, true);
+    for (int y = 6; y <= 9; y++) px(15, y);
     // Charge: 0-3 bars (3 pixels wide, a pixel apart and from the outline),
     // then two flashes when full.
     const int step = tick_ % 8;
     const int bars = step < 4 ? step : ((step - 4) % 2 == 0 ? 3 : 0);
     for (int b = 0; b < bars; b++) {
       for (int x = 2 + b * 4; x < 5 + b * 4; x++) {
-        for (int y = 6; y <= 9; y++) display.setPixel(x, y, true);
+        for (int y = 6; y <= 9; y++) px(x, y);
       }
     }
   }
@@ -273,7 +382,6 @@ class BatteryIcon : public GeekAnimation {
 InvaderIcon invader;
 PacManIcon pacIcon;
 TerminalIcon terminal;
-SpinnerIcon spinner;
 HeartIcon heart;
 RocketIcon rocket;
 CoffeeIcon coffee;
@@ -284,7 +392,6 @@ BatteryIcon battery;
 extern Animation *const invaderIconAnimation = &invader;
 extern Animation *const pacmanIconAnimation = &pacIcon;
 extern Animation *const terminalIconAnimation = &terminal;
-extern Animation *const spinnerIconAnimation = &spinner;
 extern Animation *const heartIconAnimation = &heart;
 extern Animation *const rocketIconAnimation = &rocket;
 extern Animation *const coffeeIconAnimation = &coffee;
