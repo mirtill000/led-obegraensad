@@ -15,7 +15,6 @@ extern Animation *const invadersAnimation;
 extern Animation *const maze3dAnimation;
 extern Animation *const runnerAnimation;
 extern Animation *const kongAnimation;
-extern Animation *const raceAnimation;
 extern Animation *const invaderIconAnimation;
 extern Animation *const pacmanIconAnimation;
 extern Animation *const terminalIconAnimation;
@@ -47,7 +46,6 @@ Animation *const ANIMATIONS[] = {
     maze3dAnimation,
     runnerAnimation,
     kongAnimation,
-    raceAnimation,
     invaderIconAnimation,
     pacmanIconAnimation,
     terminalIconAnimation,

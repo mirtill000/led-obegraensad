@@ -312,11 +312,7 @@ Current modes:
     Donkey Kong throwing barrels that roll down in a zigzag (and sometimes
     down a ladder), Mario climbing up to Pauline; 3 lives, each rescue makes
     the next round faster; in demo mode Mario jumps the barrels, waits on
-    the ladder while one passes the top and dodges those coming down;
-    **Corsa** - a top-down road race: three lanes, slower traffic coming
-    down them and the road getting faster and faster (the score is the
-    distance); traffic never closes all three lanes, and in demo mode the
-    computer plans a few lane changes ahead
+    the ladder while one passes the top and dodges those coming down
   - *Icone geek*: a walking Space Invader, Pac-Man chased by a ghost, a
     terminal typing commands, a loading spinner, a beating 8-bit heart, a
     rocket among the stars, a cup of coffee with steam, a charging battery
@@ -386,8 +382,7 @@ default), shown on the page while the game is on the panel:
   Bird flies with *Vola*, space or up; Space Invaders moves with left/right
   and shoots with *Spara* or space; Dino jumps with up, space or *Salta*
   and ducks with down (hold it); in Donkey Kong left/right walk, up/down
-  climb the ladders and *Salta* (space) jumps; in Corsa left/right change
-  lane; in Labirinto 3D up/down walk a step,
+  climb the ladders and *Salta* (space) jumps; in Labirinto 3D up/down walk a step,
   left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow
   down keeps moving.
 
