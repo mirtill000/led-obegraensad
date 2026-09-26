@@ -43,11 +43,11 @@ struct State {
   bool demo = true, demoForced = false;
   int brightness = 255;
 };
-const State &state();
-// The panel: 256 levels 0-15, row by row; `version` changes with each new
-// picture.
-const uint8_t *frame();
+State state();  // a thread-safe copy (read from the UI task)
+// Copies the panel (256 levels 0-15, row by row) into `out`; the return
+// value changes with each new picture.
+uint32_t frameSnapshot(uint8_t out[256]);
 uint32_t frameVersion();
-const std::vector<Item> &catalog();
+std::vector<Item> catalog();  // a thread-safe copy
 
 }  // namespace lamp

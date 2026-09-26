@@ -1,6 +1,9 @@
 #include "lamp.h"
 
 #include <BLEDevice.h>
+#include <freertos/queue.h>
+#include <freertos/semphr.h>
+#include <string.h>
 #include <BLESecurity.h>
 #include <Preferences.h>
 #include <host/ble_store.h>
@@ -22,11 +25,31 @@ std::vector<Item> items;
 BLEClient *client = nullptr;
 BLERemoteCharacteristic *commandChar = nullptr, *stateChar = nullptr, *frameChar = nullptr;
 BLEAdvertisedDevice *found = nullptr;
+
+// User actions (send / setPin / forget) come from the UI task; they are
+// queued here and carried out on the BLE task, so the connection is only
+// ever touched from one task.
+enum class Cmd : uint8_t { Send, SetPin, Forget };
+struct CmdMsg {
+  Cmd type;
+  uint32_t pin;
+  char text[224];
+};
+QueueHandle_t cmdQueue = nullptr;
 volatile bool authenticated = false, authFailed = false, dropped = false;
 
 // Notifications arrive on the BLE task: they are copied here and parsed in
 // loop().
 portMUX_TYPE lock = portMUX_INITIALIZER_UNLOCKED;
+
+// State, catalog and picture are written by the BLE task and read by the UI
+// task's draw(): a mutex so a read never sees a half-written String or a
+// torn frame. Created in begin(), before either task touches them.
+SemaphoreHandle_t dataMutex = nullptr;
+struct Guard {
+  Guard() { if (dataMutex) xSemaphoreTake(dataMutex, portMAX_DELAY); }
+  ~Guard() { if (dataMutex) xSemaphoreGive(dataMutex); }
+};
 String pendingState;
 volatile bool statePending = false;
 
@@ -50,6 +73,7 @@ String field(const String &json, const char *key) {
 }
 
 void parseState(const String &json) {
+  Guard g;
   lampState.mode = field(json, "m");
   lampState.modeName = field(json, "mn");
   lampState.button = field(json, "x");
@@ -63,6 +87,7 @@ void parseState(const String &json) {
 }
 
 void parseCatalog(const String &text) {
+  Guard g;
   items.clear();
   int start = 0;
   while (start < (int)text.length()) {
@@ -86,6 +111,7 @@ void onState(BLERemoteCharacteristic *, uint8_t *data, size_t length, bool) {
 
 void onFrame(BLERemoteCharacteristic *, uint8_t *data, size_t length, bool) {
   if (length < 128) return;
+  Guard g;
   for (int i = 0; i < 128; i++) {
     pixels[2 * i] = data[i] >> 4;
     pixels[2 * i + 1] = data[i] & 15;
@@ -182,13 +208,25 @@ void begin() {
   prefs.begin("remote", true);
   pairingPin = prefs.getUInt("pin", 0);
   prefs.end();
+  dataMutex = xSemaphoreCreateMutex();
+  cmdQueue = xQueueCreate(8, sizeof(CmdMsg));
   BLEDevice::init("Cardputer telecomando");
   BLEDevice::setSecurityCallbacks(new SecurityCallbacks());
   setSecurity();
   current = pairingPin ? Status::Searching : Status::NeedPin;
 }
 
+void setPinImpl(uint32_t p);
+void forgetImpl();
+void sendImpl(const String &command);
+
 void loop() {
+  CmdMsg m;
+  while (cmdQueue && xQueueReceive(cmdQueue, &m, 0) == pdTRUE) {
+    if (m.type == Cmd::Send) sendImpl(m.text);
+    else if (m.type == Cmd::SetPin) setPinImpl(m.pin);
+    else forgetImpl();
+  }
   if (statePending) {
     portENTER_CRITICAL(&lock);
     const String s = pendingState;
@@ -207,7 +245,7 @@ void loop() {
       if (connect()) {
         current = Status::Ready;
       } else if (authFailed) {
-        forget();
+        forgetImpl();
         problem = "PIN sbagliato: controlla quello sulla pagina della lampada";
       } else {
         current = Status::Searching;
@@ -226,7 +264,7 @@ Status status() { return current; }
 const String &message() { return problem; }
 uint32_t pin() { return pairingPin; }
 
-void setPin(uint32_t p) {
+void setPinImpl(uint32_t p) {
   pairingPin = p;
   Preferences prefs;
   prefs.begin("remote", false);
@@ -237,7 +275,7 @@ void setPin(uint32_t p) {
   problem = "";
 }
 
-void forget() {
+void forgetImpl() {
   if (client && client->isConnected()) client->disconnect();
   ble_store_clear();  // the pairing keys
   Preferences prefs;
@@ -248,14 +286,42 @@ void forget() {
   current = Status::NeedPin;
 }
 
-bool send(const String &command) {
-  if (current != Status::Ready || !commandChar) return false;
-  return commandChar->writeValue(command, false);
+void sendImpl(const String &command) {
+  if (current == Status::Ready && commandChar) commandChar->writeValue(command, false);
 }
 
-const State &state() { return lampState; }
-const uint8_t *frame() { return pixels; }
+// Public entry points, called from the UI task: they queue the work for
+// the BLE task rather than touch the connection directly.
+void setPin(uint32_t p) {
+  CmdMsg m = {Cmd::SetPin, p, {}};
+  if (cmdQueue) xQueueSend(cmdQueue, &m, 0);
+}
+
+void forget() {
+  CmdMsg m = {Cmd::Forget, 0, {}};
+  if (cmdQueue) xQueueSend(cmdQueue, &m, 0);
+}
+
+bool send(const String &command) {
+  if (current != Status::Ready) return false;
+  CmdMsg m = {Cmd::Send, 0, {}};
+  strncpy(m.text, command.c_str(), sizeof(m.text) - 1);
+  return cmdQueue && xQueueSend(cmdQueue, &m, 0) == pdTRUE;
+}
+
+State state() {
+  Guard g;
+  return lampState;
+}
+uint32_t frameSnapshot(uint8_t out[256]) {
+  Guard g;
+  memcpy(out, pixels, 256);
+  return pixelsVersion;
+}
 uint32_t frameVersion() { return pixelsVersion; }
-const std::vector<Item> &catalog() { return items; }
+std::vector<Item> catalog() {
+  Guard g;
+  return items;
+}
 
 }  // namespace lamp

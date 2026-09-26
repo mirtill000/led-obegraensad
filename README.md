@@ -492,6 +492,14 @@ the keycaps), Enter chooses, `` ` `` goes back.
 - **Luminosita'** - `,` `/` in steps of 16
 - **Impostazioni** - `F` forgets the lamp (after changing its PIN)
 
+The screen and keyboard run on their own task pinned to core 1, redrawing
+a single full-screen off-screen canvas (in internal SRAM, this board has no
+PSRAM) at ~30 fps and pushing it in one SPI burst; the Bluetooth work,
+whose scan blocks for a few seconds at a time, runs on a separate task on
+core 0 and reaches the UI only through thread-safe snapshots and a command
+queue. That split is what keeps the screen from flickering or freezing
+while it searches or reconnects.
+
 **The protocol**, for other remotes: service
 `8f3e0000-5c1a-4a6b-9b8e-0b5e6a1d0bea` with four characteristics
 (`...0001` to `...0004`, see `include/ble.h`):

@@ -81,11 +81,12 @@ void header() {
   canvas.setTextColor(FG);
   canvas.setTextSize(1);
   const lamp::Status st = lamp::status();
-  String left = st == lamp::Status::Ready ? "Lampada: " + plain(lamp::state().modeName)
+  const lamp::State s = lamp::state();
+  String left = st == lamp::Status::Ready ? "Lampada: " + plain(s.modeName)
                 : st == lamp::Status::NeedPin ? "Abbinamento"
                                               : "Cerco la lampada...";
   canvas.drawString(left, 3, 3);
-  const String right = lamp::state().time + "  " + String(M5Cardputer.Power.getBatteryLevel()) + "%";
+  const String right = s.time + "  " + String(M5Cardputer.Power.getBatteryLevel()) + "%";
   canvas.drawRightString(right, W - 3, 3);
 }
 
@@ -96,7 +97,8 @@ void footer(const char *hint) {
 
 // The lamp's panel, `cell` pixels per LED, at (x, y).
 void preview(int x, int y, int cell) {
-  const uint8_t *f = lamp::frame();
+  uint8_t f[256];
+  lamp::frameSnapshot(f);
   canvas.fillRect(x - 1, y - 1, cell * 16 + 2, cell * 16 + 2, 0x18E3);
   for (int i = 0; i < 256; i++) {
     const uint8_t v = f[i] * 17;
@@ -167,7 +169,8 @@ void drawList() {
   for (int i = first; i < (int)listItems.size() && i < first + rows; i++) {
     const int y = 18 + (i - first) * 14;
     const lamp::Item &it = listItems[i];
-    const bool current = it.id == lamp::state().mode || it.id == lamp::state().game;
+    const lamp::State s = lamp::state();
+    const bool current = it.id == s.mode || it.id == s.game;
     if (i == listPos) canvas.fillRoundRect(2, y - 2, W - 4, 13, 3, ACCENT);
     canvas.setTextColor(i == listPos ? BG : current ? ACCENT : FG);
     canvas.drawString(plain(it.name) + (current ? "  <" : ""), 8, y);
@@ -230,7 +233,7 @@ void draw() {
       case Screen::Settings: drawSettings(); break;
     }
   }
-  canvas.pushSprite(0, 0);
+  canvas.pushSprite(&M5Cardputer.Display, 0, 0);
 }
 
 // --- input -------------------------------------------------------------------
@@ -377,29 +380,45 @@ void keys() {
 
 }  // namespace
 
+// The keyboard and the screen: their own task on core 1. It is the only
+// task that touches the display and the I2C bus (keyboard, battery), so
+// there is never contention there, and it redraws at a steady ~30 fps
+// whatever the Bluetooth is doing - which is what stops the flicker.
+void uiTask(void *) {
+  for (;;) {
+    M5Cardputer.update();
+    keys();
+    draw();
+    vTaskDelay(pdMS_TO_TICKS(33));
+  }
+}
+
+// Bluetooth on core 0, next to the BLE controller: its scan blocks for a
+// few seconds at a time, but that can no longer freeze the screen.
+void bleTask(void *) {
+  for (;;) {
+    lamp::loop();
+    vTaskDelay(pdMS_TO_TICKS(20));
+  }
+}
+
 void setup() {
   auto cfg = M5.config();
   M5Cardputer.begin(cfg, true);
   M5Cardputer.Display.setRotation(1);
   M5Cardputer.Display.setBrightness(120);
-  canvas.createSprite(W, H);
+  // The render buffer (240x135x2 = ~65 KB): explicitly in internal SRAM -
+  // this board (ESP32-S3FN8) has no PSRAM. A single full-screen canvas
+  // pushed in one SPI burst is what avoids tearing.
+  canvas.setPsram(false);
+  if (!canvas.createSprite(W, H)) {
+    M5Cardputer.Display.println("Errore: memoria schermo");
+  }
   canvas.setFont(&fonts::Font0);
   canvas.setTextSize(1);
-  lamp::begin();
-  draw();
+  lamp::begin();  // creates the data mutex before either task runs
+  xTaskCreatePinnedToCore(uiTask, "ui", 8192, nullptr, 2, nullptr, 1);
+  xTaskCreatePinnedToCore(bleTask, "ble", 8192, nullptr, 1, nullptr, 0);
 }
 
-void loop() {
-  M5Cardputer.update();
-  keys();
-  lamp::loop();
-  static uint32_t lastDraw = 0, lastFrame = 0;
-  // Redraw on a new lamp picture (the remote screen), else a few times a
-  // second (cursor, clock).
-  if (lamp::frameVersion() != lastFrame || millis() - lastDraw > 250) {
-    lastFrame = lamp::frameVersion();
-    lastDraw = millis();
-    draw();
-  }
-  delay(5);
-}
+void loop() { vTaskDelay(pdMS_TO_TICKS(1000)); }
