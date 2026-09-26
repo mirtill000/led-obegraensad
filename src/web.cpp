@@ -178,7 +178,7 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   <section data-mode="quotes" hidden>
     <h2>Frasi</h2>
     <textarea id="quotes" spellcheck="false"></textarea>
-    <p class="hint">Una frase per riga: ogni ora ne compare una diversa, a pagine di 3 righe ferme (font 4 pixel, solo maiuscole). La velocità regola quanto resta ogni pagina. <span id="quotesInfo"></span></p>
+    <p class="hint">Una frase per riga: ogni ora ne compare una diversa, a pagine ferme nel font scelto in Display. Se la lista è vuota (o premi «Ripristina») usa le 100 frasi predefinite di <code>content/frasi_dell_ora.txt</code>; una lista tua le sostituisce. La velocità regola quanto resta ogni pagina. <span id="quotesInfo"></span></p>
     <div class="row">
       <button class="save" id="saveQuotes">Salva frasi</button>
       <button class="link" id="resetQuotes">Ripristina quelle predefinite</button>
