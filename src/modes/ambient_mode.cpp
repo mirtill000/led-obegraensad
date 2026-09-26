@@ -28,6 +28,19 @@ void AmbientMode::play(Animation *animation) {
   animation_->start();
 }
 
+// "auto" (or an animation that no longer exists): the animations take
+// turns. Asked on every loop(), so the lookup is redone only when the
+// setting changes.
+static bool autoRotation() {
+  static String checked;
+  static bool isAuto = true;
+  if (checked != settings.ambient) {
+    checked = settings.ambient;
+    isAuto = !findAnimation(checked);
+  }
+  return isAuto;
+}
+
 void AmbientMode::start() {
   Animation *chosen = override_ ? findAnimation(override_) : findAnimation(settings.ambient);
   play(chosen ? chosen : pickAuto());
@@ -42,7 +55,7 @@ bool AmbientMode::setOverride(const char *animationId) {
 
 void AmbientMode::action() {
   if (override_) return;  // the night schedule decides
-  if (!findAnimation(settings.ambient)) {
+  if (autoRotation()) {
     autoIndex_++;
     play(pickAuto());
     return;
@@ -56,7 +69,7 @@ void AmbientMode::action() {
   play(next);
 }
 
-bool AmbientMode::demoForced() const { return override_ || !findAnimation(settings.ambient); }
+bool AmbientMode::demoForced() const { return override_ || autoRotation(); }
 
 bool AmbientMode::input(char key) {
   if (!animation_ || !animation_->isGame() || demoForced() || demoMode(animation_->id())) return false;
@@ -66,7 +79,7 @@ bool AmbientMode::input(char key) {
 
 void AmbientMode::update(uint32_t now) {
   if (!animation_) start();
-  if (!override_ && !findAnimation(settings.ambient) && now - since_ >= AUTO_SWITCH_MS) {
+  if (!override_ && autoRotation() && now - since_ >= AUTO_SWITCH_MS) {
     autoIndex_++;
     play(pickAuto());
   }

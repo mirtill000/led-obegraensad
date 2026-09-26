@@ -37,11 +37,12 @@ The animations use it for fading trails, fire, twinkling stars and soft
 edges.
 
 Each plane has to change at exactly the right moment, or the LEDs visibly
-tremble. A hardware timer (gptimer) ticks every 100 us on CPU core 1 -
-WiFi runs on core 0 - and when a plane's time is up its interrupt wakes a
+tremble. A hardware timer (gptimer) on CPU core 1 - WiFi runs on core 0 -
+fires once per plane, when its time is up (about 1600 interrupts a second,
+re-armed each time for the next plane's length), and its interrupt wakes a
 top-priority task on the same core, which latches the plane already
 shifted into the registers and then shifts in the next one while it is
-shown: the switch happens on the tick, whatever the network is doing. It
+shown: the switch happens on time, whatever the network is doing. It
 costs a few percent of core 1. `REFRESH_HW_TIMER` in
 `include/constants.h` switches back to the older timing (an esp_timer
 callback on core 0, which WiFi traffic can delay); `GRAYSCALE false` goes
@@ -157,14 +158,22 @@ game it moves right above the pad, so you can play without looking at the
 lamp.
 
 The page stays up to date by itself: it keeps a live connection to the
-lamp (Server-Sent Events, `http://<lamp>:81/events`, up to 3 pages at a
-time) and gets a `frame` event whenever the panel changes (at most every
+lamp (Server-Sent Events, `http://<lamp>:81/events`) and gets a `frame` event whenever the panel changes (at most every
 150 ms, 256 levels in hex) and a `state` event whenever anything in
 `/api/state` changes (checked every second) - so changes made from another
 phone, the playlist or the night schedule show up within a second, and
-nothing is sent while the panel is still. If that connection can't be made
-the page falls back to polling `GET /api/frame` five times a second and
-`/api/state` every 15 s.
+nothing is sent while the panel is still (state checked every 2 s). Game
+keys go to the same port (`GET :81/input?k=L`) on a kept-alive connection,
+so a held arrow doesn't open a new connection ten times a second. Port 81
+never blocks: what a connection can't take yet waits in its own buffer
+(and meanwhile only the latest frame is sent), and a page that stops
+reading for 5 s - a phone going to sleep mid-game - is dropped instead of
+freezing the panel. If port 81 can't be reached the page falls back to
+polling `GET /api/frame` five times a second, `/api/state` every 15 s and
+`POST /api/input` for keys.
+
+If loop() ever gets stuck for 20 s a watchdog restarts the lamp (the
+diagnostics then say "watchdog" as the last restart's reason).
 
 Below it are the modes; the one on the panel is highlighted,
 with its own command button ("next quote", "jump", ...; the space bar
@@ -219,7 +228,9 @@ animation menu, ...). General settings are in collapsible sections:
   from the Internet, so they need a port forward or a tunnel to the lamp.
 - **Diagnostica** - uptime and why the lamp last restarted, free memory,
   chip temperature, firmware; WiFi signal and address; the last weather,
-  Wikipedia and calendar fetches; the pages connected live; and how steady the grayscale refresh is:
+  Wikipedia and calendar fetches; the pages connected live; how many
+  rounds the main loop makes a second and the longest one (over a few
+  hundred ms the panel stood still that long); and how steady the grayscale refresh is:
   plane changes done and missed, average and worst delay after the timer
   tick (`GET /api/diag`; refreshed every 2 s while the section is open).
 

@@ -26,7 +26,7 @@
 #include "weather.h"
 
 static WebServer server(80);
-static WiFiServer events(81);  // live updates (see eventsLoop())
+static WiFiServer events(81);  // live updates and game keys (see liveLoop())
 
 static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
 <html lang="it">
@@ -431,8 +431,8 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   <details id="diagBox">
     <summary>Diagnostica</summary>
     <table class="diag" id="diag"></table>
-    <button class="link" id="diagReset">Azzera le statistiche dei LED</button>
-    <p class="hint">Si aggiorna ogni 2 secondi mentre questa sezione è aperta. «Cambi di livello saltati» e «ritardo» dicono quanto è stabile la scala di grigi: se crescono mentre i LED tremano, il disturbo viene dal rinfresco.</p>
+    <button class="link" id="diagReset">Azzera le statistiche</button>
+    <p class="hint">Si aggiorna ogni 2 secondi mentre questa sezione è aperta. «Cambi di livello saltati» e «ritardo» dicono quanto è stabile la scala di grigi: se crescono mentre i LED tremano, il disturbo viene dal rinfresco. «Il più lungo» del ciclo principale sopra qualche centinaio di ms vuol dire che la lampada si è fermata per quel tempo.</p>
   </details>
 
   <details id="updateBox">
@@ -645,7 +645,15 @@ function renderGame() {
 }
 // Controls go out on touch/press, not on release, and don't wait for an
 // answer: every millisecond counts over WiFi.
-function sendKey(key) { fetch('/api/input', { method: 'POST', body: new URLSearchParams({ key }), keepalive: true }).catch(() => {}); }
+// Game keys go to port 81 on a kept-alive connection (no new connection
+// per key); if that fails, to /api/input.
+let fastKeys = true;
+function sendKey(key) {
+  const slow = () => fetch('/api/input', { method: 'POST', body: new URLSearchParams({ key }), keepalive: true }).catch(() => {});
+  if (!fastKeys) return slow();
+  fetch('http://' + location.hostname + ':81/input?k=' + key, { mode: 'no-cors', cache: 'no-store' })
+    .catch(() => { fastKeys = false; slow(); });
+}
 // Paddle games repeat the arrow while it is held down.
 let repeatTimer = null;
 function stopRepeat() { clearInterval(repeatTimer); repeatTimer = null; }
@@ -1268,6 +1276,7 @@ function loadDiag() {
       ['Meteo', d.weather + ' · ' + ago(d.weatherAge)],
       ['Wikipedia', d.history || '—'],
       ['Calendario', d.calendar || '—'],
+      ['Ciclo principale', d.loop.perSec.toLocaleString('it-IT') + ' giri al secondo · il più lungo ' + d.loop.maxMs.toLocaleString('it-IT') + ' ms'],
       ['LED (scala di grigi)'],
     ];
     if (d.refresh.hw) {
@@ -1334,7 +1343,7 @@ static String jsonBool(bool b) { return b ? "true" : "false"; }
 
 static String stateJson() {
   String json;
-  json.reserve(4096);
+  json.reserve(8192);  // one allocation: the state is about 6 kB
   json = "{\"mode\":" + jsonString(settings.mode) + ",\"active\":" + jsonString(currentMode()->id());
   json += ",\"night\":" + jsonBool(isNight()) + ",\"playlistPos\":" + String(playlistPosition());
 
@@ -1540,6 +1549,13 @@ static const char *resetReason() {
 }
 
 // Diagnostics: system, network, data sources and the LED refresh.
+static volatile uint32_t loopRounds = 0, loopMaxUs = 0, loopSince = 0;
+
+void noteLoopTime(uint32_t us) {
+  loopRounds = loopRounds + 1;
+  if (us > loopMaxUs) loopMaxUs = us;
+}
+
 static void handleDiag() {
   const Weather w = weatherNow();
   const WebInfo info = webInfoNow();
@@ -1556,7 +1572,9 @@ static void handleDiag() {
   json += ",\"calendar\":" + jsonString(settings.infoCalendar ? info.calendarStatus : String(""));
   json += ",\"refresh\":{\"hw\":" + jsonBool(r.hardwareTimer) + ",\"planes\":" + String(r.planes);
   json += ",\"missed\":" + String(r.missed) + ",\"avg\":" + String(r.avgLatencyUs) + ",\"max\":" + String(r.maxLatencyUs);
-  json += ",\"cycleUs\":" + String(r.cycleUs) + "}}";
+  json += ",\"cycleUs\":" + String(r.cycleUs) + "}";
+  const uint32_t secs = max<uint32_t>(1, (millis() - loopSince) / 1000);
+  json += ",\"loop\":{\"perSec\":" + String(loopRounds / secs) + ",\"maxMs\":" + String(loopMaxUs / 1000.0f, 1) + "}}";
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "application/json", json);
 }
@@ -1941,6 +1959,7 @@ static void showUpdateProgress(size_t done, size_t total) {
 
 static void handleUpdateUpload() {
   HTTPUpload &up = server.upload();
+  feedLoopWDT();  // an upload takes longer than the watchdog allows one loop()
   const size_t total = server.clientContentLength();
   switch (up.status) {
     case UPLOAD_FILE_START:
@@ -1988,6 +2007,8 @@ void webBegin() {
   server.on("/api/diag", HTTP_GET, handleDiag);
   server.on("/api/diag/reset", HTTP_POST, [] {
     Display::resetRefreshStats();
+    loopRounds = loopMaxUs = 0;
+    loopSince = millis();
     server.send(204);
   });
   server.on("/api/mode", HTTP_POST, handleMode);
@@ -2021,23 +2042,39 @@ void webBegin() {
 }
 
 // ---------------------------------------------------------------------------
-// Live updates: Server-Sent Events on port 81 (/events). The page keeps one
-// connection open and gets a "frame" event when the panel changes (at most
-// every 150 ms) and a "state" event when the state changes (checked every
-// second), instead of polling /api/frame five times a second. The page
-// falls back to polling if the connection fails.
+// Port 81: live updates and game keys, served without ever blocking loop().
+//
+//   GET /events     Server-Sent Events: a "frame" event when the panel
+//                   changes (at most every 150 ms) and a "state" event when
+//                   /api/state changes (checked every 2 s).
+//   GET /input?k=L  a game key (L R U D A), answered 204 on a kept-alive
+//                   connection, so held keys don't open a TCP connection
+//                   each.
+//
+// Everything goes out with non-blocking send(): what the socket can't take
+// yet waits in the connection's own buffer, and while it waits no new frame
+// is queued (the next one sent is simply the latest). A connection that
+// takes nothing for STALL_MS (a phone gone to sleep, out of range) is
+// closed. The port-80 WebServer instead writes with blocking calls that can
+// hold loop() for seconds when a client stops reading, which froze the
+// panel mid-game.
 
-static const int MAX_EVENT_CLIENTS = 3;
-static const uint32_t FRAME_EVERY_MS = 150, STATE_EVERY_MS = 1000, PING_EVERY_MS = 15000;
+#include <lwip/sockets.h>
 
-struct EventClient {
+static const int MAX_LIVE = 5;
+static const uint32_t FRAME_EVERY_MS = 150, STATE_EVERY_MS = 2000, PING_EVERY_MS = 15000;
+static const uint32_t STALL_MS = 5000, IDLE_MS = 15000, REQUEST_MS = 3000;
+static const size_t MAX_BACKLOG = 16384;
+
+struct LiveClient {
   WiFiClient client;
-  bool ready = false;     // headers sent
-  uint32_t since = 0;     // connected at
-  uint32_t lastFrame = 0; // hash of the last frame / state sent
-  uint32_t lastState = 0;
+  bool sse = false;         // answered /events: now only receives events
+  String in, out;           // request being read; bytes not sent yet
+  uint32_t since = 0, lastActive = 0, lastProgress = 0;
+  uint32_t lastFrame = 0, lastState = 0;  // hashes of what it last got
+  bool closeAfter = false;  // close once `out` is sent
 };
-static EventClient eventClients[MAX_EVENT_CLIENTS];
+static LiveClient live[MAX_LIVE];
 
 static uint32_t hashOf(const char *s, size_t n) {
   uint32_t h = 2166136261u;  // FNV-1a
@@ -2045,107 +2082,159 @@ static uint32_t hashOf(const char *s, size_t n) {
   return h;
 }
 
-static bool sendEvent(EventClient &c, const char *name, const char *data, size_t length) {
-  String head = String("event: ") + name + "\ndata: ";
-  if (c.client.write((const uint8_t *)head.c_str(), head.length()) != head.length()) return false;
-  if (c.client.write((const uint8_t *)data, length) != length) return false;
-  return c.client.write((const uint8_t *)"\n\n", 2) == 2;
-}
-
-static void drop(EventClient &c) {
+static void drop(LiveClient &c) {
   c.client.stop();
-  c.ready = false;
+  c.sse = c.closeAfter = false;
+  c.in = String();
+  c.out = String();
 }
 
 int liveClients() {
   int n = 0;
-  for (EventClient &c : eventClients) n += c.ready && c.client.connected();
+  for (LiveClient &c : live) n += c.sse && c.client.connected();
   return n;
 }
 
-static void eventsLoop() {
+// Sends what the socket takes now; false if the connection is gone.
+static bool flush(LiveClient &c, uint32_t now) {
+  if (!c.out.length()) {
+    c.lastProgress = now;
+    return true;
+  }
+  const int sent = ::send(c.client.fd(), c.out.c_str(), c.out.length(), MSG_DONTWAIT);
+  if (sent > 0) {
+    c.out.remove(0, sent);
+    c.lastProgress = now;
+    return true;
+  }
+  if (sent < 0 && errno != EAGAIN && errno != EWOULDBLOCK) return false;
+  return now - c.lastProgress < STALL_MS;
+}
+
+// False if the client is too far behind to take more (flush() times it out).
+static bool queue(LiveClient &c, const String &text) {
+  if (c.out.length() + text.length() > MAX_BACKLOG) return false;
+  c.out += text;
+  return true;
+}
+
+static bool queueEvent(LiveClient &c, const char *name, const char *data, size_t length) {
+  String e;
+  e.reserve(length + 24);
+  e = "event: ";
+  e += name;
+  e += "\ndata: ";
+  e.concat(data, length);
+  e += "\n\n";
+  return queue(c, e);
+}
+
+// A complete request in c.in: answer it.
+static void answer(LiveClient &c, uint32_t now) {
+  const int sp = c.in.indexOf(' '), sp2 = c.in.indexOf(' ', sp + 1);
+  const String path = sp > 0 && sp2 > sp ? c.in.substring(sp + 1, sp2) : String();
+  c.in = String();
+  c.lastActive = now;
+  if (path.startsWith("/events")) {
+    queue(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-store\r\n"
+             "Access-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\nretry: 3000\n\n");
+    c.sse = true;
+    c.lastFrame = c.lastState = 0;  // send both right away
+    return;
+  }
+  if (path.startsWith("/input?k=") && path.length() == 10 && strchr("LRUDA", path[9])) {
+    currentMode()->input(path[9]);
+    queue(c, "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nCache-Control: no-store\r\n"
+             "Connection: keep-alive\r\nContent-Length: 0\r\n\r\n");
+    return;
+  }
+  queue(c, "HTTP/1.1 404 Not Found\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+  c.closeAfter = true;
+}
+
+static void liveLoop() {
   const uint32_t now = millis();
-  // New connections: take a free slot (or the oldest one).
+  // New connection: a free slot, else the one idle longest (never a page
+  // receiving events, if there is another choice).
   if (events.hasClient()) {
-    EventClient *slot = nullptr;
-    for (EventClient &c : eventClients) {
+    LiveClient *slot = nullptr;
+    for (LiveClient &c : live) {
       if (!c.client.connected()) {
         slot = &c;
         break;
       }
-      if (!slot || c.since < slot->since) slot = &c;
+      if (!slot || (slot->sse && !c.sse) || (slot->sse == c.sse && c.lastActive < slot->lastActive)) slot = &c;
     }
     drop(*slot);
     slot->client = events.accept();
     slot->client.setNoDelay(true);
-    slot->since = now;
-    slot->lastFrame = slot->lastState = 0;
+    // Notice a phone that vanished within about half a minute.
+    int on = 1, idle = 10, interval = 5, count = 3;
+    const int fd = slot->client.fd();
+    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle));
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+    slot->since = slot->lastActive = slot->lastProgress = now;
   }
 
-  static uint32_t lastFrameAt = 0, lastStateAt = 0, lastPingAt = 0;
-  bool anyReady = false;
-  for (EventClient &c : eventClients) {
+  bool anySse = false;
+  for (LiveClient &c : live) {
     if (!c.client.connected()) {
-      c.ready = false;
+      if (c.out.length() || c.in.length()) drop(c);
       continue;
     }
-    if (c.ready) {
-      anyReady = true;
-      while (c.client.available()) c.client.read();  // nothing to read after the request
-      continue;
+    // Requests (a page receiving events sends nothing more; drain it).
+    int n = c.client.available();
+    while (n-- > 0) {
+      const int ch = c.client.read();
+      if (ch < 0) break;
+      if (c.sse) continue;
+      if (c.in.length() < 512) c.in += (char)ch;
+      if (c.in.endsWith("\r\n\r\n")) answer(c, now);
     }
-    // Waiting for the request: read it up to the blank line, then answer
-    // with the stream's headers.
-    if (now - c.since > 3000) {
+    if (!c.sse && c.in.length() && now - c.lastActive > REQUEST_MS && !c.in.endsWith("\r\n\r\n")) c.in = String();
+    if (!flush(c, now) || (c.closeAfter && !c.out.length()) || (!c.sse && now - c.lastActive > IDLE_MS)) {
       drop(c);
       continue;
     }
-    while (c.client.available()) {
-      const String line = c.client.readStringUntil('\n');
-      if (line.length() <= 1) {  // "\r" or "": end of the headers
-        c.client.print("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-store\r\n"
-                       "Access-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\nretry: 3000\n\n");
-        c.ready = true;
-        anyReady = true;
-        lastFrameAt = lastStateAt = 0;  // send both right away
-        break;
-      }
-    }
+    anySse |= c.sse;
   }
-  if (!anyReady) return;
+  if (!anySse) return;
 
+  static uint32_t lastFrameAt = 0, lastStateAt = 0, lastPingAt = 0;
   if (now - lastFrameAt >= FRAME_EVERY_MS) {
     lastFrameAt = now;
     char frame[TOTAL_PIXELS * 2 + 1];
     frameHex(frame);
     const uint32_t h = hashOf(frame, TOTAL_PIXELS * 2);
-    for (EventClient &c : eventClients) {
-      if (c.ready && c.lastFrame != h) {
-        c.lastFrame = h;
-        if (!sendEvent(c, "frame", frame, TOTAL_PIXELS * 2)) drop(c);
-      }
+    for (LiveClient &c : live) {
+      if (!c.sse || c.lastFrame == h || c.out.length()) continue;  // busy: it gets a later frame
+      if (queueEvent(c, "frame", frame, TOTAL_PIXELS * 2)) c.lastFrame = h;
     }
   }
-  if (now - lastStateAt >= STATE_EVERY_MS) {
+  bool stateDue = now - lastStateAt >= STATE_EVERY_MS;
+  for (LiveClient &c : live) stateDue |= c.sse && c.lastState == 0;  // just connected
+  if (stateDue) {
     lastStateAt = now;
     const String json = stateJson();
     const uint32_t h = hashOf(json.c_str(), json.length());
-    for (EventClient &c : eventClients) {
-      if (c.ready && c.lastState != h) {
-        c.lastState = h;
-        if (!sendEvent(c, "state", json.c_str(), json.length())) drop(c);
-      }
+    for (LiveClient &c : live) {
+      if (c.sse && c.lastState != h && queueEvent(c, "state", json.c_str(), json.length())) c.lastState = h;
     }
   }
   if (now - lastPingAt >= PING_EVERY_MS) {  // keeps idle connections (and proxies) alive
     lastPingAt = now;
-    for (EventClient &c : eventClients) {
-      if (c.ready && c.client.write((const uint8_t *)": ping\n\n", 8) != 8) drop(c);
+    for (LiveClient &c : live) {
+      if (c.sse && !c.out.length()) queue(c, ": ping\n\n");
     }
+  }
+  for (LiveClient &c : live) {
+    if (c.sse && c.out.length() && !flush(c, now)) drop(c);
   }
 }
 
 void webLoop() {
   server.handleClient();
-  eventsLoop();
+  liveLoop();
 }

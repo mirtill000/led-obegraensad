@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
+#include <esp_task_wdt.h>
 
 #include "constants.h"
 #include "display.h"
@@ -10,6 +11,8 @@
 #include "settings.h"
 #include "timekeeping.h"
 #include "web.h"
+
+static const uint32_t WATCHDOG_S = 20;
 
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -81,10 +84,19 @@ void setup() {
   // Show where to find the control page, then start the saved mode.
   display.scrollTextOnce(ip.c_str(), 60);
   refreshModes();
+
+  // Watchdog: if loop() ever gets stuck for WATCHDOG_S, restart instead of
+  // staying frozen (the diagnostics then show "watchdog" as the last
+  // restart's reason).
+  const esp_task_wdt_config_t wdt = {.timeout_ms = WATCHDOG_S * 1000, .idle_core_mask = 1, .trigger_panic = true};
+  esp_task_wdt_reconfigure(&wdt);
+  enableLoopWDT();
 }
 
 void loop() {
+  const uint32_t start = micros();
   webLoop();
   checkButton();
   updateMode();
+  noteLoopTime(micros() - start);
 }

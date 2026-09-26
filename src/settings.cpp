@@ -73,7 +73,18 @@ uint32_t scaledInterval(const char *modeId, uint32_t baseMs) {
 }
 
 bool demoMode(const char *gameId) {
-  return (String(',') + settings.demoOff + ',').indexOf(String(',') + gameId + ',') < 0;
+  // Is gameId one of the comma-separated ids in demoOff? (Called on every
+  // frame of a game: no String copies.)
+  const char *list = settings.demoOff.c_str();
+  const size_t n = strlen(gameId);
+  for (const char *p = list; *p;) {
+    const char *end = strchr(p, ',');
+    const size_t len = end ? (size_t)(end - p) : strlen(p);
+    if (len == n && strncmp(p, gameId, n) == 0) return false;
+    if (!end) break;
+    p = end + 1;
+  }
+  return true;
 }
 
 void setDemoMode(const char *gameId, bool demo) {

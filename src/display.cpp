@@ -50,9 +50,9 @@ static const uint8_t positions[TOTAL_PIXELS] = {
 // proportional to its level. Three buffers let render() hand over a new
 // frame without ever touching the one being displayed.
 //
-// With REFRESH_HW_TIMER a hardware timer (gptimer) ticks every TICK_US on
-// core 1, away from WiFi on core 0. When a plane's time is up its
-// interrupt wakes a top-priority task on core 1, which first latches the
+// With REFRESH_HW_TIMER a hardware timer (gptimer) on core 1, away from
+// WiFi on core 0, counts plane times in TICK_US units. When a plane's time
+// is up its interrupt wakes a top-priority task on core 1, which first latches the
 // plane already shifted into the registers - so the plane changes exactly
 // on the tick - and then shifts in the next one while it is shown. The
 // older path (esp_timer, core 0) is kept behind the switch.
@@ -96,22 +96,21 @@ static void takePendingFrame() {
 // --- hardware timer path ---------------------------------------------------
 static gptimer_handle_t tickTimer;
 static TaskHandle_t refreshTask;
-static volatile uint8_t isrPlane = PLANES - 1;  // plane being shown
-static volatile uint8_t isrTicks = 0;
+static volatile uint8_t isrPlane = PLANES - 1;  // plane being shown (onTick() moves on first)
 static volatile int64_t notifiedAt = 0;  // when the interrupt woke the task, us
 
 // Refresh statistics for the diagnostics page (hardware path only).
 static volatile uint32_t statPlanes = 0, statMissed = 0, statMaxLatency = 0;
 static volatile uint64_t statLatencySum = 0;
 
-static bool IRAM_ATTR onTick(gptimer_handle_t, const gptimer_alarm_event_data_t *, void *) {
-  const uint8_t ticks = isrTicks + 1;
-  if (ticks < PLANE_TICKS[isrPlane]) {
-    isrTicks = ticks;
-    return false;
-  }
-  isrTicks = 0;
+// The alarm fires once per plane, when its time is up, and is re-armed for
+// the length of the next one (a fixed 100 us tick would interrupt the core
+// 10000 times a second; this is 1600).
+static bool IRAM_ATTR onTick(gptimer_handle_t timer, const gptimer_alarm_event_data_t *event, void *) {
   isrPlane = isrPlane + 1 == PLANES ? 0 : isrPlane + 1;
+  gptimer_alarm_config_t alarm = {};
+  alarm.alarm_count = event->alarm_value + PLANE_TICKS[isrPlane] * TICK_US;
+  gptimer_set_alarm_action(timer, &alarm);
   notifiedAt = esp_timer_get_time();
   BaseType_t woken = pdFALSE;
   vTaskNotifyGiveFromISR(refreshTask, &woken);
@@ -145,9 +144,7 @@ static void startHardwareRefresh() {
   const gptimer_event_callbacks_t callbacks = {.on_alarm = onTick};
   gptimer_register_event_callbacks(tickTimer, &callbacks, nullptr);  // interrupt on this core (1)
   gptimer_alarm_config_t alarm = {};
-  alarm.alarm_count = TICK_US;
-  alarm.reload_count = 0;
-  alarm.flags.auto_reload_on_alarm = true;
+  alarm.alarm_count = PLANE_TICKS[0] * TICK_US;  // the first plane, then onTick() re-arms it
   gptimer_set_alarm_action(tickTimer, &alarm);
   gptimer_enable(tickTimer);
   gptimer_start(tickTimer);
