@@ -509,9 +509,8 @@ After the first flash over USB, later versions can go in from the page:
 **Aggiornamento firmware** (at the bottom) shows the installed version (git
 commit and build time) and takes the file `.pio/build/xhs3e/firmware.bin`
 produced by `pio run` (not `firmware.factory.bin`). While it uploads, the
-panel shows the percentage, the firmware's own bits going by (two bytes of
-every chunk received, scrolling up) and a progress bar with a blinking
-"packet" running along it; at the end "OK" (or "ERR" blinking if the lamp
+panel shows the percentage and a progress bar at the bottom with a
+blinking "packet" running along it; at the end "OK" (or "ERR" blinking if the lamp
 rejects the file); the new image is written to the spare app
 partition and verified, then the lamp restarts on it, keeping all settings
 and drawings. If the upload fails or the file isn't valid, the lamp keeps

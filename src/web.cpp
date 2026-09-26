@@ -2001,28 +2001,13 @@ static void handleDraw() {
 
 static String updateError;
 
-// The panel during an update, geek style:
-//   rows 1-4    the percentage
-//   rows 6-11   the firmware itself going by: two bytes of each chunk
-//               received, as bits, scrolling up (the newest row brightest)
-//   rows 13-14  progress bar, a bright "packet" running along its edge
-static void showUpdateProgress(size_t done, size_t total, const uint8_t *data = nullptr, size_t length = 0) {
-  static uint16_t bits[6];
-  if (done == 0) memset(bits, 0, sizeof(bits));
-  if (data && length >= 2) {
-    memmove(bits, bits + 1, sizeof(bits) - sizeof(bits[0]));
-    bits[5] = data[0] << 8 | data[length / 2];
-  }
+// The panel during an update: the percentage in the middle and a progress
+// bar at the bottom (rows 13-14), a bright "packet" blinking at its end.
+static void showUpdateProgress(size_t done, size_t total) {
   display.clear();
   const int percent = total ? min<int>(100, done * 100 / total) : 0;
   const String label = String(percent) + "%";
-  Pager::drawText((COLS - Pager::textWidth(label)) / 2, 1, label);
-  for (int r = 0; r < 6; r++) {
-    const uint8_t level = r == 5 ? 255 : 30 + r * 25;
-    for (int x = 0; x < COLS; x++) {
-      if (bits[r] & (0x8000 >> x)) display.setLevel(x, 6 + r, level);
-    }
-  }
+  Pager::drawText((COLS - Pager::textWidth(label)) / 2, 5, label);
   const float filled = total ? (float)done / total * COLS : 0;
   const int head = (int)filled;
   for (int x = 0; x < COLS; x++) {
@@ -2044,7 +2029,7 @@ static void showUpdateResult(bool ok) {
   for (int blink = 0; blink < (ok ? 1 : 3); blink++) {
     display.clear();
     const char *label = ok ? "OK" : "ERR";
-    Pager::drawText((COLS - Pager::textWidth(label)) / 2, 6, label);
+    Pager::drawText((COLS - Pager::textWidth(label)) / 2, 5, label);
     for (int x = 0; x < COLS; x++) {
       display.setLevel(x, 13, ok ? 255 : (x % 2 ? 255 : 0));
       display.setLevel(x, 14, ok ? 255 : (x % 2 ? 0 : 255));
@@ -2077,7 +2062,7 @@ static void handleUpdateUpload() {
       if (updateError.length() == 0 && Update.write(up.buf, up.currentSize) != up.currentSize) {
         updateError = Update.errorString();  // e.g. "Wrong Magic Byte": not an ESP32 firmware
       }
-      showUpdateProgress(up.totalSize + up.currentSize, total, up.buf, up.currentSize);
+      showUpdateProgress(up.totalSize + up.currentSize, total);
       break;
     case UPLOAD_FILE_END:
       if (updateError.length() == 0 && !Update.end(true)) updateError = Update.errorString();
