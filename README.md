@@ -272,9 +272,9 @@ Current modes:
   The built-in list is 100 motivational quotes from
   `content/frasi_dell_ora.txt` (one per line, UTF-8; `scripts/quotes.py`
   turns it into a header at every build, so edit the text file). On the
-  page you can replace it with your own (up to 16000 characters, saved in
-  flash as `/quotes.txt`); "restore" brings back the built-in one. Button:
-  next quote
+  page you can add your own (up to 16000 characters, saved in flash as
+  `/quotes.txt`): they join the 100 in the rotation, and "Cancella le mie
+  frasi" removes them. Button: next quote
 - **Orologio e meteo** - one screen, numbers in the text font: on top the
   temperature with a
   one-pixel degree sign and an animated weather icon (falling rain or snow,

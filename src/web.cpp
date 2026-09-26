@@ -178,10 +178,10 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
   <section data-mode="quotes" hidden>
     <h2>Frasi</h2>
     <textarea id="quotes" spellcheck="false"></textarea>
-    <p class="hint">Una frase per riga: ogni ora ne compare una diversa, a pagine ferme nel font scelto in Display. Se la lista è vuota (o premi «Ripristina») usa le 100 frasi predefinite di <code>content/frasi_dell_ora.txt</code>; una lista tua le sostituisce. La velocità regola quanto resta ogni pagina. <span id="quotesInfo"></span></p>
+    <p class="hint">Scrivi qui le tue frasi, una per riga: si aggiungono alle 100 predefinite (<code>content/frasi_dell_ora.txt</code>) e ogni ora ne compare una diversa, a pagine ferme nel font scelto in Display. La velocità regola quanto resta ogni pagina. <span id="quotesInfo"></span></p>
     <div class="row">
       <button class="save" id="saveQuotes">Salva frasi</button>
-      <button class="link" id="resetQuotes">Ripristina quelle predefinite</button>
+      <button class="link" id="resetQuotes">Cancella le mie frasi</button>
     </div>
   </section>
 
@@ -1100,13 +1100,13 @@ function loadQuotes() {
   quotesLoaded = true;
   return fetch('/api/quotes').then((r) => r.json()).then((q) => {
     if (!dirty.quotes) $('quotes').value = q.quotes;
-    $('quotesInfo').textContent = (q.custom ? 'Le tue frasi: ' : 'Frasi predefinite: ') + q.count + '.';
+    $('quotesInfo').textContent = 'In rotazione: ' + q.count + ' frasi (' + q.builtIn + ' predefinite + ' + (q.count - q.builtIn) + ' tue).';
   }).catch((e) => { quotesLoaded = false; throw e; });
 }
 $('saveQuotes').onclick = () => post('/api/quotes', { quotes: $('quotes').value })
   .then(() => { dirty.quotes = false; return loadQuotes(); }).then(() => status('Frasi salvate')).catch(fail);
 $('resetQuotes').onclick = () => post('/api/quotes', { quotes: '' })
-  .then(() => { dirty.quotes = false; return loadQuotes(); }).then(() => status('Frasi predefinite ripristinate')).catch(fail);
+  .then(() => { dirty.quotes = false; return loadQuotes(); }).then(() => status('Frasi aggiunte cancellate')).catch(fail);
 $('openPlace').onclick = () => { $('placeBox').open = true; $('placeBox').scrollIntoView({ behavior: 'smooth' }); };
 $('demoStyle').onchange = (e) => post('/api/settings', { demoStyle: e.target.value })
   .then(() => status('Stile cambiato')).catch(fail);
@@ -1566,11 +1566,12 @@ static void handleQuotes() {
 // The quotes list being used (the user's, or the built-in one) and how
 // many there are.
 static void sendQuotes() {
-  const bool custom = settings.quotes.length() > 0;
-  const String list = custom ? settings.quotes : String(QuotesMode::defaultQuotes());
+  // The textarea holds only the quotes added on the page; the built-in ones
+  // are always shown too.
   server.send(200, "application/json",
-              "{\"custom\":" + jsonBool(custom) + ",\"count\":" + String(QuotesMode::count()) +
-                  ",\"quotes\":" + jsonString(list) + "}");
+              "{\"custom\":" + jsonBool(settings.quotes.length() > 0) + ",\"builtIn\":" +
+                  String(QuotesMode::builtInCount()) + ",\"count\":" + String(QuotesMode::count()) +
+                  ",\"quotes\":" + jsonString(settings.quotes) + "}");
 }
 
 static const char *resetReason() {

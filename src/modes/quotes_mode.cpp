@@ -6,12 +6,6 @@
 // Built-in list, generated from content/frasi_dell_ora.txt at build time.
 #include "quotes_builtin.h"
 
-const char *QuotesMode::defaultQuotes() { return BUILTIN_QUOTES; }
-
-static const String &activeList() {
-  static String builtIn = BUILTIN_QUOTES;
-  return settings.quotes.length() ? settings.quotes : builtIn;
-}
 
 // Splits the list into non-empty lines; returns how many there are and, if
 // `want` is in range, that line in `out`.
@@ -31,6 +25,22 @@ static uint16_t quoteLine(const String &list, uint16_t want, String *out) {
   }
   return n;
 }
+
+// The 100 built-in quotes followed by the ones added on the page; rebuilt
+// only when those change.
+static const String &activeList() {
+  static String combined, added;
+  static bool built = false;
+  if (!built || added != settings.quotes) {
+    added = settings.quotes;
+    combined = BUILTIN_QUOTES;
+    if (added.length()) combined += "\n" + added;
+    built = true;
+  }
+  return combined;
+}
+
+uint16_t QuotesMode::builtInCount() { return quoteLine(String(BUILTIN_QUOTES), UINT16_MAX, nullptr); }
 
 uint16_t QuotesMode::currentIndex(uint16_t count) const {
   uint32_t hour;

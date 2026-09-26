@@ -3,11 +3,11 @@
 #include "modes.h"
 #include "pager.h"
 
-// A different quote every hour, shown as still pages of three lines in the
-// 4-row Tiny font (see Pager), again and again; the quote only changes at
-// the end of a pass, so it is never cut off. The list is edited
-// on the web page (settings.quotes, one per line); when that is empty the
-// built-in list is used, generated from content/frasi_dell_ora.txt.
+// A different quote every hour, shown as still pages in the font chosen in
+// Display (see Pager), again and again; the quote only changes at the end
+// of a pass, so it is never cut off. The list is the built-in quotes
+// (generated from content/frasi_dell_ora.txt) followed by those added on the
+// web page (settings.quotes, one per line).
 class QuotesMode : public Mode {
  public:
   const char *id() const override { return "quotes"; }
@@ -17,10 +17,9 @@ class QuotesMode : public Mode {
   const char *actionName() const override { return "Prossima frase"; }
   void action() override;
 
-  // The built-in list, one quote per line (UTF-8).
-  static const char *defaultQuotes();
-  // How many quotes the list in use has.
+  // How many quotes are in rotation (built-in plus added).
   static uint16_t count();
+  static uint16_t builtInCount();  // the quotes from content/frasi_dell_ora.txt
   // Quote number `index` (wrapping round) of the list in use, UTF-8.
   static String quoteAt(uint16_t index);
 
