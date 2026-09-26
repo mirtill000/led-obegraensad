@@ -202,7 +202,8 @@ Current modes:
 
 - **Testo scorrevole** - scrolls the text set on the page, at the height
   chosen there: top, middle, bottom or variable (a different height at
-  every pass, the default), in the font chosen there (the same setting as
+  every pass, the default) - or shows it as still pages of three lines
+  like the hourly quote, in the font chosen there (the same setting as
   in Display). With *Attuale*, this and all other scrolling text (web info, word clock, game scores, the countdown's header) use its
   compact variant (`include/font_compact.h`): letters one pixel narrower -
   3 instead of 4 - where the shape allows it, so more text fits; the
@@ -240,7 +241,8 @@ Current modes:
 - **Dal web** - in turn: the word of the day (built-in list), an "on this
   day" event from Italian Wikipedia, and the next event of your calendar
   (paste its secret iCal link, e.g. from Google Calendar; recurring events
-  aren't supported). Choose the sources and the height on the page. Until
+  aren't supported). Choose the sources and the height on the page (or
+  pages of three lines, like the hourly quote). Until
   the first data arrives it shows the waiting dots
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small
@@ -317,11 +319,13 @@ on row 10.
 
 ### Games and demo mode
 
-The arcade games (Tetris, Snake, Pong, Breakout, Flappy Bird, Space
-Invaders, Dino, Donkey Kong) draw LEDs only fully on or off: in-between brightness is made
-by switching LEDs on and off very fast, which can show as a slight
-flicker. Super Mario and Labirinto 3D keep their shades of gray, which
-their look depends on.
+All games follow **Grafica dei giochi** in the Display section:
+*Sfumata* (the default) uses shades of gray - fading snake, dimmer
+settled Tetris blocks, gliding balls, Mario's shaded sprite, the maze's
+distance-shaded walls - and *Nitida* draws every LED fully on or off
+(the maze then uses a fixed dot pattern for depth, Mario becomes a lit
+silhouette). In-between brightness is made by switching LEDs on and off
+very fast; if it trembles on your lamp, pick Nitida.
 
 All the games in the animations have a **Modalità demo** checkbox (on by
 default), shown on the page while the game is on the panel:
