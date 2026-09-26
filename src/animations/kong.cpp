@@ -6,8 +6,8 @@
 // round faster. In demo mode Mario heads for the next ladder, jumps the
 // barrels coming at him, waits on the ladder (head still below the floor)
 // while a barrel passes the top, and gets out of the way of barrels coming
-// down a ladder. LEDs are only
-// fully on or off, like the other arcade games.
+// down a ladder. Drawn in the games' style (softGames(): dimmer floors and
+// ladders).
 //
 //   row 0-2  Donkey Kong (x0-3)                 Pauline (x14, rows 1-2)
 //   row 3    floor 3 ----------------------------------------------
@@ -16,6 +16,7 @@
 //   row 15   floor 0
 #include "animations/arcade_game.h"
 #include "display.h"
+#include "settings.h"
 
 namespace {
 
@@ -249,18 +250,20 @@ class KongGame : public ArcadeGame {
   void draw() {
     display.clear();
     const bool flash = won_ > 0 && (won_ / 4) % 2;
+    // "Sfumata" (softGames()): floors and ladders dimmer than the figures.
+    const uint8_t floorLevel = softGames() && !flash ? 110 : 255, ladderLevel = softGames() ? 70 : 255;
     // Floors, with a gap where a ladder comes up through them.
     for (int f = 0; f < FLOORS; f++) {
       for (int x = 0; x < COLS; x++) {
         const bool gap = f > 0 && x == LADDER_X[f - 1];
-        display.setPixel(x, FLOOR_ROW[f], !gap || flash);
+        display.setLevel(x, FLOOR_ROW[f], !gap || flash ? floorLevel : 0);
       }
     }
     // Ladders: dotted, the rungs just below the floor above and just above
     // the floor below.
     for (int f = 0; f < FLOORS - 1; f++) {
-      display.setPixel(LADDER_X[f], FLOOR_ROW[f + 1] + 1, true);
-      display.setPixel(LADDER_X[f], FLOOR_ROW[f] - 1, true);
+      display.setLevel(LADDER_X[f], FLOOR_ROW[f + 1] + 1, ladderLevel);
+      display.setLevel(LADDER_X[f], FLOOR_ROW[f] - 1, ladderLevel);
     }
     // Donkey Kong: arms up while throwing.
     static const char *const KONG[2][3] = {{".##.", "####", "#..#"}, {"#..#", "####", ".##."}};

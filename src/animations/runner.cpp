@@ -2,11 +2,12 @@
 // on the ground line; cacti and pterodactyls come at it faster and faster.
 // ↑ or the main button jumps, ↓ ducks. In demo mode the computer simulates
 // running on, jumping and ducking and takes the first choice that keeps it
-// alive. LEDs are only fully on or off, like the other arcade games.
+// alive. Drawn in the games' style (softGames(): a fainter ground).
 #include <math.h>
 
 #include "animations/arcade_game.h"
 #include "display.h"
+#include "settings.h"
 
 namespace {
 
@@ -243,7 +244,8 @@ class RunnerGame : public ArcadeGame {
     display.clear();
     // Ground with a few gaps that scroll by.
     const int shift = (int)distance_;
-    for (int x = 0; x < COLS; x++) display.setPixel(x, GROUND, (x + shift) % 9 != 0);
+    const uint8_t ground = softGames() ? 90 : 255;  // "sfumata": a fainter ground
+    for (int x = 0; x < COLS; x++) display.setLevel(x, GROUND, (x + shift) % 9 != 0 ? ground : 0);
     for (const Obstacle &o : obstacles_) {
       if (!o.used) continue;
       const char *const *rows;

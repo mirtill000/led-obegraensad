@@ -43,8 +43,6 @@ uint16_t QuotesMode::currentIndex(uint16_t count) const {
   return count ? (hour + skip_) % count : 0;
 }
 
-static const uint32_t PAGE_MS = 2500;  // each page (scaled by the speed setting)
-
 void QuotesMode::start() {
   const String &list = activeList();
   const uint16_t count = quoteLine(list, 0xFFFF, nullptr);

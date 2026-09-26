@@ -1,6 +1,7 @@
 // Games that play themselves: Tetris and Snake.
 #include "animation.h"
 #include "display.h"
+#include "settings.h"
 
 // ---------------------------------------------------------------------------
 // Tetris: a 10x16 well in the middle of the panel. In demo mode, for every
@@ -226,10 +227,10 @@ class TetrisAnimation : public Animation {
     }
   }
 
-  // Every LED is either fully on or off: in-between levels are made by
-  // switching the LEDs rapidly, which can show as a slight flicker, and
-  // Tetris' blocks should look crisp.
+  // "Nitida": every LED fully on or off. "Sfumata" (softGames()): settled
+  // blocks dimmer than the falling piece, faint walls, a fade at game over.
   void draw() {
+    if (softGames()) return drawSoft();
     display.clear();
     for (int y = 0; y < H; y++) {
       display.setPixel(LEFT - 1, y, true);  // walls
@@ -241,6 +242,27 @@ class TetrisAnimation : public Animation {
         if (!board_[y][x] || gone) continue;
         if (flashing && phaseFrames_ % 2 == 0) continue;  // full rows blink
         display.setPixel(LEFT + x, y, true);
+      }
+    }
+    if (phase_ == DROPPING) {
+      Cell c[4];
+      cells(piece_, rotation_, c);
+      for (const Cell &k : c) display.setLevel(LEFT + x_ + k.x, y_ + k.y, 255);
+    }
+  }
+
+  void drawSoft() {
+    display.clear();
+    for (int y = 0; y < H; y++) {
+      display.setLevel(LEFT - 1, y, 30);  // walls
+      display.setLevel(LEFT + W, y, 30);
+      const bool flashing = phase_ == CLEARING && rowFull(y);
+      for (int x = 0; x < W; x++) {
+        if (!board_[y][x]) continue;
+        uint8_t l = 150;
+        if (flashing) l = (phaseFrames_ % 2) ? 255 : 40;
+        if (phase_ == GAME_OVER) l = 150 * (30 - phaseFrames_) / 30;  // fade out
+        display.setLevel(LEFT + x, y, l);
       }
     }
     if (phase_ == DROPPING) {
@@ -470,9 +492,20 @@ class SnakeAnimation : public Animation {
     } while (taken[food_]);
   }
 
-  // LEDs only fully on or off (no flicker from in-between levels). At game
-  // over the snake shortens from the tail until it is gone.
-  void draw(uint32_t) {
+  // "Nitida": LEDs only fully on or off; at game over the snake shortens
+  // from the tail. "Sfumata": the body fades towards the tail, the food
+  // pulses, and the snake fades out at game over.
+  void draw(uint32_t now) {
+    if (softGames()) {
+      display.clear();
+      for (int i = length_ - 1; i >= 0; i--) {
+        uint8_t l = i == 0 ? 255 : 200 - 140 * i / max(1, length_ - 1);
+        if (over_) l = l * (25 - min(over_, 25)) / 25;
+        display.setLevel(body_[i] % COLS, body_[i] / COLS, l);
+      }
+      if (!over_) display.setLevel(food_ % COLS, food_ / COLS, (now / 250) % 2 ? 255 : 90);
+      return;
+    }
     display.clear();
     const int shown = over_ ? length_ * (25 - min(over_, 25)) / 25 : length_;
     for (int i = 0; i < shown; i++) display.setPixel(body_[i] % COLS, body_[i] / COLS, true);

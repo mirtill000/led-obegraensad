@@ -9,8 +9,9 @@ struct Settings {
   String mode;          // mode picked by the user, see modes.h
   String text;          // scrolling text (UTF-8)
   String textFont;      // font of all scrolling text: "small" (font A, the default), "big" or "mini"
-  // Height of the scrolling text: "top", "middle", "bottom" or "random" (a
-  // different height at every pass).
+  // How the scrolling text is shown: at a height - "top", "middle",
+  // "bottom" or "random" (a different one at every pass) - or "pages" (still
+  // pages of three lines, see Pager). settings.webPosition works the same.
   String textPosition;
   uint8_t brightness;   // 1-255
   bool vertical;        // how the lamp hangs: vertical or horizontal
@@ -34,6 +35,7 @@ struct Settings {
   String quotes;        // one quote per line; empty = built-in list (see loadQuotes)
   String galleryShow;   // drawing shown by the "Disegni" mode, or "all"
   String demoStyle;     // "Demo" mode: "auto", "rows3", "pages" or "rows2"
+  String gameStyle;     // all games: "soft" (shades of gray) or "crisp" (LEDs on/off)
 
   // Playlist: modes shown in turn, "id:minutes,id:minutes,...".
   bool playlistOn;
@@ -77,6 +79,10 @@ bool saveQuotes();
 
 // Font for scrolling text from settings.textFont.
 TextFont fontForSettings();
+// Whether games draw with shades of gray (settings.gameStyle "soft") or
+// with LEDs only fully on or off ("crisp").
+inline bool softGames() { return settings.gameStyle != "crisp"; }
+
 // Transition style from settings.transition.
 Transition transitionForSettings();
 // Display rotation for the current orientation setting.

@@ -6,8 +6,6 @@
 #include "modes/quotes_mode.h"
 #include "settings.h"
 
-static const uint32_t PAGE_MS = 2500;  // each still page (scaled by the speed setting)
-
 // --- text in the two small fonts --------------------------------------------
 
 enum class Font : uint8_t { Tiny, Mini };

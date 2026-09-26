@@ -28,6 +28,11 @@ void WebMode::showNext() {
   waitSince_ = millis();
   if (waiting_) return;
   if (line.length() == 0) line = "Scegli cosa mostrare nella pagina";
+  pages_ = settings.webPosition == "pages";
+  if (pages_) {
+    pager_.start(line);
+    return;
+  }
   scroller_.start(line);
   row_ = Scroller::rowFor(settings.webPosition, row_);
   scroller_.setRow(row_);
@@ -43,5 +48,5 @@ void WebMode::update(uint32_t now) {
     display.render();
     return;
   }
-  if (scroller_.update(now, interval(SCROLL_DELAY_MS))) showNext();
+  if (pages_ ? pager_.update(now, interval(PAGE_MS)) : scroller_.update(now, interval(SCROLL_DELAY_MS))) showNext();
 }

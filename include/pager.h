@@ -8,6 +8,9 @@
 // (font_tiny.h): each line up to 16 pixels, words kept whole where they fit
 // and split by Italian syllables where they don't (CON / SAPE / VO / LEZ /
 // ZA), every line centred and the block centred vertically. Used by "Frase dell'ora" and the Demo mode.
+// Time each page stays, before the speed setting scales it.
+static const uint32_t PAGE_MS = 2500;
+
 class Pager {
  public:
   // `text` is UTF-8; draws the first page (with the mode transition).

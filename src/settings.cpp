@@ -109,6 +109,7 @@ void loadSettings() {
   settings.quotes = prefs.getString("quotes", "");  // from before /quotes.txt
   settings.galleryShow = prefs.getString("galleryShow", "all");
   settings.demoStyle = prefs.getString("demoStyle", "auto");
+  settings.gameStyle = prefs.getString("gameStyle", "soft");
   settings.playlistOn = prefs.getBool("plOn", false);
   settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5");
   // Super Mario used to be a mode of its own; it is now one of the games.
@@ -158,6 +159,7 @@ void saveSettings() {
   prefs.putString("webPos", settings.webPosition);
   prefs.putString("galleryShow", settings.galleryShow);
   prefs.putString("demoStyle", settings.demoStyle);
+  prefs.putString("gameStyle", settings.gameStyle);
   prefs.putBool("plOn", settings.playlistOn);
   prefs.putString("playlist", settings.playlist);
   prefs.putString("demoOff", settings.demoOff);

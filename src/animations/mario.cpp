@@ -35,11 +35,17 @@ static uint8_t spriteLevel(char c) {
   }
 }
 
+// "Sfumata": each part at its level. "Nitida" (see softGames()): a lit
+// silhouette with the hair, eye and moustache left dark.
 static void drawMario(int x, int y, const char *const *rows) {
   for (int r = 0; r < MARIO_H; r++) {
     for (int c = 0; c < MARIO_W; c++) {
       const uint8_t l = spriteLevel(rows[r][c]);
-      if (l) display.setLevel(x + c, y + r, l);
+      if (!softGames()) {
+        if (rows[r][c] != '.' && rows[r][c] != 'M') display.setPixel(x + c, y + r, true);
+      } else if (l) {
+        display.setLevel(x + c, y + r, l);
+      }
     }
   }
 }
@@ -305,7 +311,7 @@ void MarioGame::draw(uint32_t now) {
   display.clear();
   // Faint clouds in the background, drifting at half speed.
   static const uint16_t CLOUD[2] = {0x6000, 0xF000};
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 2 && softGames(); i++) {
     const int period = 24;
     const int x = ((i * 13 - s_.cam / 2) % period + period) % period - 4;
     for (int row = 0; row < 2; row++) {
@@ -319,16 +325,18 @@ void MarioGame::draw(uint32_t now) {
     const int top = topAt(s_, wx);
     if (top == NONE) continue;
     display.setPixel(sx, GROUND, true);
-    display.setLevel(sx, GROUND + 1, wx % 4 != 3 ? 110 : 0);  // bricks show the scrolling
+    display.setLevel(sx, GROUND + 1, wx % 4 != 3 ? (softGames() ? 110 : 255) : 0);  // bricks show the scrolling
     for (int y = top; y < GROUND; y++) display.setPixel(sx, y, true);
   }
   for (const Coin &c : s_.coins) {
     if (c.taken) continue;
     const int sx = c.x - s_.cam;
     // Spinning glint: the two halves swap brightness.
+    // Spinning glint when soft: the two halves swap brightness.
     const bool phase = (now / 200) % 2;
-    display.setLevel(sx, c.y, phase ? 255 : 120);
-    display.setLevel(sx, c.y + 1, phase ? 120 : 255);
+    const bool soft = softGames();
+    display.setLevel(sx, c.y, !soft || phase ? 255 : 120);
+    display.setLevel(sx, c.y + 1, !soft || !phase ? 255 : 120);
   }
   for (const Goomba &g : s_.goombas) {
     if (g.alive) display.drawBitmap((int)lroundf(g.x) - s_.cam, GROUND - 2, GOOMBA[(frame_ / 3) % 2], 3, 2);

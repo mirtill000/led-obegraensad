@@ -143,12 +143,13 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <input type="text" id="text" maxlength="200" autocomplete="off">
     <button class="save" id="saveText">Mostra</button>
     <p class="hint">Maiuscole e minuscole, cifre, . , : ; ! ? ' - %. Le lettere accentate compaiono con l'apostrofo: «perché» diventa «perche'».</p>
-    <label for="textPos">Altezza</label>
+    <label for="textPos">Come mostrarlo</label>
     <select id="textPos">
-      <option value="random">Variabile (cambia a ogni passaggio)</option>
-      <option value="top">In alto</option>
-      <option value="middle">Al centro</option>
-      <option value="bottom">In basso</option>
+      <option value="random">Scorre, a un'altezza variabile (cambia a ogni passaggio)</option>
+      <option value="top">Scorre in alto</option>
+      <option value="middle">Scorre al centro</option>
+      <option value="bottom">Scorre in basso</option>
+      <option value="pages">A pagine: 3 righe ferme (font 4 pixel, come le frasi dell'ora)</option>
     </select>
     <label for="textFontText">Font</label>
     <select id="textFontText">
@@ -191,12 +192,13 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
     <label class="check"><input type="checkbox" id="infoCalendar"> Prossimo evento del calendario</label>
     <input type="text" id="icalUrl" placeholder="Link iCal del calendario (.ics)" autocomplete="off">
     <p class="hint">Google Calendar: Impostazioni → il tuo calendario → «Indirizzo segreto in formato iCal». Gli eventi ricorrenti non sono supportati. <span id="calendarStatus"></span></p>
-    <label for="webPos">Altezza</label>
+    <label for="webPos">Come mostrarlo</label>
     <select id="webPos">
-      <option value="random">Variabile (cambia a ogni passaggio)</option>
-      <option value="top">In alto</option>
-      <option value="middle">Al centro</option>
-      <option value="bottom">In basso</option>
+      <option value="random">Scorre, a un'altezza variabile (cambia a ogni passaggio)</option>
+      <option value="top">Scorre in alto</option>
+      <option value="middle">Scorre al centro</option>
+      <option value="bottom">Scorre in basso</option>
+      <option value="pages">A pagine: 3 righe ferme (font 4 pixel, come le frasi dell'ora)</option>
     </select>
     <button class="save" id="saveWeb">Salva</button>
     <p class="hint" id="webPreview"></p>
@@ -349,6 +351,12 @@ static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
       <option value="mini">Mini 3×5 (solo maiuscole)</option>
     </select>
     <p class="hint">Vale per tutto il testo che scorre: testo, dati dal web, orologio a parole e punteggi dei giochi (le frasi dell'ora hanno le loro pagine a 3 righe). Con «Attuale» le lettere sono strette di un pixel. Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
+    <label for="gameStyle">Grafica dei giochi</label>
+    <select id="gameStyle">
+      <option value="soft">Sfumata: più livelli di luce (profondità, scie, sfondi)</option>
+      <option value="crisp">Nitida: LED solo accesi o spenti</option>
+    </select>
+    <p class="hint">Vale per tutti i giochi. Se con la sfumata noti tremolii, prova la nitida.</p>
     <label for="transition">Passaggio tra modalità e animazioni</label>
     <select id="transition">
       <option value="fade">Dissolvenza</option>
@@ -514,6 +522,7 @@ function render() {
   $('textFont').value = s.textFont;
   $('textFontText').value = s.textFont;
   $('transition').value = s.transition;
+  $('gameStyle').value = s.gameStyle;
   $('fwVersion').textContent = s.version;
 }
 
@@ -1029,6 +1038,8 @@ for (const id of ['textFont', 'textFontText']) {
     post('/api/settings', { textFont: e.target.value }).then(() => status('Font cambiato')).catch(fail);
   };
 }
+$('gameStyle').onchange = (e) => post('/api/settings', { gameStyle: e.target.value })
+  .then(() => status('Grafica dei giochi: ' + e.target.selectedOptions[0].textContent.split(':')[0].toLowerCase())).catch(fail);
 $('transition').onchange = (e) => post('/api/settings', { transition: e.target.value })
   .then(() => status('Passaggio: ' + e.target.selectedOptions[0].textContent.toLowerCase())).catch(fail);
 $('brightness').onchange = (e) => post('/api/settings', { brightness: e.target.value }).catch(fail);
@@ -1154,7 +1165,7 @@ static void sendState() {
   json += ",\"text\":" + jsonString(settings.text) + ",\"textFont\":" + jsonString(settings.textFont);
   json += ",\"textPos\":" + jsonString(settings.textPosition);
   json += ",\"brightness\":" + String(settings.brightness) + ",\"vertical\":" + jsonBool(settings.vertical);
-  json += ",\"transition\":" + jsonString(settings.transition);
+  json += ",\"transition\":" + jsonString(settings.transition) + ",\"gameStyle\":" + jsonString(settings.gameStyle);
   json += ",\"lat\":" + String(settings.latitude, 4) + ",\"lon\":" + String(settings.longitude, 4);
   json += ",\"city\":" + jsonString(settings.city) + ",\"tzName\":" + jsonString(settings.timezoneName);
 
@@ -1343,6 +1354,11 @@ static void handleSettings() {
     Display::setScrollFont(fontForSettings());
     restartMode();  // scrolling widths depend on the font
   }
+  if (server.hasArg("gameStyle")) {
+    const String style = server.arg("gameStyle");
+    if (style != "soft" && style != "crisp") return badRequest("Stile sconosciuto");
+    settings.gameStyle = style;
+  }
   if (server.hasArg("transition")) {
     const String style = server.arg("transition");
     if (style != "fade" && style != "wipe" && style != "none") return badRequest("Passaggio sconosciuto");
@@ -1356,7 +1372,7 @@ static void handleSettings() {
   }
   if (server.hasArg("textPos")) {
     const String pos = server.arg("textPos");
-    if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom") return badRequest("Altezza non valida");
+    if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom" && pos != "pages") return badRequest("Altezza non valida");
     settings.textPosition = pos;
     if (strcmp(currentMode()->id(), "text") == 0) restartMode();  // show it at the new height now
   }
@@ -1444,7 +1460,7 @@ static void handleNight() {
 
 static void handleWeb() {
   const String pos = server.arg("pos"), url = server.arg("url");
-  if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom") return badRequest("Altezza non valida");
+  if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom" && pos != "pages") return badRequest("Altezza non valida");
   if (url.length() > 500) return badRequest("Link troppo lungo");
   settings.infoWord = server.arg("word") == "1";
   settings.infoHistory = server.arg("history") == "1";
