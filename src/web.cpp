@@ -21,6 +21,7 @@
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
 #include "moon.h"
+#include "pager.h"
 #include "webinfo.h"
 #include "settings.h"
 #include "timekeeping.h"
@@ -2000,19 +2001,62 @@ static void handleDraw() {
 
 static String updateError;
 
-static void showUpdateProgress(size_t done, size_t total) {
+// The panel during an update, geek style:
+//   rows 1-4    the percentage
+//   rows 6-11   the firmware itself going by: two bytes of each chunk
+//               received, as bits, scrolling up (the newest row brightest)
+//   rows 13-14  progress bar, a bright "packet" running along its edge
+static void showUpdateProgress(size_t done, size_t total, const uint8_t *data = nullptr, size_t length = 0) {
+  static uint16_t bits[6];
+  if (done == 0) memset(bits, 0, sizeof(bits));
+  if (data && length >= 2) {
+    memmove(bits, bits + 1, sizeof(bits) - sizeof(bits[0]));
+    bits[5] = data[0] << 8 | data[length / 2];
+  }
   display.clear();
-  const float filled = total ? (float)done / total * COLS : 0;
-  for (int x = 0; x < COLS; x++) {
-    display.setLevel(x, 7, 40);
-    display.setLevel(x, 8, 40);
-    const float f = filled - x;
-    if (f > 0) {
-      display.setLevel(x, 7, 40 + 215 * fminf(f, 1));
-      display.setLevel(x, 8, 40 + 215 * fminf(f, 1));
+  const int percent = total ? min<int>(100, done * 100 / total) : 0;
+  const String label = String(percent) + "%";
+  Pager::drawText((COLS - Pager::textWidth(label)) / 2, 1, label);
+  for (int r = 0; r < 6; r++) {
+    const uint8_t level = r == 5 ? 255 : 30 + r * 25;
+    for (int x = 0; x < COLS; x++) {
+      if (bits[r] & (0x8000 >> x)) display.setLevel(x, 6 + r, level);
     }
   }
+  const float filled = total ? (float)done / total * COLS : 0;
+  const int head = (int)filled;
+  for (int x = 0; x < COLS; x++) {
+    const uint8_t level = x < head ? 150 : 20;
+    display.setLevel(x, 13, level);
+    display.setLevel(x, 14, level);
+  }
+  if (head < COLS) {  // the packet on its way, blinking
+    const uint8_t level = (millis() / 120) % 2 ? 255 : 90;
+    display.setLevel(head, 13, level);
+    display.setLevel(head, 14, level);
+  }
   display.render();
+}
+
+// The end of an update: "OK" and a full bar before the restart, or "ERR"
+// blinking before going back to the mode on show.
+static void showUpdateResult(bool ok) {
+  for (int blink = 0; blink < (ok ? 1 : 3); blink++) {
+    display.clear();
+    const char *label = ok ? "OK" : "ERR";
+    Pager::drawText((COLS - Pager::textWidth(label)) / 2, 6, label);
+    for (int x = 0; x < COLS; x++) {
+      display.setLevel(x, 13, ok ? 255 : (x % 2 ? 255 : 0));
+      display.setLevel(x, 14, ok ? 255 : (x % 2 ? 0 : 255));
+    }
+    display.render();
+    delay(ok ? 0 : 300);
+    if (!ok) {
+      display.clear();
+      display.render();
+      delay(200);
+    }
+  }
 }
 
 static void handleUpdateUpload() {
@@ -2033,7 +2077,7 @@ static void handleUpdateUpload() {
       if (updateError.length() == 0 && Update.write(up.buf, up.currentSize) != up.currentSize) {
         updateError = Update.errorString();  // e.g. "Wrong Magic Byte": not an ESP32 firmware
       }
-      showUpdateProgress(up.totalSize + up.currentSize, total);
+      showUpdateProgress(up.totalSize + up.currentSize, total, up.buf, up.currentSize);
       break;
     case UPLOAD_FILE_END:
       if (updateError.length() == 0 && !Update.end(true)) updateError = Update.errorString();
@@ -2049,9 +2093,11 @@ static void handleUpdateDone() {
   if (updateError.length() || Update.hasError()) {
     if (Update.isRunning()) Update.abort();
     server.send(400, "text/plain", "Aggiornamento non riuscito: " + updateError);
+    showUpdateResult(false);
     restartMode();  // back to what was on the panel
     return;
   }
+  showUpdateResult(true);
   server.sendHeader("Connection", "close");
   server.send(200, "text/plain", "ok");
   delay(500);  // let the answer reach the browser
