@@ -152,9 +152,19 @@ own. Until it manages to connect it scrolls `wifi...` and retries every
 20 s; if WiFi drops later it reconnects by itself.
 
 At the top, **Sulla lampada ora** is a live preview: a 16x16 picture of
-what the panel shows, refreshed five times a second while the page is in
-view (from `GET /api/frame`, 256 levels in hex). While you play a game it
-moves right above the pad, so you can play without looking at the lamp.
+what the panel shows, pushed by the lamp as it changes. While you play a
+game it moves right above the pad, so you can play without looking at the
+lamp.
+
+The page stays up to date by itself: it keeps a live connection to the
+lamp (Server-Sent Events, `http://<lamp>:81/events`, up to 3 pages at a
+time) and gets a `frame` event whenever the panel changes (at most every
+150 ms, 256 levels in hex) and a `state` event whenever anything in
+`/api/state` changes (checked every second) - so changes made from another
+phone, the playlist or the night schedule show up within a second, and
+nothing is sent while the panel is still. If that connection can't be made
+the page falls back to polling `GET /api/frame` five times a second and
+`/api/state` every 15 s.
 
 Below it are the modes; the one on the panel is highlighted,
 with its own command button ("next quote", "jump", ...; the space bar
@@ -194,7 +204,7 @@ animation menu, ...). General settings are in collapsible sections:
 
 - **Diagnostica** - uptime and why the lamp last restarted, free memory,
   chip temperature, firmware; WiFi signal and address; the last weather,
-  Wikipedia and calendar fetches; and how steady the grayscale refresh is:
+  Wikipedia and calendar fetches; the pages connected live; and how steady the grayscale refresh is:
   plane changes done and missed, average and worst delay after the timer
   tick (`GET /api/diag`; refreshed every 2 s while the section is open).
 

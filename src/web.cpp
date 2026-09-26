@@ -24,6 +24,7 @@
 #include "weather.h"
 
 static WebServer server(80);
+static WiFiServer events(81);  // live updates (see eventsLoop())
 
 static const char PAGE[] PROGMEM = R"HTML(<!doctype html>
 <html lang="it">
@@ -1157,7 +1158,7 @@ $('fwUpload').onclick = () => {
 // Live preview: what the lamp shows, polled a few times a second while
 // the page is in view. Off LEDs are faint dots, lit ones white discs.
 const preview = $('preview'), pctx = preview.getContext('2d');
-let previewBusy = false;
+let previewBusy = false, live = false;
 function drawPreview(hex) {
   if (hex.length !== 512) return;
   const cell = preview.width / 16;
@@ -1172,7 +1173,7 @@ function drawPreview(hex) {
   }
 }
 setInterval(() => {
-  if (document.hidden || previewBusy) return;
+  if (live || document.hidden || previewBusy) return;
   previewBusy = true;
   fetch('/api/frame').then((r) => r.text()).then(drawPreview).catch(() => {}).finally(() => { previewBusy = false; });
 }, 200);
@@ -1198,6 +1199,7 @@ function loadDiag() {
       ['Rete'],
       ['Wi-Fi', d.ssid + ' · ' + d.rssi + ' dBm (' + (d.rssi > -60 ? 'ottimo' : d.rssi > -70 ? 'buono' : d.rssi > -80 ? 'debole' : 'pessimo') + ')'],
       ['Indirizzo', d.ip],
+      ['Pagine in diretta', d.live + (live ? ' (questa compresa)' : ' · questa pagina interroga ogni 0,2 s')],
       ['Meteo', d.weather + ' · ' + ago(d.weatherAge)],
       ['Wikipedia', d.history || '—'],
       ['Calendario', d.calendar || '—'],
@@ -1221,7 +1223,22 @@ $('diagReset').onclick = () => fetch('/api/diag/reset', { method: 'POST' }).then
 
 function refresh() { return fetch('/api/state').then((r) => r.json()).then((s) => { state = s; render(); }); }
 refresh().catch(() => status('Lampada non raggiungibile'));
-setInterval(() => refresh().catch(() => {}), 15000);
+setInterval(() => { if (!live) refresh().catch(() => {}); }, 15000);
+
+// Live updates: the lamp pushes the preview and the state (Server-Sent
+// Events on port 81). While the connection is up the polling above pauses;
+// if it drops, polling takes over until the browser reconnects.
+function startLive() {
+  if (!window.EventSource) return;
+  const es = new EventSource('http://' + location.hostname + ':81/events');
+  es.addEventListener('frame', (e) => { live = true; if (!document.hidden) drawPreview(e.data); });
+  es.addEventListener('state', (e) => {
+    live = true;
+    try { state = JSON.parse(e.data); render(); } catch (err) {}
+  });
+  es.onerror = () => { live = false; };
+}
+startLive();
 </script>
 </body>
 </html>
@@ -1250,7 +1267,7 @@ static String jsonString(const String &s) {
 
 static String jsonBool(bool b) { return b ? "true" : "false"; }
 
-static void sendState() {
+static String stateJson() {
   String json;
   json.reserve(4096);
   json = "{\"mode\":" + jsonString(settings.mode) + ",\"active\":" + jsonString(currentMode()->id());
@@ -1362,8 +1379,10 @@ static void sendState() {
     json += ",\"weather\":null";
   }
   json += "}";
-  server.send(200, "application/json", json);
+  return json;
 }
+
+static void sendState() { server.send(200, "application/json", stateJson()); }
 
 // ---------------------------------------------------------------------------
 // Handlers: each changes settings, saves them and answers with the state.
@@ -1462,7 +1481,7 @@ static void handleDiag() {
   json += ",\"psram\":" + String(ESP.getFreePsram()) + ",\"chipTemp\":" + String(temperatureRead(), 1);
   json += ",\"version\":" + jsonString(String(FIRMWARE_COMMIT) + " del " + FIRMWARE_BUILT);
   json += ",\"ssid\":" + jsonString(WiFi.SSID()) + ",\"rssi\":" + String(WiFi.RSSI());
-  json += ",\"ip\":" + jsonString(WiFi.localIP().toString());
+  json += ",\"ip\":" + jsonString(WiFi.localIP().toString()) + ",\"live\":" + String(liveClients());
   json += ",\"weather\":" + jsonString(weatherStatus());
   json += ",\"weatherAge\":" + String(w.valid ? (long)((millis() - w.fetchedAt) / 1000) : -1L);
   json += ",\"history\":" + jsonString(settings.infoHistory ? info.historyStatus : String(""));
@@ -1476,9 +1495,8 @@ static void handleDiag() {
 
 // What the panel shows right now, for the page's preview: 256 levels as
 // hex, row by row from the top-left (as seen on the lamp).
-static void handleFrame() {
+static void frameHex(char *out) {
   static const char HEX_DIGITS[] = "0123456789abcdef";
-  char out[TOTAL_PIXELS * 2 + 1];
   int n = 0;
   for (int y = 0; y < ROWS; y++) {
     for (int x = 0; x < COLS; x++) {
@@ -1488,6 +1506,11 @@ static void handleFrame() {
     }
   }
   out[n] = 0;
+}
+
+static void handleFrame() {
+  char out[TOTAL_PIXELS * 2 + 1];
+  frameHex(out);
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "text/plain", out);
 }
@@ -1868,6 +1891,135 @@ void webBegin() {
   server.on("/api/update", HTTP_POST, handleUpdateDone, handleUpdateUpload);
   server.onNotFound([] { server.send(404, "text/plain", "Not found"); });
   server.begin();
+  events.begin();
 }
 
-void webLoop() { server.handleClient(); }
+// ---------------------------------------------------------------------------
+// Live updates: Server-Sent Events on port 81 (/events). The page keeps one
+// connection open and gets a "frame" event when the panel changes (at most
+// every 150 ms) and a "state" event when the state changes (checked every
+// second), instead of polling /api/frame five times a second. The page
+// falls back to polling if the connection fails.
+
+static const int MAX_EVENT_CLIENTS = 3;
+static const uint32_t FRAME_EVERY_MS = 150, STATE_EVERY_MS = 1000, PING_EVERY_MS = 15000;
+
+struct EventClient {
+  WiFiClient client;
+  bool ready = false;     // headers sent
+  uint32_t since = 0;     // connected at
+  uint32_t lastFrame = 0; // hash of the last frame / state sent
+  uint32_t lastState = 0;
+};
+static EventClient eventClients[MAX_EVENT_CLIENTS];
+
+static uint32_t hashOf(const char *s, size_t n) {
+  uint32_t h = 2166136261u;  // FNV-1a
+  for (size_t i = 0; i < n; i++) h = (h ^ (uint8_t)s[i]) * 16777619u;
+  return h;
+}
+
+static bool sendEvent(EventClient &c, const char *name, const char *data, size_t length) {
+  String head = String("event: ") + name + "\ndata: ";
+  if (c.client.write((const uint8_t *)head.c_str(), head.length()) != head.length()) return false;
+  if (c.client.write((const uint8_t *)data, length) != length) return false;
+  return c.client.write((const uint8_t *)"\n\n", 2) == 2;
+}
+
+static void drop(EventClient &c) {
+  c.client.stop();
+  c.ready = false;
+}
+
+int liveClients() {
+  int n = 0;
+  for (EventClient &c : eventClients) n += c.ready && c.client.connected();
+  return n;
+}
+
+static void eventsLoop() {
+  const uint32_t now = millis();
+  // New connections: take a free slot (or the oldest one).
+  if (events.hasClient()) {
+    EventClient *slot = nullptr;
+    for (EventClient &c : eventClients) {
+      if (!c.client.connected()) {
+        slot = &c;
+        break;
+      }
+      if (!slot || c.since < slot->since) slot = &c;
+    }
+    drop(*slot);
+    slot->client = events.accept();
+    slot->client.setNoDelay(true);
+    slot->since = now;
+    slot->lastFrame = slot->lastState = 0;
+  }
+
+  static uint32_t lastFrameAt = 0, lastStateAt = 0, lastPingAt = 0;
+  bool anyReady = false;
+  for (EventClient &c : eventClients) {
+    if (!c.client.connected()) {
+      c.ready = false;
+      continue;
+    }
+    if (c.ready) {
+      anyReady = true;
+      while (c.client.available()) c.client.read();  // nothing to read after the request
+      continue;
+    }
+    // Waiting for the request: read it up to the blank line, then answer
+    // with the stream's headers.
+    if (now - c.since > 3000) {
+      drop(c);
+      continue;
+    }
+    while (c.client.available()) {
+      const String line = c.client.readStringUntil('\n');
+      if (line.length() <= 1) {  // "\r" or "": end of the headers
+        c.client.print("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-store\r\n"
+                       "Access-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\nretry: 3000\n\n");
+        c.ready = true;
+        anyReady = true;
+        lastFrameAt = lastStateAt = 0;  // send both right away
+        break;
+      }
+    }
+  }
+  if (!anyReady) return;
+
+  if (now - lastFrameAt >= FRAME_EVERY_MS) {
+    lastFrameAt = now;
+    char frame[TOTAL_PIXELS * 2 + 1];
+    frameHex(frame);
+    const uint32_t h = hashOf(frame, TOTAL_PIXELS * 2);
+    for (EventClient &c : eventClients) {
+      if (c.ready && c.lastFrame != h) {
+        c.lastFrame = h;
+        if (!sendEvent(c, "frame", frame, TOTAL_PIXELS * 2)) drop(c);
+      }
+    }
+  }
+  if (now - lastStateAt >= STATE_EVERY_MS) {
+    lastStateAt = now;
+    const String json = stateJson();
+    const uint32_t h = hashOf(json.c_str(), json.length());
+    for (EventClient &c : eventClients) {
+      if (c.ready && c.lastState != h) {
+        c.lastState = h;
+        if (!sendEvent(c, "state", json.c_str(), json.length())) drop(c);
+      }
+    }
+  }
+  if (now - lastPingAt >= PING_EVERY_MS) {  // keeps idle connections (and proxies) alive
+    lastPingAt = now;
+    for (EventClient &c : eventClients) {
+      if (c.ready && c.client.write((const uint8_t *)": ping\n\n", 8) != 8) drop(c);
+    }
+  }
+}
+
+void webLoop() {
+  server.handleClient();
+  eventsLoop();
+}

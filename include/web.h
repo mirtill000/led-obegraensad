@@ -5,3 +5,6 @@
 // loop().
 void webBegin();
 void webLoop();
+
+// Pages connected for live updates (Server-Sent Events on port 81).
+int liveClients();
