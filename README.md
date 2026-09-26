@@ -341,11 +341,18 @@ Current modes:
   runner of Chrome's offline page: cacti and pterodactyls (low: jump,
   middle: duck, high: run under) faster and faster; in demo mode the
   computer simulates running, jumping and ducking and picks the first
-  that keeps it alive; **Donkey Kong** - four floors and three ladders,
-  Donkey Kong throwing barrels that roll down in a zigzag (and sometimes
-  down a ladder), Mario climbing up to Pauline; 3 lives, each rescue makes
-  the next round faster; in demo mode Mario jumps the barrels, waits on
-  the ladder while one passes the top and dodges those coming down;
+  that keeps it alive; **Donkey Kong** - four floors joined by ladders,
+  Mario climbing up to Pauline in three levels taken in turn ("LIV 1-3"
+  before each): *1* Kong throws barrels that roll down in a zigzag (and
+  sometimes down a ladder); *2* no barrels, but fires - the first out of
+  the oil drum at the bottom, the others on the middle floors - wander the
+  floors, climb the ladders and drift towards Mario; *3* barrels and fires
+  together, new ladders. The characters are small gray-level sprites:
+  Mario 2x3 (cap, face, legs walking, facing where he goes), Kong 5x3
+  (arms up when he throws), Pauline 2x3, with a heart over her at the
+  rescue. 3 lives, faster each time round the three levels; in demo mode
+  Mario jumps what comes at him, waits on the ladder while something
+  passes the top and backs off from what comes down it;
   **Doom** - a first-person shooter drawn like Labirinto 3D (walls
   shaded by distance): imps standing in the level, hidden behind walls
   and bigger as they come, throw fireballs you can see coming; a gun at
