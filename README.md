@@ -352,7 +352,15 @@ Current modes:
   the bottom of the view and the health bar on the bottom row. Kill them
   all for the next level (more imps, some health back); the score is 100
   per imp and 500 per level. In demo mode the computer turns to the
-  nearest imp in sight and shoots, or walks the shortest way to one
+  nearest imp in sight and shoots, or walks the shortest way to one;
+  **Sonic** - he runs faster and faster over rolling Green Hill ground
+  (the checkerboard soil), collecting rings (counted along the top row);
+  a jump curls him into a spinning ball that smashes the motobugs, springs
+  throw him up to rings high in the sky. Spikes, or an enemy hit while not
+  in a ball, cost all the rings (blinking for a moment); with no rings, or
+  in a pit, a life. 3 lives; the score is distance, rings and enemies. In
+  demo mode the computer simulates running on and jumping at every moment
+  ahead, and jumps at the first moment that clears everything
 - **Disegni** - your drawings and animations, one or all in turn; the
   gallery starts with a few examples (a beating heart, the Super Mario
   mushroom, a cat, a flower, Pac-Man, a space invader). On the page there
@@ -415,7 +423,7 @@ default), shown on the page while the game is on the panel:
   Bird flies with *Vola*, space or up; Space Invaders moves with left/right
   and shoots with *Spara* or space; Dino jumps with up, space or *Salta*
   and ducks with down (hold it); in Donkey Kong left/right walk, up/down
-  climb the ladders and *Salta* (space) jumps; in Doom up/down walk, left/right turn and *Spara* (space) shoots; in Labirinto 3D up/down walk a step,
+  climb the ladders and *Salta* (space) jumps; in Doom up/down walk, left/right turn and *Spara* (space) shoots; in Sonic right runs (hold it), left brakes and *Salta* (space) jumps; in Labirinto 3D up/down walk a step,
   left/right turn and *Mappa* (or space) shows the map. In the paddle games holding an arrow
   down keeps moving.
 

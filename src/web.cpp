@@ -638,6 +638,7 @@ const PADS = {
   invaders: { keys: ['L', 'R', 'A'], labels: { A: 'Spara' }, repeat: true, hint: 'Tastiera: ← → per muoverti, spazio o ↑ per sparare.' },
   dino: { keys: ['U', 'D', 'A'], labels: { U: '↑', D: '↓', A: 'Salta' }, repeat: true, hint: '↑ o Salta per saltare, ↓ per abbassarti (tienilo premuto). Tastiera: frecce e spazio.' },
   kong: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { U: '↑', D: '↓', A: 'Salta' }, repeat: true, hint: '← → per camminare, ↑ ↓ per le scale, Salta per scavalcare i barili. Tastiera: frecce e spazio.' },
+  sonic: { keys: ['L', 'R', 'A'], labels: { A: 'Salta' }, repeat: true, hint: '→ per correre (tienilo premuto), ← per frenare, Salta per saltare in palla e distruggere i nemici. Tastiera: frecce e spazio.' },
   doom: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { L: '↶', R: '↷', U: '↑', D: '↓', A: 'Spara' }, repeat: true, hint: '↑ ↓ per camminare, ← → per girarti, Spara per colpire il diavoletto al centro della vista. Tastiera: frecce e spazio.' },
   maze: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { L: '↶', R: '↷', U: '↑', D: '↓', A: 'Mappa' }, hint: '↑ ↓ per camminare, ← → per girarti, Mappa per vedere dove sei. Trova il blocco che pulsa. Tastiera: le frecce e la barra spaziatrice.' },
 };
