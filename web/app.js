@@ -839,10 +839,11 @@ function loadDiag() {
       ['Memoria libera (minima)', kb(d.heap) + ' (' + kb(d.minHeap) + ')'],
       ['PSRAM libera', kb(d.psram)],
       ['Temperatura del chip', d.chipTemp.toFixed(0) + ' °C'],
-      ['Firmware', d.version],
+      ['Firmware', d.version + (d.trial ? ' (nuovo, in prova: se non parte bene torna al precedente)' : '')],
       ['Rete'],
       ['Wi-Fi', d.ssid + ' · ' + d.rssi + ' dBm (' + (d.rssi > -60 ? 'ottimo' : d.rssi > -70 ? 'buono' : d.rssi > -80 ? 'debole' : 'pessimo') + ')'],
       ['Indirizzo', d.ip],
+      ['Bluetooth', !d.ble.on ? 'spento' : d.ble.connected ? 'attivo, telecomando collegato' : 'attivo, nessun telecomando'],
       ['Pagine in diretta', d.live + (live ? ' (questa compresa)' : ' · questa pagina interroga ogni 0,2 s')],
       ['Meteo', d.weather + ' · ' + ago(d.weatherAge)],
       ['Wikipedia', d.history || '—'],
@@ -860,6 +861,11 @@ function loadDiag() {
     }
     $('diag').innerHTML = rows.map((r) => r.length === 1 ? '<tr><th colspan="2">' + r[0] + '</th></tr>'
       : '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>').join('');
+    // The event log, newest first.
+    const when = (t) => t ? new Date(t * 1000).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+    $('events').innerHTML = d.events.length
+      ? d.events.map((e) => '<tr><td>' + when(e[0]) + '</td><td>' + e[1].replace(/</g, '&lt;') + '</td></tr>').join('')
+      : '<tr><td>Nessun evento</td></tr>';
   }).catch(() => {});
 }
 $('diagBox').addEventListener('toggle', loadDiag);

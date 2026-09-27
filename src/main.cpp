@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "ble.h"
 #include "display.h"
+#include "events.h"
 #include "gallery.h"
 #include "modes.h"
 #include "net.h"
@@ -67,6 +68,7 @@ void setup() {
 
   loadSettings();
   galleryBegin();
+  eventsBegin();
   loadQuotes();
   display.begin();
   display.setBrightness(settings.brightness);
@@ -100,6 +102,7 @@ void loop() {
   const uint32_t start = micros();
   webLoop();
   bleLoop();
+  eventsLoop();
   checkButton();
   updateMode();
   noteLoopTime(micros() - start);

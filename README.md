@@ -118,6 +118,7 @@ src/
   animations/        - the animations and games ("Animazioni", "Giochi")
   settings.cpp       - settings saved in flash (NVS), versioned migrations
   backup.cpp         - all settings to one file and back
+  events.cpp         - event log; keeps a new firmware only once it runs fine (rollback)
   timekeeping.cpp    - NTP time sync (time zone: TIMEZONE in constants.h)
   net.cpp            - background task for everything downloaded
   weather.cpp        - weather, 12-hour forecast, sunrise/sunset (Open-Meteo)
@@ -242,7 +243,11 @@ animation menu, ...). General settings are in collapsible sections:
   from the Internet, so they need a port forward or a tunnel to the lamp.
 - **Diagnostica** - uptime and why the lamp last restarted, free memory,
   chip temperature, firmware; WiFi signal and address; the last weather,
-  Wikipedia and calendar fetches; the pages connected live; how many
+  Wikipedia and calendar fetches; the pages connected live; Bluetooth
+  (on, remote connected); whether the firmware is new and still on trial
+  (see "Updating over WiFi"); the recent events (starts and why, updates,
+  rollbacks, restored settings, WiFi lost for over half a minute and back:
+  the last 30, kept in flash); how many
   rounds the main loop makes a second and the longest one (over a few
   hundred ms the panel stood still that long); and how steady the grayscale refresh is:
   plane changes done and missed, average and worst delay after the timer
@@ -568,7 +573,10 @@ blinking "packet" running along it; at the end "OK" (or "ERR" blinking if the la
 rejects the file); the new image is written to the spare app
 partition and verified, then the lamp restarts on it, keeping all settings
 and drawings. If the upload fails or the file isn't valid, the lamp keeps
-running the firmware it had. As with the rest of the page there is no
+running the firmware it had. A new firmware is also on trial: it is kept
+only after running for a minute with WiFi up; if it crashes or hangs before
+that (the watchdog restarts it), the lamp goes back to the previous
+firmware by itself, and the event log says so. As with the rest of the page there is no
 password, so anyone on your network could do this.
 
 `scripts/build_info.py` (run by PlatformIO before each build) writes the

@@ -11,6 +11,7 @@
 #include "ble.h"
 #include "build_info.h"
 #include "commands.h"
+#include "events.h"
 #include "display.h"
 #include "modes.h"
 #include "modes/ambient_mode.h"
@@ -242,20 +243,6 @@ static void sendQuotes() {
                   ",\"quotes\":" + jsonString(settings.quotes) + "}");
 }
 
-static const char *resetReason() {
-  switch (esp_reset_reason()) {
-    case ESP_RST_POWERON: return "accensione";
-    case ESP_RST_SW: return "riavvio (aggiornamento o comando)";
-    case ESP_RST_PANIC: return "errore del firmware";
-    case ESP_RST_INT_WDT:
-    case ESP_RST_TASK_WDT:
-    case ESP_RST_WDT: return "watchdog (blocco)";
-    case ESP_RST_BROWNOUT: return "calo di tensione";
-    case ESP_RST_DEEPSLEEP: return "risveglio";
-    default: return "altro";
-  }
-}
-
 // Diagnostics: system, network, data sources and the LED refresh.
 static volatile uint32_t loopRounds = 0, loopMaxUs = 0, loopSince = 0;
 
@@ -268,7 +255,7 @@ static void handleDiag() {
   const Weather w = weatherNow();
   const WebInfo info = webInfoNow();
   const Display::RefreshStats r = Display::refreshStats();
-  String json = "{\"uptime\":" + String(millis() / 1000) + ",\"reset\":" + jsonString(resetReason());
+  String json = "{\"uptime\":" + String(millis() / 1000) + ",\"reset\":" + jsonString(resetReasonText());
   json += ",\"heap\":" + String(ESP.getFreeHeap()) + ",\"minHeap\":" + String(ESP.getMinFreeHeap());
   json += ",\"psram\":" + String(ESP.getFreePsram()) + ",\"chipTemp\":" + String(temperatureRead(), 1);
   json += ",\"version\":" + jsonString(String(FIRMWARE_COMMIT) + " del " + FIRMWARE_BUILT);
@@ -282,7 +269,10 @@ static void handleDiag() {
   json += ",\"missed\":" + String(r.missed) + ",\"avg\":" + String(r.avgLatencyUs) + ",\"max\":" + String(r.maxLatencyUs);
   json += ",\"cycleUs\":" + String(r.cycleUs) + "}";
   const uint32_t secs = max<uint32_t>(1, (millis() - loopSince) / 1000);
-  json += ",\"loop\":{\"perSec\":" + String(loopRounds / secs) + ",\"maxMs\":" + String(loopMaxUs / 1000.0f, 1) + "}}";
+  json += ",\"loop\":{\"perSec\":" + String(loopRounds / secs) + ",\"maxMs\":" + String(loopMaxUs / 1000.0f, 1) + "}";
+  json += ",\"ble\":{\"on\":" + jsonBool(settings.bleOn) + ",\"connected\":" + jsonBool(bleConnected()) + "}";
+  json += ",\"trial\":" + jsonBool(firmwarePendingVerify());
+  json += ",\"events\":" + eventsJson() + "}";
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "application/json", json);
 }
@@ -567,6 +557,7 @@ static void handleBackup() {
 
 static void handleRestore() {
   if (const char *error = restoreSettings(server.arg("plain"))) return badRequest(error);
+  logEvent("Impostazioni ripristinate da un backup");
   server.sendHeader("Connection", "close");
   server.send(200, "text/plain", "ok");
   delay(500);  // let the answer reach the browser
@@ -762,10 +753,12 @@ static void handleUpdateDone() {
   if (updateError.length() || Update.hasError()) {
     if (Update.isRunning()) Update.abort();
     server.send(400, "text/plain", "Aggiornamento non riuscito: " + updateError);
+    logEvent("Aggiornamento rifiutato: " + updateError);
     showUpdateResult(false);
     restartMode();  // back to what was on the panel
     return;
   }
+  logEvent("Aggiornamento ricevuto: riavvio con il firmware nuovo");
   showUpdateResult(true);
   server.sendHeader("Connection", "close");
   server.send(200, "text/plain", "ok");
