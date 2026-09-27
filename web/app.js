@@ -29,7 +29,15 @@ const ZONES = {
   'Pacific/Auckland': 'NZST-12NZDT,M9.5.0,M4.1.0/3', 'UTC': 'UTC0',
 };
 
-function status(msg) { $('status').textContent = msg; }
+// Feedback as a toast at the bottom of the screen, wherever you are.
+let statusTimer = null;
+function status(msg) {
+  const el = $('status');
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+  clearTimeout(statusTimer);
+  if (msg) statusTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
 function fail(e) { status(e.message || 'Errore'); }
 
 async function post(path, data) {
@@ -45,6 +53,18 @@ function weatherName(code) { const hit = WEATHER.find(([max]) => code <= max); r
 function editing(...ids) { return ids.includes(document.activeElement && document.activeElement.id); }
 function hhmm(minutes) { return String(Math.floor(minutes / 60)).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0'); }
 function minutesOf(value) { const [h, m] = value.split(':').map(Number); return h * 60 + m; }
+// The mode tiles, in three groups; modes not listed go under "Altro".
+const MODE_GROUPS = [
+  ['Informazioni', ['clock', 'forecast', 'web', 'world', 'quotes', 'text']],
+  ['Giochi e creatività', ['games', 'ambient', 'life', 'pet', 'formula', 'gallery']],
+  ['Altro', []],
+];
+function groupModes(modes) {
+  const groups = MODE_GROUPS.map(([title, ids]) => [title, ids.map((id) => modes.find((m) => m.id === id)).filter(Boolean)]);
+  const listed = new Set(MODE_GROUPS.flatMap(([, ids]) => ids));
+  groups[groups.length - 1][1].push(...modes.filter((m) => !listed.has(m.id)));
+  return groups.filter(([, list]) => list.length);
+}
 function modeName(id) { const m = state.modes.find((m) => m.id === id); return m ? m.name : id; }
 
 function render() {
@@ -61,17 +81,27 @@ function render() {
   const selected = s.playlistPos >= 0 ? s.active : s.mode;
   const box = $('modes');
   box.innerHTML = '';
-  for (const m of s.modes) {
-    const b = document.createElement('button');
-    b.className = m.id === selected ? 'on' : '';
-    b.textContent = m.name;
-    if (m.id === selected && s.playlistPos >= 0) {
-      const tag = document.createElement('small');
-      tag.textContent = 'playlist';
-      b.appendChild(tag);
+  for (const [title, ids] of groupModes(s.modes)) {
+    const group = document.createElement('div');
+    group.className = 'modegroup';
+    const h = document.createElement('h3');
+    h.textContent = title;
+    const tiles = document.createElement('div');
+    tiles.className = 'tiles';
+    for (const m of ids) {
+      const b = document.createElement('button');
+      b.className = 'tile' + (m.id === selected ? ' on' : '');
+      b.textContent = m.name;
+      if (m.id === selected && s.playlistPos >= 0) {
+        const tag = document.createElement('small');
+        tag.textContent = 'dalla playlist';
+        b.appendChild(tag);
+      }
+      b.onclick = () => post('/api/mode', { id: m.id }).then(() => status(m.name)).catch(fail);
+      tiles.appendChild(b);
     }
-    b.onclick = () => post('/api/mode', { id: m.id }).then(() => status(m.name)).catch(fail);
-    box.appendChild(b);
+    group.append(h, tiles);
+    box.appendChild(group);
   }
   const override = $('override');
   override.hidden = s.active === selected;
@@ -94,8 +124,14 @@ function render() {
   renderGame();
   renderExtras();
 
-  // Only the picked mode's own settings.
-  for (const sec of document.querySelectorAll('section[data-mode]')) sec.hidden = sec.dataset.mode !== selected;
+  // Only the picked mode's own settings, in one card titled with its name.
+  let panel = null;
+  for (const p of document.querySelectorAll('.panel[data-mode]')) {
+    p.hidden = p.dataset.mode !== selected;
+    if (!p.hidden) panel = p;
+  }
+  $('modeCard').hidden = !panel;
+  $('modeTitle').textContent = modeName(selected);
 
   if (!editing('text')) $('text').value = s.text;
   $('textPos').value = s.textPos;
@@ -302,7 +338,7 @@ setInterval(() => {
   }
 }, 60);
 setInterval(() => {
-  if ($('board').closest('section').hidden || canvasBusy || canvasDrawing) return;
+  if ($('board').closest('.panel').hidden || canvasBusy || canvasDrawing) return;
   fetch('/api/canvas').then((r) => r.json()).then(showCanvas).catch(() => {});
 }, 1000);
 $('canvasClear').onclick = () => confirm('Cancellare il disegno (anche per gli altri)?')
@@ -330,6 +366,7 @@ function renderPet(p) {
   if (!care.children.length && p.pad) {
     [...p.pad.keys].forEach((k) => {
       const b = document.createElement('button');
+      b.className = 'btn';
       b.textContent = p.pad.labels['LRUDA'.indexOf(k)] || DEFAULT_LABELS[k];
       b.onclick = () => post('/api/cmd', { c: 'k ' + k }).catch(fail);
       care.appendChild(b);
@@ -599,11 +636,12 @@ async function loadGallery() {
     const name = document.createElement('span');
     name.className = 'name';
     name.textContent = d.name + (d.frames > 1 ? ' (' + d.frames + ' fotogrammi)' : '');
-    const show = document.createElement('button'); show.textContent = 'Mostra';
+    const show = document.createElement('button'); show.textContent = 'Mostra'; show.className = 'btn small';
     show.onclick = () => post('/api/gallery/show', { id: d.id }).then(() => status('Mostro «' + d.name + '»')).catch(fail);
-    const open = document.createElement('button'); open.textContent = 'Modifica';
+    const open = document.createElement('button'); open.textContent = 'Modifica'; open.className = 'btn small';
     open.onclick = () => openDrawing(d.id, true);
-    const del = document.createElement('button'); del.textContent = '✕';
+    const del = document.createElement('button'); del.textContent = '✕'; del.className = 'btn small icon quiet';
+    del.setAttribute('aria-label', 'Elimina');
     del.onclick = async () => {
       if (!confirm('Eliminare «' + d.name + '»?')) return;
       await fetch('/api/gallery/delete', { method: 'POST', body: new URLSearchParams({ id: d.id }) });
@@ -698,7 +736,8 @@ function addPlaylistRow(id, minutes, list = $('playlist')) {
   min.type = 'number'; min.min = 1; min.max = 240; min.value = minutes; min.className = 'narrow';
   min.title = 'minuti';
   const x = document.createElement('button');
-  x.className = 'x'; x.textContent = '✕';
+  x.className = 'btn small icon quiet'; x.textContent = '✕';
+  x.setAttribute('aria-label', 'Rimuovi');
   x.onclick = () => { row.remove(); dirty.playlist = true; };
   sel.onchange = min.oninput = () => { dirty.playlist = true; };
   row.append(sel, min, x);
@@ -768,9 +807,9 @@ function showScenes() {
 function addScene(time, bright, items) {
   const box = document.createElement('div');
   box.className = 'scene';
-  box.innerHTML = '<div class="row"><input type="time" class="st"><button class="x" title="Rimuovi fascia">✕</button></div>' +
-    '<div class="row"><label style="margin:0;flex:0 0 auto">Luce</label><input type="range" class="sb" min="0" max="255"><span class="sv narrow"></span></div>' +
-    '<div class="list items" style="margin-top:6px"></div><button class="link add">+ Aggiungi modalità</button>';
+  box.innerHTML = '<div class="row"><input type="time" class="st" aria-label="Inizio"><button class="btn small icon quiet x" aria-label="Rimuovi fascia">✕</button></div>' +
+    '<div class="row"><label>Luce</label><input type="range" class="sb" min="0" max="255"><span class="sv narrow hint"></span></div>' +
+    '<div class="stack items"></div><div class="actions"><button class="btn quiet add">+ Aggiungi modalità</button></div>';
   const list = box.querySelector('.items'), sb = box.querySelector('.sb'), sv = box.querySelector('.sv');
   box.querySelector('.st').value = time;
   sb.value = bright;

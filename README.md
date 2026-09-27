@@ -165,10 +165,24 @@ The lamp only uses your home network; it never opens a WiFi network of its
 own. Until it manages to connect it scrolls `wifi...` and retries every
 20 s; if WiFi drops later it reconnects by itself.
 
-At the top, **Sulla lampada ora** is a live preview: a 16x16 picture of
-what the panel shows, pushed by the lamp as it changes. While you play a
-game it moves right above the pad, so you can play without looking at the
-lamp.
+The page is laid out top to bottom as what you use most:
+
+- **Sulla lampada** - a live preview (a 16x16 picture of what the panel
+  shows, pushed by the lamp as it changes), with the button and speed of
+  the mode on show. While you play a game the preview moves right above
+  the pad, so you can play without looking at the lamp.
+- **Modalità** - the modes as tiles in three groups (Informazioni, Giochi
+  e creatività, Altro).
+- One card with the settings of the mode picked, titled with its name.
+- **Impostazioni** (playlist, alarm, night, place, display),
+  **Collegamenti** (phone notifications, Bluetooth) and **Sistema**
+  (diagnostics, backup, firmware update): folding rows in three cards.
+
+One set of components throughout (`web/style.css`): filled buttons for the
+main action of a card (Salva, Mostra...), outlined ones for the others,
+plain text for the destructive or minor ones; the longer explanations are
+folded behind "Come funziona"; confirmations and errors appear as a toast
+at the bottom of the screen; light and dark follow the phone.
 
 The page stays up to date by itself: it keeps a live connection to the
 lamp (Server-Sent Events, `http://<lamp>:81/events`) and gets a `frame` event whenever the panel changes (at most every

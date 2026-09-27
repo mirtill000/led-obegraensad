@@ -3,31 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>OBEGRÄNSAD</title>
 <style>/*STYLE*/</style>
 </head>
 <body>
 <main>
-  <h1>OBEGRÄNSAD</h1>
-  <p class="info" id="info"></p>
+  <header>
+    <h1>OBEGRÄNSAD</h1>
+    <p class="info" id="info"></p>
+  </header>
 
-  <section id="previewBox">
-    <h2>Sulla lampada ora</h2>
+  <!-- What the lamp shows now, with the button and speed of that mode -->
+  <section class="card" id="previewBox">
+    <h2>Sulla lampada</h2>
     <canvas id="preview" width="320" height="320"></canvas>
-  </section>
-
-  <section>
-    <h2>Modalità</h2>
-    <div class="modes" id="modes"></div>
-    <p class="hint" id="override" hidden></p>
-    <button class="action" id="action" hidden></button>
+    <p class="note" id="override" hidden></p>
+    <div class="actions center">
+      <button class="btn primary" id="action" hidden></button>
+    </div>
     <div id="speedBox" hidden>
       <label for="speed">Velocità</label>
       <input type="range" id="speed" min="1" max="9">
     </div>
   </section>
 
-  <section id="gameBox" hidden>
+  <section class="card" id="gameBox" hidden>
     <h2 id="gameTitle">Gioco</h2>
     <label class="check"><input type="checkbox" id="demo"> Modalità demo: gioca da solo</label>
     <p class="hint" id="demoHint"></p>
@@ -40,369 +41,417 @@
     <p class="hint" id="padHint"></p>
   </section>
 
-  <!-- Settings of the mode being shown -->
-  <section data-mode="text" hidden>
-    <h2>Testo scorrevole</h2>
-    <input type="text" id="text" maxlength="200" autocomplete="off">
-    <button class="save" id="saveText">Mostra</button>
-    <p class="hint">Maiuscole e minuscole, cifre, . , : ; ! ? ' - %. Le lettere accentate compaiono con l'apostrofo: «perché» diventa «perche'».</p>
-    <label for="textPos">Come mostrarlo</label>
-    <select id="textPos">
-      <option value="random">Scorre, a un'altezza variabile (cambia a ogni passaggio)</option>
-      <option value="top">Scorre in alto</option>
-      <option value="middle">Scorre al centro</option>
-      <option value="bottom">Scorre in basso</option>
-      <option value="pages">A pagine ferme (nel font scelto in Display, come le frasi dell'ora)</option>
-    </select>
-    <label for="textFontText">Font</label>
-    <select id="textFontText">
-      <option value="big">Grande (16 px)</option>
-      <option value="small">Media (8 px)</option>
-      <option value="mini">Piccola (5 px, maiuscole)</option>
-      <option value="tiny">Minima (4 px, maiuscole)</option>
-    </select>
-    <p class="hint">È lo stesso font di Display: vale per il testo che scorre e per le pagine (Media e Piccola: 2 righe per pagina; Minima: 3 righe; col Grande il testo scorre sempre). Con «Media» le lettere sono strette di un pixel, e in verticale sono più basse (6 px). Con il Grande l'altezza non conta.</p>
+  <section class="card">
+    <h2>Modalità</h2>
+    <div id="modes"></div>
   </section>
 
-  <section data-mode="quotes" hidden>
-    <h2>Frasi</h2>
-    <textarea id="quotes" spellcheck="false"></textarea>
-    <p class="hint">Scrivi qui le tue frasi, una per riga: si aggiungono alle 100 predefinite (<code>content/frasi_dell_ora.txt</code>) e ogni ora ne compare una diversa, a pagine ferme nel font scelto in Display. La velocità regola quanto resta ogni pagina. <span id="quotesInfo"></span></p>
-    <div class="row">
-      <button class="save" id="saveQuotes">Salva frasi</button>
-      <button class="link" id="resetQuotes">Cancella le mie frasi</button>
+  <!-- Settings of the mode picked: one panel at a time -->
+  <section class="card" id="modeCard" hidden>
+    <h2 id="modeTitle"></h2>
+
+    <div class="panel" data-mode="text" hidden>
+      <div class="inline">
+        <input type="text" id="text" maxlength="200" autocomplete="off" aria-label="Testo">
+        <button class="btn primary" id="saveText">Mostra</button>
+      </div>
+      <p class="hint">Lettere accentate con l'apostrofo: «perché» diventa «perche'».</p>
+      <label for="textPos">Come mostrarlo</label>
+      <select id="textPos">
+        <option value="random">Scorre, a un'altezza variabile</option>
+        <option value="top">Scorre in alto</option>
+        <option value="middle">Scorre al centro</option>
+        <option value="bottom">Scorre in basso</option>
+        <option value="pages">A pagine ferme</option>
+      </select>
+      <label for="textFontText">Font</label>
+      <select id="textFontText">
+        <option value="big">Grande (16 px)</option>
+        <option value="small">Media (8 px)</option>
+        <option value="mini">Piccola (5 px, maiuscole)</option>
+        <option value="tiny">Minima (4 px, maiuscole)</option>
+      </select>
+      <p class="hint">È lo stesso font di Display: vale per tutto il testo della lampada.</p>
+    </div>
+
+    <div class="panel" data-mode="quotes" hidden>
+      <label for="quotes">Le tue frasi, una per riga</label>
+      <textarea id="quotes" spellcheck="false"></textarea>
+      <p class="hint">Si aggiungono alle 100 predefinite; ogni ora ne compare una diversa, a pagine ferme. <span id="quotesInfo"></span></p>
+      <div class="actions">
+        <button class="btn primary" id="saveQuotes">Salva</button>
+        <button class="btn quiet" id="resetQuotes">Cancella le mie frasi</button>
+      </div>
+    </div>
+
+    <div class="panel" data-mode="clock" hidden>
+      <p class="hint" id="clockInfo"></p>
+      <div class="actions">
+        <button class="btn" id="openPlace">Cambia città o fuso orario</button>
+      </div>
+    </div>
+
+    <div class="panel" data-mode="forecast" hidden>
+      <div class="fcdays" id="fcDays"></div>
+      <label>Prossime 12 ore</label>
+      <div class="fc" id="fcChart"></div>
+      <p class="hint" id="fcInfo"></p>
+    </div>
+
+    <div class="panel" data-mode="web" hidden>
+      <label class="check"><input type="checkbox" id="infoWord"> Parola del giorno</label>
+      <label class="check"><input type="checkbox" id="infoHistory"> Accadde oggi (Wikipedia)</label>
+      <p class="hint" id="historyStatus"></p>
+      <label class="check"><input type="checkbox" id="infoCalendar"> Prossimo evento del calendario</label>
+      <input type="text" id="icalUrl" placeholder="Link iCal del calendario (.ics)" autocomplete="off" aria-label="Link iCal">
+      <p class="hint"><span id="calendarStatus"></span></p>
+      <details class="help"><summary>Dove trovo il link?</summary>
+        <p>Google Calendar: Impostazioni → il tuo calendario → «Indirizzo segreto in formato iCal». Gli eventi ricorrenti non sono supportati.</p>
+      </details>
+      <label for="webPos">Come mostrarlo</label>
+      <select id="webPos">
+        <option value="random">Scorre, a un'altezza variabile</option>
+        <option value="top">Scorre in alto</option>
+        <option value="middle">Scorre al centro</option>
+        <option value="bottom">Scorre in basso</option>
+        <option value="pages">A pagine ferme</option>
+      </select>
+      <div class="actions">
+        <button class="btn primary" id="saveWeb">Salva</button>
+      </div>
+      <p class="hint" id="webPreview"></p>
+    </div>
+
+    <div class="panel" data-mode="world" hidden>
+      <p class="lead" id="worldInfo"></p>
+      <p class="hint" id="worldStatus"></p>
+      <details class="help"><summary>Come funziona</summary>
+        <p>A turno, con una dissolvenza: la qualità dell'aria dove sei (indice europeo e livello, da Open-Meteo, ogni mezz'ora) e la Stazione spaziale sul planisfero con la sua scia (il punto fisso sei tu; da wheretheiss.at, ogni 20 secondi). I dati si scaricano solo mentre questa modalità è in uso.</p>
+      </details>
+    </div>
+
+    <div class="panel" data-mode="life" hidden>
+      <div class="board" id="board"></div>
+      <div class="choice" id="inks">
+        <button data-level="255" class="on">Matita</button>
+        <button data-level="0">Gomma</button>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="canvasLife">Fai vivere</button>
+        <button class="btn" id="canvasSave" title="Salva nei Disegni">Salva</button>
+        <button class="btn quiet" id="canvasClear">Cancella</button>
+      </div>
+      <details class="help"><summary>Come funziona</summary>
+        <p>Da sola la lampada fa nascere e morire colonie a caso. Disegna qui la tua prima generazione: la lampada la mostra mentre disegni e «Fai vivere» la mette in moto. Chi ha la pagina aperta su un altro telefono vede i tuoi tratti e tu i suoi. Dal Cardputer: le frecce muovono un cursore, lo spazio accende o spegne una cellula, X fa vivere. Il disegno resta dopo un riavvio; «Salva» lo mette tra i Disegni.</p>
+      </details>
+    </div>
+
+    <div class="panel" data-mode="ambient" hidden>
+      <select id="ambient" aria-label="Animazione"></select>
+      <p class="hint" id="ambientInfo"></p>
+    </div>
+
+    <div class="panel" data-mode="games" hidden>
+      <select id="games" aria-label="Gioco"></select>
+      <p class="hint" id="gamesInfo"></p>
+    </div>
+
+    <div class="panel" data-mode="gallery" hidden>
+      <canvas id="canvas" width="320" height="320"></canvas>
+      <div class="swatches" id="swatches"></div>
+      <div class="tools">
+        <button class="btn small" id="toolFill">Riempi</button>
+        <button class="btn small" id="toolClear">Pulisci</button>
+        <button class="btn small" id="toolInvert">Inverti</button>
+      </div>
+      <div class="frames">
+        <button class="btn small icon" id="framePrev" aria-label="Fotogramma precedente">◀</button>
+        <span id="frameInfo"></span>
+        <button class="btn small icon" id="frameNext" aria-label="Fotogramma successivo">▶</button>
+      </div>
+      <div class="tools">
+        <button class="btn small" id="frameAdd">+ Fotogramma</button>
+        <button class="btn small" id="frameDup">Duplica</button>
+        <button class="btn small" id="frameDel">Elimina fotogramma</button>
+        <button class="btn small" id="framePlay">▶ Anteprima</button>
+      </div>
+      <label for="fps">Velocità dell'animazione</label>
+      <select id="fps">
+        <option value="500">2 fotogrammi al secondo</option><option value="250">4 al secondo</option>
+        <option value="166">6 al secondo</option><option value="125">8 al secondo</option>
+        <option value="100">10 al secondo</option><option value="66">15 al secondo</option>
+      </select>
+      <label for="drawName">Nome</label>
+      <div class="inline">
+        <input type="text" id="drawName" maxlength="40" placeholder="Il mio disegno">
+        <button class="btn primary" id="saveDrawing">Salva</button>
+      </div>
+      <div class="actions">
+        <button class="btn" id="newDrawing">Nuovo disegno</button>
+      </div>
+      <label for="importFile">Importa un'immagine o una GIF</label>
+      <input type="file" id="importFile" accept="image/*">
+      <label class="check"><input type="checkbox" id="importInvert"> Inverti chiari e scuri</label>
+      <label class="check"><input type="checkbox" id="importContrast" checked> Contrasto automatico</label>
+      <h3>Galleria</h3>
+      <div class="actions">
+        <button class="btn" id="showAll">Mostra tutti a rotazione</button>
+      </div>
+      <div class="gallery" id="gallery"></div>
+    </div>
+
+    <div class="panel" data-mode="formula" hidden>
+      <label for="formulaPreset">Esempi</label>
+      <select id="formulaPreset"></select>
+      <label for="formulaText">La tua formula</label>
+      <textarea class="code" id="formulaText" rows="3" spellcheck="false" autocapitalize="off"></textarea>
+      <div class="actions">
+        <button class="btn primary" id="formulaShow">Mostra</button>
+      </div>
+      <p class="hint error" id="formulaError"></p>
+      <details class="help"><summary>Come si scrive</summary>
+        <p>Come su tixy.land: una formula calcolata per ogni pixel, 30 volte al secondo, con <b>t</b> (secondi), <b>i</b> (numero del pixel, 0-255), <b>x</b> e <b>y</b> (colonna e riga, 0-15). Più il risultato è alto più il pixel è acceso (1 = pieno); i valori negativi si vedono appena. Si scrive come in JavaScript: + - * / % **, confronti, &amp;&amp; || !, &amp; | ^ &lt;&lt; &gt;&gt;, a ? b : c, PI e le funzioni sin cos tan asin acos atan atan2 abs sqrt floor ceil round sign min max pow hypot log exp random. La lampada la usa subito, senza aggiornare il firmware.</p>
+      </details>
+    </div>
+
+    <div class="panel" data-mode="hourglass" hidden>
+      <label for="hgMin">Durata</label>
+      <div class="inline">
+        <select id="hgMin">
+          <option value="1">1 minuto</option>
+          <option value="3">3 minuti</option>
+          <option value="5">5 minuti</option>
+          <option value="10">10 minuti</option>
+          <option value="15">15 minuti</option>
+          <option value="25">25 minuti</option>
+          <option value="30">30 minuti</option>
+          <option value="60">1 ora</option>
+        </select>
+        <button class="btn primary" id="hgStart">Ricomincia</button>
+      </div>
+      <p class="hint" id="hgInfo"></p>
+      <details class="help"><summary>Come funziona</summary>
+        <p>Ogni granello è un LED e cade davvero: la sabbia si ammucchia, scivola e lascia un cratere in alto. «Gira» la capovolge come una vera clessidra (il tempo che resta è quello già trascorso); alla fine la sabbia pulsa per qualche secondo.</p>
+      </details>
+    </div>
+
+    <div class="panel" data-mode="pet" hidden>
+      <p class="lead" id="petTitle"></p>
+      <p class="hint" id="petMood"></p>
+      <div class="petStats">
+        <label>Pancia <meter id="petFood" min="0" max="100" low="25" optimum="100"></meter></label>
+        <label>Allegria <meter id="petJoy" min="0" max="100" low="25" optimum="100"></meter></label>
+        <label>Energia <meter id="petEnergy" min="0" max="100" low="20" optimum="100"></meter></label>
+      </div>
+      <div class="petCare" id="petCare"></div>
+      <p class="hint" id="petHint"></p>
+      <label for="petName">Nome</label>
+      <div class="inline">
+        <input type="text" id="petName" maxlength="15">
+        <button class="btn primary" id="petNameSave">Salva</button>
+      </div>
+      <div class="actions">
+        <button class="btn quiet" id="petReset">Nuovo uovo</button>
+      </div>
+      <details class="help"><summary>Come funziona</summary>
+        <p>Nasce da un uovo, cresce (piccolo, ragazzo, adulto), ha fame, si annoia, dorme dalle 22 alle 7 e sporca: se lo trascuri per un paio d'ore si ammala, ma non muore. Il tempo passa anche quando la lampada mostra altro o è spenta: al ritorno recupera fino a tre giorni. Si cura anche dal Cardputer, con le frecce e lo spazio.</p>
+      </details>
+    </div>
+
+    <div class="panel" data-mode="demo" hidden>
+      <label for="demoStyle">Come mostrare le frasi</label>
+      <select id="demoStyle">
+        <option value="auto">A turno: uno stile per frase</option>
+        <option value="rows3">3 righe che scorrono insieme (font Minima)</option>
+        <option value="pages">A pagine: 3 righe ferme alla volta (font Minima)</option>
+        <option value="rows2">2 righe che scorrono insieme (font Piccola)</option>
+      </select>
+      <p class="hint">Le frasi dell'ora, per confrontare come si legge un testo lungo su 16×16 LED.</p>
     </div>
   </section>
 
-  <section data-mode="clock" hidden>
-    <h2>Orologio e meteo</h2>
-    <p class="hint" id="clockInfo"></p>
-    <button class="link" id="openPlace">Cambia città o fuso orario</button>
-  </section>
+  <!-- General settings, in three groups -->
+  <h2 class="group">Impostazioni</h2>
+  <div class="card list">
+    <details id="playlistBox">
+      <summary>Playlist</summary>
+      <label class="check"><input type="checkbox" id="playlistOn"> Alterna le modalità da sola</label>
+      <label class="check"><input type="checkbox" id="scenesOn"> Cambia per fascia oraria</label>
+      <div id="plainPlaylist">
+        <div class="stack" id="playlist"></div>
+        <div class="actions"><button class="btn quiet" id="addItem">+ Aggiungi</button></div>
+      </div>
+      <div id="scenesBox" hidden>
+        <div class="stack" id="scenes"></div>
+        <div class="actions"><button class="btn quiet" id="addScene">+ Aggiungi fascia</button></div>
+        <p class="hint">Ogni fascia parte alla sua ora e vale fino alla successiva, con la sua luminosità e le sue modalità. La notte e la sveglia hanno comunque la precedenza.</p>
+      </div>
+      <div class="actions"><button class="btn primary" id="savePlaylist">Salva</button></div>
+      <p class="hint">Scegliere una modalità a mano ferma la playlist.</p>
+    </details>
 
-  <section data-mode="forecast" hidden>
-    <h2>Previsioni</h2>
-    <div class="fcdays" id="fcDays"></div>
-    <label>Prossime 12 ore</label>
-    <div class="fc" id="fcChart"></div>
-    <p class="hint" id="fcInfo"></p>
-  </section>
+    <details id="alarmBox">
+      <summary>Sveglia con l'alba</summary>
+      <label class="check"><input type="checkbox" id="alarmOn"> Attiva</label>
+      <label for="alarmTime">Ora della sveglia</label>
+      <input type="time" id="alarmTime">
+      <label>Giorni</label>
+      <div class="days" id="alarmDays"></div>
+      <div class="grid2">
+        <div><label for="alarmRamp">Alba (minuti prima)</label><input type="number" id="alarmRamp" min="5" max="60"></div>
+        <div><label for="alarmHold">Accesa dopo (minuti)</label><input type="number" id="alarmHold" min="1" max="120"></div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="saveAlarm">Salva</button>
+        <button class="btn" id="testAlarm">Prova l'alba (1 minuto)</button>
+      </div>
+      <p class="hint">Il sole sorge sul pannello e la luminosità sale piano fino all'ora della sveglia. Ha la precedenza su tutto, anche sulla notte.</p>
+    </details>
 
-  <section data-mode="web" hidden>
-    <h2>Dal web</h2>
-    <label class="check"><input type="checkbox" id="infoWord"> Parola del giorno</label>
-    <label class="check"><input type="checkbox" id="infoHistory"> Accadde oggi (Wikipedia)</label>
-    <p class="hint" id="historyStatus"></p>
-    <label class="check"><input type="checkbox" id="infoCalendar"> Prossimo evento del calendario</label>
-    <input type="text" id="icalUrl" placeholder="Link iCal del calendario (.ics)" autocomplete="off">
-    <p class="hint">Google Calendar: Impostazioni → il tuo calendario → «Indirizzo segreto in formato iCal». Gli eventi ricorrenti non sono supportati. <span id="calendarStatus"></span></p>
-    <label for="webPos">Come mostrarlo</label>
-    <select id="webPos">
-      <option value="random">Scorre, a un'altezza variabile (cambia a ogni passaggio)</option>
-      <option value="top">Scorre in alto</option>
-      <option value="middle">Scorre al centro</option>
-      <option value="bottom">Scorre in basso</option>
-      <option value="pages">A pagine ferme (nel font scelto in Display, come le frasi dell'ora)</option>
-    </select>
-    <button class="save" id="saveWeb">Salva</button>
-    <p class="hint" id="webPreview"></p>
-  </section>
+    <details id="nightBox">
+      <summary>Giorno e notte</summary>
+      <label class="check"><input type="checkbox" id="nightOn"> Di notte cambia comportamento</label>
+      <label class="check"><input type="checkbox" id="nightSun"> Dal tramonto all'alba <small id="sunTimes"></small></label>
+      <div class="grid2">
+        <div><label for="nightStart">Dalle</label><input type="time" id="nightStart"></div>
+        <div><label for="nightEnd">Alle</label><input type="time" id="nightEnd"></div>
+      </div>
+      <label for="nightMode">Di notte</label>
+      <select id="nightMode">
+        <option value="off">Lampada spenta</option>
+        <option value="stars">Solo stelle</option>
+        <option value="dim">Luminosità ridotta</option>
+      </select>
+      <div id="nightDimBox">
+        <label for="nightBrightness">Luminosità di notte</label>
+        <input type="range" id="nightBrightness" min="1" max="255">
+      </div>
+      <div class="actions"><button class="btn primary" id="saveNight">Salva</button></div>
+    </details>
 
-  <section data-mode="gallery" hidden>
-    <h2>Disegni</h2>
-    <canvas id="canvas" width="320" height="320"></canvas>
-    <div class="swatches" id="swatches"></div>
-    <div class="tools">
-      <button id="toolFill">Riempi</button><button id="toolClear">Pulisci</button><button id="toolInvert">Inverti</button>
-    </div>
-    <div class="row">
-      <button class="x" id="framePrev">◀</button>
-      <span id="frameInfo" style="text-align:center"></span>
-      <button class="x" id="frameNext">▶</button>
-    </div>
-    <div class="tools">
-      <button id="frameAdd">+ Fotogramma</button><button id="frameDup">Duplica</button><button id="frameDel">Elimina fotogramma</button><button id="framePlay">▶ Anteprima</button>
-    </div>
-    <label for="fps">Velocità dell'animazione</label>
-    <select id="fps">
-      <option value="500">2 fotogrammi al secondo</option><option value="250">4 al secondo</option>
-      <option value="166">6 al secondo</option><option value="125">8 al secondo</option>
-      <option value="100">10 al secondo</option><option value="66">15 al secondo</option>
-    </select>
-    <label for="drawName">Nome</label>
-    <div class="row">
-      <input type="text" id="drawName" maxlength="40" placeholder="Il mio disegno">
-      <button class="save narrow" id="saveDrawing" style="margin-top:0">Salva</button>
-    </div>
-    <div class="tools"><button id="newDrawing">Nuovo disegno</button></div>
-    <label for="importFile">Importa un'immagine o una GIF</label>
-    <input type="file" id="importFile" accept="image/*">
-    <label class="check" style="margin-top:6px"><input type="checkbox" id="importInvert"> Inverti chiari e scuri</label>
-    <label class="check"><input type="checkbox" id="importContrast" checked> Contrasto automatico</label>
-    <h2 style="margin-top:16px">Galleria</h2>
-    <div class="tools"><button id="showAll">Mostra tutti a rotazione</button></div>
-    <div class="gallery" id="gallery"></div>
-  </section>
+    <details id="placeBox">
+      <summary>Luogo e ora</summary>
+      <label for="city">Città (per il meteo)</label>
+      <div class="inline">
+        <input type="text" id="city" autocomplete="off" placeholder="es. Milano">
+        <button class="btn primary" id="searchCity">Cerca</button>
+      </div>
+      <div class="results" id="cityResults"></div>
+      <p class="hint" id="placeInfo"></p>
+      <label for="tz">Fuso orario</label>
+      <select id="tz"></select>
+      <p class="hint" id="skyInfo"></p>
+    </details>
 
-  <section data-mode="demo" hidden>
-    <h2>Demo</h2>
-    <label for="demoStyle">Come mostrare le frasi</label>
-    <select id="demoStyle">
-      <option value="auto">A turno: uno stile per frase</option>
-      <option value="rows3">3 righe che scorrono insieme (font Minima)</option>
-      <option value="pages">A pagine: 3 righe ferme alla volta (font Minima)</option>
-      <option value="rows2">2 righe che scorrono insieme (Mini 5 pixel)</option>
-    </select>
-    <p class="hint">Le frasi dell'ora, per confrontare come si legge un testo lungo su 16×16 LED. La velocità regola lo scorrimento e il tempo di ogni pagina.</p>
-  </section>
+    <details id="displayBox">
+      <summary>Display</summary>
+      <label>Orientamento della lampada</label>
+      <div class="choice" id="orientation">
+        <button data-vertical="0">Orizzontale</button>
+        <button data-vertical="1">Verticale</button>
+      </div>
+      <label for="brightness">Luminosità</label>
+      <input type="range" id="brightness" min="1" max="255">
+      <label for="textFont">Font del testo</label>
+      <select id="textFont">
+        <option value="big">Grande (16 px)</option>
+        <option value="small">Media (8 px)</option>
+        <option value="mini">Piccola (5 px, maiuscole)</option>
+        <option value="tiny">Minima (4 px, maiuscole)</option>
+      </select>
+      <details class="help"><summary>Dove si usa</summary>
+        <p>Per tutto il testo, che scorra o sia a pagine: testo scorrevole, frasi dell'ora, dati dal web, notifiche, orologio a parole e punteggi dei giochi. A pagine: 2 righe con Media e Piccola, 3 con Minima; col Grande il testo scorre sempre. Con «Media» le lettere sono strette di un pixel, e in verticale il testo è più basso (6 px invece di 8).</p>
+      </details>
+      <label for="gameStyle">Grafica dei giochi</label>
+      <select id="gameStyle">
+        <option value="soft">Sfumata: più livelli di luce</option>
+        <option value="crisp">Nitida: LED solo accesi o spenti</option>
+      </select>
+      <p class="hint">Vale per <span id="styleGames">i giochi che la seguono</span>. Se con la sfumata noti tremolii, prova la nitida.</p>
+      <label for="transition">Passaggio tra modalità e animazioni</label>
+      <select id="transition">
+        <option value="fade">Dissolvenza</option>
+        <option value="wipe">Tendina da sinistra</option>
+        <option value="none">Stacco netto</option>
+      </select>
+    </details>
+  </div>
 
-  <section data-mode="hourglass" hidden>
-    <h2>Clessidra</h2>
-    <label for="hgMin">Durata</label>
-    <select id="hgMin">
-      <option value="1">1 minuto</option>
-      <option value="3">3 minuti</option>
-      <option value="5">5 minuti</option>
-      <option value="10">10 minuti</option>
-      <option value="15">15 minuti</option>
-      <option value="25">25 minuti</option>
-      <option value="30">30 minuti</option>
-      <option value="60">1 ora</option>
-    </select>
-    <button class="save" id="hgStart">Ricomincia</button>
-    <p class="hint" id="hgInfo"></p>
-    <p class="hint">Ogni granello è un LED e cade davvero: la sabbia si ammucchia, scivola e lascia un cratere in alto. «Gira» la capovolge come una vera clessidra (il tempo che resta è quello già trascorso); alla fine la sabbia pulsa per qualche secondo.</p>
-  </section>
+  <h2 class="group">Collegamenti</h2>
+  <div class="card list">
+    <details id="notifyBox">
+      <summary>Notifiche dal telefono</summary>
+      <p class="hint">La lampada mostra un'icona animata, poi il testo a pagine, poi torna a quello che stava facendo. Si mandano con un indirizzo:</p>
+      <p class="code" id="notifyUrl"></p>
+      <div class="grid2">
+        <div><label for="notifyText">Testo</label><input type="text" id="notifyText" maxlength="200" value="Lavatrice finita"></div>
+        <div><label for="notifyIcon">Icona</label>
+          <select id="notifyIcon">
+            <option value="">nessuna</option>
+            <option value="bell">campanella</option>
+            <option value="mail">busta</option>
+            <option value="check">spunta</option>
+            <option value="alert">attenzione</option>
+            <option value="heart">cuore</option>
+            <option value="phone">telefono</option>
+            <option value="home">casa</option>
+            <option value="star">stella</option>
+          </select></div>
+      </div>
+      <label class="check"><input type="checkbox" id="notifyNight"> Anche di notte (altrimenti di notte vengono ignorate)</label>
+      <div class="actions"><button class="btn primary" id="notifySend">Prova</button></div>
+      <details class="help"><summary>Come collegare il telefono</summary>
+        <p><b>iPhone</b>: app Comandi → Automazione (es. «Quando arriva un'email da…», «Quando esco di casa», un orario) → azione «Ottieni contenuto dell'URL» con l'indirizzo qui sopra. Funziona quando il telefono è sulla rete di casa.</p>
+        <p><b>Android</b>: app come HTTP Shortcuts, Tasker o MacroDroid, con lo stesso indirizzo.</p>
+        <p><b>IFTTT</b> e altri servizi su Internet chiamano dall'esterno: servono l'inoltro di una porta sul router o un tunnel verso la lampada.</p>
+        <p>Parametri: <code>text</code> (fino a 200 caratteri, anche accentati) e <code>icon</code> (bell, mail, check, alert, heart, phone, home, star); con GET, POST da modulo o POST JSON <code>{"text":"…","icon":"…"}</code>. Fino a 4 notifiche aspettano in coda.</p>
+      </details>
+    </details>
 
-  <section data-mode="world" hidden>
-    <h2>Mondo</h2>
-    <p id="worldInfo" style="white-space: pre-line"></p>
-    <p class="hint" id="worldStatus"></p>
-    <p class="hint">A turno, con una dissolvenza: la qualità dell'aria dove sei («Aria», l'indice europeo e il livello; da Open-Meteo, ogni mezz'ora) e la Stazione spaziale su una mappa del mondo con la sua scia (il punto fisso sei tu; con la lampada in verticale c'è la scritta «ISS»; da wheretheiss.at, ogni 20 secondi). I dati si scaricano solo mentre questa modalità è in uso.</p>
-  </section>
+    <details id="bleBox">
+      <summary>Bluetooth (telecomando)</summary>
+      <label class="check"><input type="checkbox" id="bleOn"> Telecomando Bluetooth attivo</label>
+      <p class="hint" id="bleInfo"></p>
+      <div class="actions"><button class="btn quiet" id="bleForget">Dimentica i telecomandi e cambia PIN</button></div>
+      <p class="hint">Un telecomando Bluetooth (per esempio il Cardputer ADV con il firmware in <code>cardputer/</code>) si abbina una volta sola scrivendo il PIN qui sopra. Attivare o disattivare il Bluetooth e cambiare PIN riavviano la lampada.</p>
+    </details>
+  </div>
 
-  <section data-mode="formula" hidden>
-    <h2>Formule</h2>
-    <label for="formulaPreset">Esempi</label>
-    <select id="formulaPreset"></select>
-    <label for="formulaText">La tua formula</label>
-    <textarea id="formulaText" rows="3" spellcheck="false" autocapitalize="off" style="font-family: ui-monospace, monospace"></textarea>
-    <button class="save" id="formulaShow">Mostra</button>
-    <p class="hint" id="formulaError"></p>
-    <p class="hint">Come su tixy.land: una formula calcolata per ogni pixel, 30 volte al secondo, con <b>t</b> (secondi), <b>i</b> (numero del pixel, 0-255), <b>x</b> e <b>y</b> (colonna e riga, 0-15). Più il risultato è alto più il pixel è acceso (1 = pieno); i valori negativi si vedono appena. Si scrive come in JavaScript: + - * / % **, confronti, &amp;&amp; || !, &amp; | ^ &lt;&lt; &gt;&gt;, a ? b : c, PI e le funzioni sin cos tan asin acos atan atan2 abs sqrt floor ceil round sign min max pow hypot log exp random. La lampada la usa subito, senza aggiornare il firmware.</p>
-  </section>
+  <h2 class="group">Sistema</h2>
+  <div class="card list">
+    <details id="diagBox">
+      <summary>Diagnostica</summary>
+      <table class="diag" id="diag"></table>
+      <h3>Eventi recenti</h3>
+      <table class="diag" id="events"></table>
+      <div class="actions"><button class="btn quiet" id="diagReset">Azzera le statistiche</button></div>
+      <details class="help"><summary>Come leggerla</summary>
+        <p>Si aggiorna ogni 2 secondi mentre questa sezione è aperta. «Cambi di livello saltati» e «ritardo» dicono quanto è stabile la scala di grigi: se crescono mentre i LED tremano, il disturbo viene dal rinfresco. «Il più lungo» del ciclo principale sopra qualche centinaio di ms vuol dire che la lampada si è fermata per quel tempo.</p>
+      </details>
+    </details>
 
-  <section data-mode="life" hidden>
-    <h2>Gioco della vita</h2>
-    <div class="board" id="board"></div>
-    <div class="row inks" id="inks">
-      <button data-level="255" class="on">Matita</button>
-      <button data-level="0">Gomma</button>
-    </div>
-    <div class="row">
-      <button class="save" id="canvasLife">Fai vivere</button>
-      <button class="save" id="canvasSave" title="Salva nei Disegni">Salva</button>
-      <button class="save" id="canvasClear">Cancella</button>
-    </div>
-    <p class="hint">Da sola la lampada fa nascere e morire colonie a caso. Disegna qui la tua prima generazione (col dito o col mouse; chi ha la pagina aperta su un altro telefono vede i tuoi tratti e tu i suoi): la lampada mostra il disegno mentre lo fai, e «Fai vivere» lo mette in moto. Dal Cardputer: le frecce muovono un cursore lampeggiante, lo spazio accende o spegne una cellula, X fa vivere. Il disegno resta anche dopo un riavvio; «Salva» lo mette tra i Disegni.</p>
-  </section>
+    <details id="backupBox">
+      <summary>Backup delle impostazioni</summary>
+      <p class="hint">Tutte le impostazioni (modalità, playlist e fasce orarie, testi, frasi aggiunte, notte, sveglia, luogo, Bluetooth…) in un file. I disegni della galleria non sono inclusi.</p>
+      <div class="actions"><a class="btn" id="backupGet" href="/api/backup" download="obegransad-backup.json">Scarica il backup</a></div>
+      <label for="backupFile">Ripristina da un file</label>
+      <input type="file" id="backupFile" accept=".json,application/json">
+      <div class="actions"><button class="btn primary" id="backupRestore" disabled>Ripristina</button></div>
+      <p class="hint">Il ripristino sostituisce tutte le impostazioni con quelle del file e riavvia la lampada.</p>
+    </details>
 
-  <section data-mode="pet" hidden>
-    <h2 id="petTitle">Animaletto</h2>
-    <p id="petMood"></p>
-    <div class="petStats">
-      <label>Pancia <meter id="petFood" min="0" max="100" low="25" optimum="100"></meter></label>
-      <label>Allegria <meter id="petJoy" min="0" max="100" low="25" optimum="100"></meter></label>
-      <label>Energia <meter id="petEnergy" min="0" max="100" low="20" optimum="100"></meter></label>
-    </div>
-    <div class="petCare" id="petCare"></div>
-    <p class="hint" id="petHint"></p>
-    <label for="petName">Nome</label>
-    <div class="row"><input type="text" id="petName" maxlength="15"><button class="save narrow" id="petNameSave">Salva</button></div>
-    <button class="save" id="petReset">Nuovo uovo</button>
-    <p class="hint">Nasce da un uovo, cresce (piccolo, ragazzo, adulto), ha fame, si annoia, dorme dalle 22 alle 7 e sporca: se lo trascuri per un paio d'ore si ammala, ma non muore. Il tempo passa anche quando la lampada mostra altro o è spenta: al ritorno recupera fino a tre giorni. Si cura anche dal Cardputer, con le frecce e lo spazio.</p>
-  </section>
-
-  <section data-mode="ambient" hidden>
-    <h2>Animazioni</h2>
-    <select id="ambient"></select>
-    <p class="hint" id="ambientInfo"></p>
-  </section>
-
-  <section data-mode="games" hidden>
-    <h2>Giochi</h2>
-    <select id="games"></select>
-    <p class="hint" id="gamesInfo"></p>
-  </section>
-
-  <!-- General settings -->
-  <details id="playlistBox">
-    <summary>Playlist</summary>
-    <label class="check"><input type="checkbox" id="playlistOn"> Alterna le modalità da sola</label>
-    <label class="check"><input type="checkbox" id="scenesOn"> Cambia per fascia oraria</label>
-    <div id="plainPlaylist">
-      <div class="list" id="playlist"></div>
-      <button class="link" id="addItem">+ Aggiungi</button>
-    </div>
-    <div id="scenesBox" hidden>
-      <div class="list" id="scenes"></div>
-      <button class="link" id="addScene">+ Aggiungi fascia</button>
-      <p class="hint">Ogni fascia parte alla sua ora e vale fino alla successiva (l'ultima continua dopo mezzanotte), con la sua luminosità e le sue modalità. La notte e la sveglia hanno comunque la precedenza.</p>
-    </div>
-    <button class="save" id="savePlaylist">Salva playlist</button>
-    <p class="hint">Scegliere una modalità a mano ferma la playlist.</p>
-  </details>
-
-  <details id="alarmBox">
-    <summary>Sveglia con l'alba</summary>
-    <label class="check"><input type="checkbox" id="alarmOn"> Attiva</label>
-    <label for="alarmTime">Ora della sveglia</label>
-    <input type="time" id="alarmTime">
-    <label>Giorni</label>
-    <div class="days" id="alarmDays"></div>
-    <div class="row">
-      <div><label for="alarmRamp">Alba (minuti prima)</label><input type="number" id="alarmRamp" min="5" max="60"></div>
-      <div><label for="alarmHold">Accesa dopo (minuti)</label><input type="number" id="alarmHold" min="1" max="120"></div>
-    </div>
-    <div class="row">
-      <button class="save" id="saveAlarm">Salva</button>
-      <button class="link" id="testAlarm">Prova l'alba (1 minuto)</button>
-    </div>
-    <p class="hint">Il sole sorge sul pannello e la luminosità sale piano fino all'ora della sveglia. Ha la precedenza su tutto, anche sulla notte.</p>
-  </details>
-
-  <details id="nightBox">
-    <summary>Giorno e notte</summary>
-    <label class="check"><input type="checkbox" id="nightOn"> Di notte cambia comportamento</label>
-    <label class="check"><input type="checkbox" id="nightSun"> Dal tramonto all'alba <small id="sunTimes"></small></label>
-    <div class="row">
-      <div><label for="nightStart">Dalle</label><input type="time" id="nightStart"></div>
-      <div><label for="nightEnd">Alle</label><input type="time" id="nightEnd"></div>
-    </div>
-    <label for="nightMode">Di notte</label>
-    <select id="nightMode">
-      <option value="off">Lampada spenta</option>
-      <option value="stars">Solo stelle</option>
-      <option value="dim">Luminosità ridotta</option>
-    </select>
-    <div id="nightDimBox">
-      <label for="nightBrightness">Luminosità di notte</label>
-      <input type="range" id="nightBrightness" min="1" max="255">
-    </div>
-    <button class="save" id="saveNight">Salva</button>
-  </details>
-
-  <details id="placeBox">
-    <summary>Luogo e ora</summary>
-    <label for="city">Città (per il meteo)</label>
-    <div class="row">
-      <input type="text" id="city" autocomplete="off" placeholder="es. Milano">
-      <button class="save narrow" id="searchCity" style="margin-top:0">Cerca</button>
-    </div>
-    <div class="results" id="cityResults"></div>
-    <p class="hint" id="placeInfo"></p>
-    <label for="tz">Fuso orario</label>
-    <select id="tz"></select>
-    <p class="hint" id="skyInfo"></p>
-  </details>
-
-  <details id="displayBox">
-    <summary>Display</summary>
-    <label>Orientamento della lampada</label>
-    <div class="segmented" id="orientation">
-      <button data-vertical="0">Orizzontale</button>
-      <button data-vertical="1">Verticale</button>
-    </div>
-    <label for="brightness">Luminosità</label>
-    <input type="range" id="brightness" min="1" max="255">
-    <label for="textFont">Font del testo che scorre</label>
-    <select id="textFont">
-      <option value="big">Grande (16 px)</option>
-      <option value="small">Media (8 px)</option>
-      <option value="mini">Piccola (5 px, maiuscole)</option>
-      <option value="tiny">Minima (4 px, maiuscole)</option>
-    </select>
-    <p class="hint">Vale per il testo che scorre e per quello a pagine: testo scorrevole, frasi dell'ora, dati dal web, notifiche, orologio a parole e punteggi dei giochi. A pagine: 2 righe con Media e Piccola, 3 con Minima; col Grande il testo scorre sempre (una pagina conterrebbe due lettere). Con «Media» le lettere sono strette di un pixel, e in verticale il testo è più basso (6 px invece di 8). Con il Grande l'altezza del testo non conta: occupa tutto il pannello.</p>
-    <label for="gameStyle">Grafica dei giochi</label>
-    <select id="gameStyle">
-      <option value="soft">Sfumata: più livelli di luce (profondità, scie, sfondi)</option>
-      <option value="crisp">Nitida: LED solo accesi o spenti</option>
-    </select>
-    <p class="hint">Vale per <span id="styleGames">i giochi che la seguono</span>. Se con la sfumata noti tremolii, prova la nitida.</p>
-    <label for="transition">Passaggio tra modalità e animazioni</label>
-    <select id="transition">
-      <option value="fade">Dissolvenza</option>
-      <option value="wipe">Tendina da sinistra</option>
-      <option value="none">Stacco netto</option>
-    </select>
-  </details>
-
-  <details id="notifyBox">
-    <summary>Notifiche dal telefono</summary>
-    <p class="hint" style="margin-top:0">La lampada mostra un'icona animata, poi il testo a pagine, poi torna a quello che stava facendo. Si mandano con un indirizzo:</p>
-    <p class="hint"><code id="notifyUrl"></code></p>
-    <div class="row">
-      <div><label for="notifyText">Testo</label><input type="text" id="notifyText" maxlength="200" value="Lavatrice finita"></div>
-      <div><label for="notifyIcon">Icona</label>
-        <select id="notifyIcon">
-          <option value="">nessuna</option>
-          <option value="bell">campanella</option>
-          <option value="mail">busta</option>
-          <option value="check">spunta</option>
-          <option value="alert">attenzione</option>
-          <option value="heart">cuore</option>
-          <option value="phone">telefono</option>
-          <option value="home">casa</option>
-          <option value="star">stella</option>
-        </select></div>
-    </div>
-    <button class="save" id="notifySend">Prova</button>
-    <label class="check"><input type="checkbox" id="notifyNight"> Anche di notte (altrimenti di notte vengono ignorate)</label>
-    <p class="hint"><b>iPhone</b>: app Comandi → Automazione (es. «Quando arriva un'email da…», «Quando esco di casa», un orario) → azione «Ottieni contenuto dell'URL» con l'indirizzo qui sopra. Funziona quando il telefono è sulla rete di casa.<br>
-      <b>Android</b>: app come HTTP Shortcuts, Tasker o MacroDroid, con lo stesso indirizzo.<br>
-      <b>IFTTT</b> e altri servizi su Internet chiamano dall'esterno: servono l'inoltro di una porta sul router o un tunnel verso la lampada.<br>
-      Parametri: <code>text</code> (fino a 200 caratteri, anche accentati) e <code>icon</code> (bell, mail, check, alert, heart, phone, home, star); con GET, POST da modulo o POST JSON <code>{"text":"…","icon":"…"}</code>. Fino a 4 notifiche aspettano in coda.</p>
-  </details>
-
-  <details id="bleBox">
-    <summary>Bluetooth (telecomando)</summary>
-    <label class="check"><input type="checkbox" id="bleOn"> Telecomando Bluetooth attivo</label>
-    <p class="hint" id="bleInfo"></p>
-    <button class="link" id="bleForget">Dimentica i telecomandi e cambia PIN</button>
-    <p class="hint">Un telecomando Bluetooth (per esempio il Cardputer ADV con il firmware in <code>cardputer/</code>) si abbina una volta sola scrivendo il PIN qui sopra; poi la lampada lo riconosce. Attivare o disattivare il Bluetooth e cambiare PIN riavviano la lampada.</p>
-  </details>
-
-  <details id="diagBox">
-    <summary>Diagnostica</summary>
-    <table class="diag" id="diag"></table>
-    <h3>Eventi recenti</h3>
-    <table class="diag" id="events"></table>
-    <button class="link" id="diagReset">Azzera le statistiche</button>
-    <p class="hint">Si aggiorna ogni 2 secondi mentre questa sezione è aperta. «Cambi di livello saltati» e «ritardo» dicono quanto è stabile la scala di grigi: se crescono mentre i LED tremano, il disturbo viene dal rinfresco. «Il più lungo» del ciclo principale sopra qualche centinaio di ms vuol dire che la lampada si è fermata per quel tempo.</p>
-  </details>
-
-  <details id="backupBox">
-    <summary>Backup delle impostazioni</summary>
-    <p class="hint" style="margin-top:0">Tutte le impostazioni (modalità, playlist e fasce orarie, testi, frasi aggiunte, notte, sveglia, luogo, Bluetooth…) in un file. I disegni della galleria non sono inclusi.</p>
-    <a class="save" id="backupGet" href="/api/backup" download="obegransad-backup.json">Scarica il backup</a>
-    <label for="backupFile">Ripristina da un file</label>
-    <input type="file" id="backupFile" accept=".json,application/json">
-    <button class="save" id="backupRestore" disabled>Ripristina</button>
-    <p class="hint">Il ripristino sostituisce tutte le impostazioni con quelle del file e riavvia la lampada.</p>
-  </details>
-
-  <details id="updateBox">
-    <summary>Aggiornamento firmware</summary>
-    <p class="hint">Versione installata: <b id="fwVersion"></b></p>
-    <label for="fwFile">File del firmware</label>
-    <input type="file" id="fwFile" accept=".bin">
-    <p class="hint">Dopo <code>pio run</code>, carica <code>.pio/build/xhs3e/firmware.bin</code> (non <i>firmware.factory.bin</i>). La lampada lo verifica, si riavvia con il nuovo firmware e tiene tutte le impostazioni; se qualcosa va storto resta quello di prima.</p>
-    <button class="save" id="fwUpload" disabled>Aggiorna</button>
-    <progress id="fwProgress" max="100" value="0" hidden style="width:100%;margin-top:12px"></progress>
-  </details>
-
-  <p id="status"></p>
+    <details id="updateBox">
+      <summary>Aggiornamento firmware</summary>
+      <p class="hint">Versione installata: <b id="fwVersion"></b></p>
+      <label for="fwFile">File del firmware</label>
+      <input type="file" id="fwFile" accept=".bin">
+      <div class="actions"><button class="btn primary" id="fwUpload" disabled>Aggiorna</button></div>
+      <progress id="fwProgress" max="100" value="0" hidden></progress>
+      <p class="hint">Dopo <code>pio run</code>, carica <code>.pio/build/xhs3e/firmware.bin</code> (non <i>firmware.factory.bin</i>). La lampada lo verifica, si riavvia con il nuovo firmware e tiene tutte le impostazioni; se qualcosa va storto resta quello di prima.</p>
+    </details>
+  </div>
 </main>
+<div id="status" role="status" aria-live="polite"></div>
 <script>/*SCRIPT*/</script>
 </body>
 </html>
