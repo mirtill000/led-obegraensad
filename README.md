@@ -316,7 +316,8 @@ Current modes:
 - **Mondo** - news from the world in pixels (`src/modes/world_mode.cpp`,
   data from `src/world.cpp`): two cards taking turns with a cross-fade
   (`Display::beginFade()`). The air quality where the lamp is - "ARIA" at
-  the top, the European index in big digits in the middle, its band at
+  the top, the European index in the middle (the 3x6 digits of the text
+  fonts, brighter than the words), its band at
   the bottom ("BUONA", "MODERATA", ...; scrolling when it's long;
   Open-Meteo, every 30 minutes) - for 8 seconds; then the International
   Space Station on a 16x8 world map with its trail and you as a steady dot

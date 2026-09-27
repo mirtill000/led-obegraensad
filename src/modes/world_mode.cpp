@@ -2,7 +2,6 @@
 
 #include <math.h>
 
-#include "bigdigits.h"
 #include "display.h"
 #include "settings.h"
 #include "ui.h"
@@ -87,9 +86,14 @@ void WorldMode::update(uint32_t now) {
   if (card_ == AIR) {
     // "Aria" above, the European index in the middle, its band below
     // (scrolling when the name is long).
-    word("Aria", 0, 150, t);
-    drawBigNumber(min(w.aqi, 99), 5, 255);
-    word(aqiBand(w.aqi), 12, 200, t);
+    // The value in the text fonts' own 3x6 digits (as "Media" draws
+    // them), centred in rows 5-10 between two blank rows: the three lines
+    // read as one family. The words are dimmer so the number leads.
+    word("Aria", 0, 110, t);
+    const String value(w.aqi);
+    const int width = Display::textWidthIn(TextFont::Short, value.c_str(), 0, value.length());
+    display.drawTextIn(TextFont::Short, (COLS + 1 - width) / 2, 5, value.c_str(), 0, value.length());
+    word(aqiBand(w.aqi), 12, 170, t);
   } else {
     for (int y = 0; y < 8; y++) {
       for (int x = 0; x < COLS; x++) {
