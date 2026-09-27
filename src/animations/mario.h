@@ -11,6 +11,11 @@ class MarioGame : public ArcadeGame {
  public:
   const char *id() const override { return "mario"; }
   const char *name() const override { return "Super Mario"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"A", {nullptr, nullptr, nullptr, nullptr, "Salta"}, false,
+                                   "Tastiera: barra spaziatrice o freccia su per saltare."};
+    return &c;
+  }
   uint16_t frameMs() const override;
   void start() override;
   void tick(uint32_t now) override;

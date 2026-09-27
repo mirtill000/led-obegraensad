@@ -21,6 +21,12 @@ class PongGame : public ArcadeGame {
  public:
   const char *id() const override { return "pong"; }
   const char *name() const override { return "Pong"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"UD", {nullptr, nullptr, nullptr, nullptr, nullptr}, true,
+                                   "Racchetta di sinistra. Tastiera: ↑ ↓ (tieni premuto)."};
+    return &c;
+  }
+  GameStyle style() const override { return GameStyle::Crisp; }
   uint16_t frameMs() const override { return 30; }
 
   void start() override {
@@ -122,6 +128,12 @@ class BreakoutGame : public ArcadeGame {
  public:
   const char *id() const override { return "breakout"; }
   const char *name() const override { return "Breakout"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"LR", {nullptr, nullptr, nullptr, nullptr, nullptr}, true,
+                                   "Tastiera: ← → (tieni premuto)."};
+    return &c;
+  }
+  GameStyle style() const override { return GameStyle::Crisp; }
   uint16_t frameMs() const override { return 30; }
 
   void start() override {
@@ -249,6 +261,12 @@ class FlappyGame : public ArcadeGame {
  public:
   const char *id() const override { return "flappy"; }
   const char *name() const override { return "Flappy Bird"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"A", {nullptr, nullptr, nullptr, nullptr, "Vola"}, false,
+                                   "Tastiera: spazio o ↑."};
+    return &c;
+  }
+  GameStyle style() const override { return GameStyle::Crisp; }
   uint16_t frameMs() const override { return 40; }
 
   void start() override {
@@ -373,6 +391,12 @@ class InvadersGame : public ArcadeGame {
  public:
   const char *id() const override { return "invaders"; }
   const char *name() const override { return "Space Invaders"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"LRA", {nullptr, nullptr, nullptr, nullptr, "Spara"}, true,
+                                   "Tastiera: ← → per muoverti, spazio o ↑ per sparare."};
+    return &c;
+  }
+  GameStyle style() const override { return GameStyle::Crisp; }
   uint16_t frameMs() const override { return 50; }
 
   void start() override {

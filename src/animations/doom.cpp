@@ -89,6 +89,12 @@ class DoomGame : public ArcadeGame {
  public:
   const char *id() const override { return "doom"; }
   const char *name() const override { return "Doom"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"LRUDA", {"↶", "↷", nullptr, nullptr, "Spara"}, true,
+                                   "↑ ↓ per camminare, ← → per girarti, Spara per colpire il diavoletto al centro della vista. Tastiera: frecce e spazio."};
+    return &c;
+  }
+  GameStyle style() const override { return GameStyle::Shaded; }
   uint16_t frameMs() const override { return 50; }
 
   void start() override {

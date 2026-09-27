@@ -6,7 +6,8 @@
 //   command (write)       one command per write, e.g. "k L" (the list is in
 //                          include/remote_protocol.h; run by src/commands.cpp)
 //   state (read, notify)  {"m":mode,"mn":name,"x":button name,"g":game,
-//                          "gn":game name,"d":demo,"f":demo forced,"b":brightness,
+//                          "gn":game name,"d":demo,"f":demo forced,"c":keys the
+//                          game uses (of LRUDA),"ca":what A does,"b":brightness,
 //                          "t":"HH:MM"} - sent when it changes
 //   frame (read, notify)  the panel as seen: 256 levels 0-15, two pixels per
 //                          byte (high nibble first), row by row - at most
@@ -84,6 +85,9 @@ String stateJson() {
     const bool forced = a && a->demoForced();
     j += ",\"g\":" + quoted(game) + ",\"gn\":" + quoted(a && a->playing() ? a->playing()->name() : m->name());
     j += String(",\"d\":") + (forced || demoMode(game) ? 1 : 0) + ",\"f\":" + (forced ? 1 : 0);
+    const Animation *g = findAnimation(game);
+    const GameControls *c = g ? g->controls() : nullptr;
+    if (c) j += ",\"c\":" + quoted(c->keys) + ",\"ca\":" + quoted(c->labels[4] ? c->labels[4] : "Salta");
   }
   j += ",\"b\":" + String(settings.brightness);
   struct tm t;

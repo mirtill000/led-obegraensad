@@ -61,6 +61,11 @@ class SonicGame : public ArcadeGame {
  public:
   const char *id() const override { return "sonic"; }
   const char *name() const override { return "Sonic"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"LRA", {nullptr, nullptr, nullptr, nullptr, "Salta"}, true,
+                                   "→ per correre (tienilo premuto), ← per frenare, Salta per saltare in palla e distruggere i nemici. Tastiera: frecce e spazio."};
+    return &c;
+  }
   uint16_t frameMs() const override { return 35; }
 
   void start() override {

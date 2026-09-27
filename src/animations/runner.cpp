@@ -52,6 +52,11 @@ class RunnerGame : public ArcadeGame {
  public:
   const char *id() const override { return "dino"; }
   const char *name() const override { return "Dino"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"UDA", {nullptr, nullptr, nullptr, nullptr, "Salta"}, true,
+                                   "↑ o Salta per saltare, ↓ per abbassarti (tienilo premuto). Tastiera: frecce e spazio."};
+    return &c;
+  }
   uint16_t frameMs() const override { return 35; }
 
   void start() override {

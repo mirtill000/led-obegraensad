@@ -60,6 +60,15 @@ static String jsonString(const String &s) {
 
 static String jsonBool(bool b) { return b ? "true" : "false"; }
 
+// A game's pad for the page: {"keys":"LRA","labels":[...5, null = default],"repeat":..,"hint":..}.
+static String controlsJson(const Animation *a) {
+  const GameControls *c = a ? a->controls() : nullptr;
+  if (!c) return "null";
+  String j = "{\"keys\":" + jsonString(c->keys) + ",\"labels\":[";
+  for (int i = 0; i < 5; i++) j += String(i ? "," : "") + (c->labels[i] ? jsonString(c->labels[i]) : String("null"));
+  return j + "],\"repeat\":" + jsonBool(c->repeat) + ",\"hint\":" + jsonString(c->hint) + "}";
+}
+
 static String stateJson() {
   String json;
   json.reserve(8192);  // one allocation: the state is about 6 kB
@@ -92,7 +101,9 @@ static String stateJson() {
   for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
     if (i) json += ',';
     json += "{\"id\":" + jsonString(ANIMATIONS[i]->id()) + ",\"name\":" + jsonString(ANIMATIONS[i]->name()) +
-            ",\"group\":" + jsonString(ANIMATIONS[i]->group()) + ",\"game\":" + jsonBool(ANIMATIONS[i]->isGame()) + "}";
+            ",\"group\":" + jsonString(ANIMATIONS[i]->group()) + ",\"game\":" + jsonBool(ANIMATIONS[i]->isGame());
+    if (ANIMATIONS[i]->isGame()) json += ",\"style\":" + jsonString(styleId(ANIMATIONS[i]->style()));
+    json += "}";
   }
   json += "],\"games\":" + jsonString(settings.game);
   // The animation or game on the panel (Animazioni or Giochi mode).
@@ -107,7 +118,8 @@ static String stateJson() {
     const bool forced = ambient && ambient->demoForced();
     const char *gameName = playing ? playing->name() : currentMode()->name();
     json += ",\"game\":{\"id\":" + jsonString(game) + ",\"name\":" + jsonString(gameName) +
-            ",\"demo\":" + jsonBool(forced || demoMode(game)) + ",\"forced\":" + jsonBool(forced) + "}";
+            ",\"demo\":" + jsonBool(forced || demoMode(game)) + ",\"forced\":" + jsonBool(forced) +
+            ",\"pad\":" + controlsJson(findAnimation(game)) + "}";
   } else {
     json += ",\"game\":null";
   }

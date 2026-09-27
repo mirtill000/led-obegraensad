@@ -434,6 +434,14 @@ Breakout, Flappy Bird and Space Invaders are always sharp; Doom always
 uses shades of gray for its walls. In-between brightness is made by switching LEDs on and off
 very fast; if it trembles on your lamp, pick Nitida.
 
+Each game declares its style (`style()`: `Selectable`, `Crisp` or
+`Shaded`) and its controls (`controls()`: the keys it uses out of L R U D A,
+the pad's labels, whether held arrows repeat, the hint under the pad). The
+firmware sends them along - the style in the page's list of games (shown in
+the game box and under Grafica dei giochi), the controls with the game on
+show (`state.game.pad`) and over Bluetooth (`"c"`, `"ca"`) - so the page
+and the Cardputer keep no list of their own.
+
 All the games have a **Modalità demo** checkbox (on by
 default), shown on the page while the game is on the panel:
 
@@ -544,7 +552,7 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 | Characteristic | | |
 |---|---|---|
 | command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9) |
-| state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"b":200,"t":"15:42"}`, sent when it changes |
+| state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","b":200,"t":"15:42"}`, sent when it changes |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
 | catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |
 

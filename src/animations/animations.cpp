@@ -71,3 +71,11 @@ Animation *findAnimation(const String &id) {
   }
   return nullptr;
 }
+
+const char *styleId(GameStyle style) {
+  switch (style) {
+    case GameStyle::Crisp: return "crisp";
+    case GameStyle::Shaded: return "shaded";
+    default: return "selectable";
+  }
+}

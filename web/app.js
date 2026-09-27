@@ -156,24 +156,19 @@ function render() {
   $('textFontText').value = s.textFont;
   $('transition').value = s.transition;
   $('gameStyle').value = s.gameStyle;
+  // Which games follow this choice, and which always look the same.
+  const games = s.animations.filter((a) => a.game);
+  const names = (st) => games.filter((a) => a.style === st).map((a) => a.name).join(', ');
+  const fixed = [[names('crisp'), 'grafica sempre nitida'], [names('shaded'), 'sempre sfumata']]
+    .filter(([n]) => n).map(([n, how]) => n + ': ' + how).join('; ');
+  $('styleGames').textContent = names('selectable') + (fixed ? ' (' + fixed + ')' : '');
   $('fwVersion').textContent = s.version;
 }
 
-// Game box: demo checkbox and, when the player is in control, the pad.
-const PADS = {
-  mario: { keys: ['A'], labels: { A: 'Salta' }, hint: 'Tastiera: barra spaziatrice o freccia su per saltare.' },
-  tetris: { keys: ['L', 'R', 'U', 'D'], labels: { U: '↻', D: '⤓' }, hint: 'Tastiera: ← → per spostare, ↑ per ruotare, ↓ o spazio per far cadere.' },
-  snake: { keys: ['L', 'R', 'U', 'D'], labels: { U: '↑', D: '↓' }, hint: 'Tastiera: le frecce.' },
-  pong: { keys: ['U', 'D'], labels: {}, repeat: true, hint: 'Racchetta di sinistra. Tastiera: ↑ ↓ (tieni premuto).' },
-  breakout: { keys: ['L', 'R'], labels: {}, repeat: true, hint: 'Tastiera: ← → (tieni premuto).' },
-  flappy: { keys: ['A'], labels: { A: 'Vola' }, hint: 'Tastiera: spazio o ↑.' },
-  invaders: { keys: ['L', 'R', 'A'], labels: { A: 'Spara' }, repeat: true, hint: 'Tastiera: ← → per muoverti, spazio o ↑ per sparare.' },
-  dino: { keys: ['U', 'D', 'A'], labels: { U: '↑', D: '↓', A: 'Salta' }, repeat: true, hint: '↑ o Salta per saltare, ↓ per abbassarti (tienilo premuto). Tastiera: frecce e spazio.' },
-  kong: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { U: '↑', D: '↓', A: 'Salta' }, repeat: true, hint: '← → per camminare, ↑ ↓ per le scale, Salta per scavalcare i barili. Tastiera: frecce e spazio.' },
-  sonic: { keys: ['L', 'R', 'A'], labels: { A: 'Salta' }, repeat: true, hint: '→ per correre (tienilo premuto), ← per frenare, Salta per saltare in palla e distruggere i nemici. Tastiera: frecce e spazio.' },
-  doom: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { L: '↶', R: '↷', U: '↑', D: '↓', A: 'Spara' }, repeat: true, hint: '↑ ↓ per camminare, ← → per girarti, Spara per colpire il diavoletto al centro della vista. Tastiera: frecce e spazio.' },
-  maze: { keys: ['L', 'R', 'U', 'D', 'A'], labels: { L: '↶', R: '↷', U: '↑', D: '↓', A: 'Mappa' }, hint: '↑ ↓ per camminare, ← → per girarti, Mappa per vedere dove sei. Trova il blocco che pulsa. Tastiera: le frecce e la barra spaziatrice.' },
-};
+// Game box: demo checkbox and, when the player is in control, the pad. The
+// keys, labels and hint come from the game itself (state.game.pad).
+const DEFAULT_LABELS = { L: '←', R: '→', U: '↑', D: '↓', A: 'Salta' };
+const STYLE_NAMES = { crisp: 'sempre nitida', shaded: 'sempre sfumata', selectable: 'come scelto in Display' };
 function playable() { return state && state.game && !state.game.demo; }
 function renderGame() {
   const g = state.game;
@@ -189,15 +184,16 @@ function renderGame() {
   $('demoHint').textContent = g.forced
     ? 'In «Automatica» i giochi vanno sempre in demo: scegline uno nel menu dei giochi per giocare.'
     : g.demo ? 'Togli la spunta per giocare tu.' : '';
-  const pad = PADS[g.id];
+  const info = state.animations.find((a) => a.id === g.id);
+  $('gameStyleInfo').textContent = info && info.style ? 'Grafica: ' + STYLE_NAMES[info.style] + '.' : '';
+  const pad = g.pad;
   $('pad').hidden = g.demo || !pad;
   $('padHint').textContent = g.demo || !pad ? '' : pad.hint;
   if (!pad) return;
   for (const b of $('pad').querySelectorAll('button')) {
-    b.hidden = !pad.keys.includes(b.dataset.key);
-    const label = pad.labels[b.dataset.key];
-    if (label) b.textContent = label;
-    else b.textContent = { L: '←', R: '→', U: '↑', D: '↓', A: 'Salta' }[b.dataset.key];
+    const k = b.dataset.key;
+    b.hidden = !pad.keys.includes(k);
+    b.textContent = pad.labels['LRUDA'.indexOf(k)] || DEFAULT_LABELS[k];
   }
 }
 // Controls go out on touch/press, not on release, and don't wait for an
@@ -218,7 +214,7 @@ for (const b of $('pad').querySelectorAll('button')) {
   b.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     sendKey(b.dataset.key);
-    const pad = state.game && PADS[state.game.id];
+    const pad = state.game && state.game.pad;
     stopRepeat();
     if (pad && pad.repeat && b.dataset.key !== 'A') repeatTimer = setInterval(() => sendKey(b.dataset.key), 110);
   });

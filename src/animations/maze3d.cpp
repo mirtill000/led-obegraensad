@@ -24,6 +24,11 @@ class Maze3dAnimation : public ArcadeGame {
  public:
   const char *id() const override { return "maze"; }
   const char *name() const override { return "Labirinto 3D"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"LRUDA", {"↶", "↷", nullptr, nullptr, "Mappa"}, false,
+                                   "↑ ↓ per camminare, ← → per girarti, Mappa per vedere dove sei. Trova il blocco che pulsa. Tastiera: le frecce e la barra spaziatrice."};
+    return &c;
+  }
   uint16_t frameMs() const override { return 40; }
 
   void input(char key) override { queued_ = key; }

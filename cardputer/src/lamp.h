@@ -40,6 +40,7 @@ bool send(const String &command);
 // What the lamp reported last.
 struct State {
   String mode, modeName, button, game, gameName, time;
+  String keys, actionKey;  // the game's keys (of LRUDA) and what A does
   bool demo = true, demoForced = false;
   int brightness = 255;
 };

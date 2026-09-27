@@ -5,6 +5,19 @@
 // One animation of the "Animazioni" mode. frame() draws a whole frame into
 // the display buffer (the mode clears nothing and calls render() after);
 // it is called every frameMs(), scaled by the mode's speed setting.
+// How a game is played, told to the web page (its pad) and to the Cardputer
+// (state "c"/"ca") so neither keeps its own list.
+struct GameControls {
+  const char *keys;       // the keys it uses, out of "LRUDA"
+  const char *labels[5];  // pad labels for L R U D A; nullptr = the plain arrow / "Salta"
+  bool repeat;            // held arrows repeat (paddles, walking)
+  const char *hint;       // one line under the pad
+};
+
+// Graphics of a game: always on/off LEDs, always shaded, or following the
+// "Grafica dei giochi" setting (softGames()).
+enum class GameStyle : uint8_t { Crisp, Shaded, Selectable };
+
 class Animation {
  public:
   virtual const char *id() const = 0;     // stable, used in URLs and NVS
@@ -20,7 +33,12 @@ class Animation {
   virtual bool isGame() const { return false; }
   virtual void setDemo(bool) {}
   virtual void input(char) {}
+  virtual const GameControls *controls() const { return nullptr; }
+  virtual GameStyle style() const { return GameStyle::Selectable; }
 };
+
+// "crisp", "shaded" or "selectable", for the page.
+const char *styleId(GameStyle style);
 
 // All animations, in menu order (src/animations/animations.cpp).
 extern Animation *const ANIMATIONS[];

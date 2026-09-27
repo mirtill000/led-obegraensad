@@ -14,6 +14,11 @@ class TetrisAnimation : public ArcadeGame {
  public:
   const char *id() const override { return "tetris"; }
   const char *name() const override { return "Tetris"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"LRUD", {nullptr, nullptr, "↻", "⤓", nullptr}, false,
+                                   "Tastiera: ← → per spostare, ↑ per ruotare, ↓ o spazio per far cadere."};
+    return &c;
+  }
   uint16_t frameMs() const override { return 60; }
 
   void input(char key) override {
@@ -300,6 +305,11 @@ class SnakeAnimation : public ArcadeGame {
  public:
   const char *id() const override { return "snake"; }
   const char *name() const override { return "Snake"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"LRUD", {nullptr, nullptr, nullptr, nullptr, nullptr}, false,
+                                   "Tastiera: le frecce."};
+    return &c;
+  }
   uint16_t frameMs() const override { return 110; }
 
   void input(char key) override {

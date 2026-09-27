@@ -83,6 +83,11 @@ class KongGame : public ArcadeGame {
  public:
   const char *id() const override { return "kong"; }
   const char *name() const override { return "Donkey Kong"; }
+  const GameControls *controls() const override {
+    static const GameControls c = {"LRUDA", {nullptr, nullptr, nullptr, nullptr, "Salta"}, true,
+                                   "← → per camminare, ↑ ↓ per le scale, Salta per scavalcare i barili. Tastiera: frecce e spazio."};
+    return &c;
+  }
   uint16_t frameMs() const override { return 40; }
 
   void start() override {

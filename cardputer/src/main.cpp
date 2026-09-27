@@ -152,8 +152,15 @@ void drawRemote() {
   canvas.setTextColor(s.demo ? DIM : ACCENT);
   canvas.drawString(!s.game.length() ? "(non e' un gioco)" : s.demo ? "Demo (D per giocare)" : "Giochi tu", x, 34);
   canvas.setTextColor(DIM);
-  canvas.drawString("; . , /  frecce", x, 54);
-  canvas.drawString("Spazio   salta/spara", x, 66);
+  // The keys this game uses, as the lamp describes them.
+  const bool known = s.keys.length() > 0;
+  String arrows;
+  for (char c : s.keys) {
+    const char *name = c == 'L' ? "sx" : c == 'R' ? "dx" : c == 'U' ? "su" : c == 'D' ? "giu" : nullptr;
+    if (name) arrows += String(arrows.length() ? " " : "") + name;
+  }
+  if (!known || arrows.length()) canvas.drawString(known ? "; . , /  " + arrows : "; . , /  frecce", x, 54);
+  if (!known || s.keys.indexOf('A') >= 0) canvas.drawString("Spazio   " + (known ? plain(s.actionKey) : String("salta/spara")), x, 66);
   canvas.drawString("D  demo si'/no", x, 78);
   canvas.drawString("X  " + plain(s.button), x, 90);
   canvas.drawString("`  indietro", x, 102);
