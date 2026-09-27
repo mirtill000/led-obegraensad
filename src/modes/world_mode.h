@@ -4,10 +4,10 @@
 #include "scroller.h"
 
 // "Mondo": the air where you are, the Space Station, the next rocket (see
-// world.h), one after the other: each first as a picture for a few
-// seconds - a gauge with the air quality index, a world map with the
-// station and its trail (you are the steady dot), a rocket lifting off -
-// then as a line of text scrolling by.
+// world.h), one after the other: "Aria" with the European index and its
+// band; the world map with the station and its trail (you are the steady
+// dot; "ISS" above it with the lamp vertical); a rocket lifting off, then
+// the launch's name and countdown scrolling by.
 class WorldMode : public Mode {
  public:
   const char *id() const override { return "world"; }

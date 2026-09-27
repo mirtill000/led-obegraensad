@@ -8,7 +8,9 @@
 #include "ui.h"
 #include "world.h"
 
-static const uint32_t PICTURE_MS = 6000;
+// How long each picture stays. The air and the Station are only pictures;
+// the launch is followed by its line of text.
+static const uint32_t AIR_MS = 8000, ISS_MS = 10000, LAUNCH_MS = 6000;
 
 // The world, 16 x 8 (22.5 degrees a cell), from 180 W and from the pole.
 static const char *const MAP[8] = {
@@ -21,10 +23,34 @@ static const char *const MAP[8] = {
     ".....#..........",  // 56 S
     "################",  // Antarctica
 };
-static const int MAP_TOP = 4;
+// Centred; with the lamp vertical a row lower, under "ISS".
+static int mapTop() { return settings.vertical ? 5 : 4; }
 
 static int mapX(float lon) { return constrain((int)floorf((lon + 180) / 22.5f), 0, 15); }
-static int mapY(float lat) { return MAP_TOP + constrain((int)floorf((90 - lat) / 22.5f), 0, 7); }
+static int mapY(float lat) { return mapTop() + constrain((int)floorf((90 - lat) / 22.5f), 0, 7); }
+
+// A word in the 4-pixel font (the rows below `y` must be empty), centred;
+// scrolling round when it is wider than the panel.
+static void word(const char *text, int y, uint8_t level, uint32_t t) {
+  const String plain = Display::fontText(text);
+  String s;
+  for (unsigned k = 0; k < plain.length(); k++) s += (char)toupper((uint8_t)plain[k]);  // capitals only
+  const int w = Display::textWidthIn(TextFont::Tiny, s.c_str(), 0, s.length());
+  if (w <= COLS + 1) {
+    display.drawTextIn(TextFont::Tiny, (COLS + 1 - w) / 2, y, s.c_str(), 0, s.length());
+  } else {
+    const int period = w + 6;  // a gap before it comes round again
+    const int offset = (int)(t / 90) % period;
+    display.drawTextIn(TextFont::Tiny, -offset, y, s.c_str(), 0, s.length());
+    display.drawTextIn(TextFont::Tiny, period - offset, y, s.c_str(), 0, s.length());
+  }
+  // The font draws at full brightness: bring its rows down to `level`.
+  for (int r = y; r < y + Display::fontHeightOf(TextFont::Tiny); r++) {
+    for (int x = 0; x < COLS; x++) {
+      if (display.getLevel(x, r)) display.setLevel(x, r, level);
+    }
+  }
+}
 
 // A 5x10 rocket, nose up.
 static const char *const ROCKET[10] = {"..#..", ".###.", ".###.", ".#.#.", ".###.", ".###.", ".###.", "#####", "##.##", "#...#"};
@@ -33,23 +59,8 @@ static bool available(const WorldInfo &w, int scene) {
   return scene == 0 ? w.airOk : scene == 1 ? w.issOk : w.launchOk;
 }
 
-static String sceneText(const WorldInfo &w, int scene) {
-  switch (scene) {
-    case 0: {
-      String s = String("Aria ") + aqiBand(w.aqi) + " - indice europeo " + w.aqi;
-      if (w.pm25 >= 0) s += ", PM2.5 " + String((int)lroundf(w.pm25));
-      return s;
-    }
-    case 1: {
-      float bearing;
-      const float km = distanceKm(settings.latitude, settings.longitude, w.issLat, w.issLon, &bearing);
-      const String dist = String((long)lroundf(km / 10) * 10);
-      if (km < 1500) return "La Stazione spaziale passa sopra di te! A " + dist + " km, verso " + compassName(bearing);
-      return "Stazione spaziale a " + dist + " km da qui, verso " + compassName(bearing);
-    }
-    default:
-      return "Prossimo lancio: " + w.launchName + " " + countdownText((long)(w.launchTime - time(nullptr)));
-  }
+static String launchText(const WorldInfo &w) {
+  return "Prossimo lancio: " + w.launchName + " " + countdownText((long)(w.launchTime - time(nullptr)));
 }
 
 void WorldMode::start() {
@@ -82,9 +93,11 @@ void WorldMode::update(uint32_t now) {
   }
   if (scene_ >= SCENES || !available(w, scene_)) return next(now);
   if (picture_) {
-    if (now - sceneStart_ >= PICTURE_MS) {
+    const uint32_t shown = scene_ == AIR ? AIR_MS : scene_ == ISS ? ISS_MS : LAUNCH_MS;
+    if (now - sceneStart_ >= shown) {
+      if (scene_ != LAUNCH) return next(now);
       picture_ = false;
-      scroller_.start(sceneText(w, scene_));
+      scroller_.start(launchText(w));
       row_ = Scroller::rowFor(settings.webPosition == "pages" ? String("middle") : settings.webPosition, row_);
       scroller_.setRow(row_);
       return;
@@ -102,23 +115,17 @@ void WorldMode::drawPicture(uint32_t now) {
   const uint32_t t = now - sceneStart_;
   display.clear();
   switch (scene_) {
-    case AIR: {
-      // The index in big digits, and a gauge filling up to it: one pixel
-      // per 6.25 points, the bands marked below.
-      drawBigNumber(min(w.aqi, 99), 1, 230);
-      const float filled = min(1.0f, t / 1200.0f) * min(w.aqi, 100) / 100.0f * COLS;
-      for (int x = 0; x < COLS; x++) {
-        const float f = filled - x;
-        const uint8_t l = f >= 1 ? 220 : f > 0 ? (uint8_t)(220 * f) : 25;
-        for (int y = 10; y <= 12; y++) display.setLevel(x, y, l);
-      }
-      for (int band = 1; band < 5; band++) display.setLevel(band * COLS / 5, 14, 90);
+    case AIR:
+      // "Aria" above, the European index in the middle, its band below
+      // (scrolling when the name is long).
+      word("Aria", 0, 150, t);
+      drawBigNumber(min(w.aqi, 99), 5, 255);
+      word(aqiBand(w.aqi), 12, 200, t);
       break;
-    }
     case ISS: {
       for (int y = 0; y < 8; y++) {
         for (int x = 0; x < COLS; x++) {
-          if (MAP[y][x] == '#') display.setLevel(x, MAP_TOP + y, 35);
+          if (MAP[y][x] == '#') display.setLevel(x, mapTop() + y, 35);
         }
       }
       for (int i = w.trailCount - 1; i >= 0; i--) {
@@ -126,6 +133,7 @@ void WorldMode::drawPicture(uint32_t now) {
       }
       display.setLevel(mapX(settings.longitude), mapY(settings.latitude), 140);
       if ((now / 300) % 2) display.setLevel(mapX(w.issLon), mapY(w.issLat), 255);
+      if (settings.vertical) word("ISS", 0, 150, t);
       break;
     }
     default: {
