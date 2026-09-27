@@ -124,13 +124,16 @@ src/
   moon.cpp           - moon phase from the date
   gallery.cpp        - drawings saved in flash (LittleFS)
   ble.cpp            - Bluetooth LE remote control (see "Bluetooth remote")
-  web.cpp            - control page + JSON API
+  web.cpp            - web server: JSON API, live updates (the page itself is in web/)
   main.cpp           - WiFi, button, main loop
+web/
+  page.html          - the control page (HTML); style.css and app.js are its CSS and JS
 content/
   frasi_dell_ora.txt - built-in quotes of "Frase dell'ora"
 scripts/
   build_info.py      - firmware version (git commit, build time) for the page
   quotes.py          - content/frasi_dell_ora.txt -> include/quotes_builtin.h
+  webpage.py         - web/ -> include/webpage.h (one page, CSS and JS inlined, gzipped)
 cardputer/           - Bluetooth remote for the M5Stack Cardputer ADV (its own PlatformIO project)
 platformio.ini
 ```
