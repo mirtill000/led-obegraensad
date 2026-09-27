@@ -123,6 +123,7 @@ src/
   net.cpp            - background task for everything downloaded
   weather.cpp        - weather, 12-hour forecast, sunrise/sunset (Open-Meteo)
   webinfo.cpp        - word of the day, Wikipedia "on this day", iCal calendar
+  world.cpp          - air quality, Space Station position, next rocket launch
   moon.cpp           - moon phase from the date
   gallery.cpp        - drawings saved in flash (LittleFS)
   ble.cpp            - Bluetooth LE remote control (see "Bluetooth remote")
@@ -311,6 +312,16 @@ Current modes:
   aren't supported). Choose the sources and the height on the page (or
   still pages, like the hourly quote). Until
   the first data arrives it shows the waiting dots
+- **Mondo** - news from the world in pixels (`src/modes/world_mode.cpp`,
+  data from `src/world.cpp`), each first as a picture for 6 seconds, then
+  as a line of text at the height of "Dal web": the air quality where the
+  lamp is (European AQI in big digits over a gauge; Open-Meteo, every 30
+  minutes), the International Space Station on a 16x8 world map with its
+  trail and you as a steady dot ("a 4.210 km da qui, verso nord-est",
+  "passa sopra di te!" under 1500 km; wheretheiss.at, every 20 seconds) and
+  the next rocket launch anywhere with a countdown, shown as a lift-off
+  (The Space Devs, every hour). Downloads run only while the mode is shown
+  and for 15 minutes after; button: next
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for

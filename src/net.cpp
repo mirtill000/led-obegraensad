@@ -4,11 +4,13 @@
 
 #include "webinfo.h"
 #include "weather.h"
+#include "world.h"
 
 static void netTask(void *) {
   for (;;) {
     weatherTick();
     webInfoTick();
+    worldTick();
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }

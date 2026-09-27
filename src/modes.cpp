@@ -17,6 +17,7 @@
 #include "modes/sunrise_mode.h"
 #include "modes/text_mode.h"
 #include "modes/web_mode.h"
+#include "modes/world_mode.h"
 #include "settings.h"
 #include "timekeeping.h"
 #include "weather.h"
@@ -26,6 +27,7 @@ static QuotesMode quotesMode;
 static ClockMode clockMode;
 static ForecastMode forecastMode;
 static WebMode webMode;
+static WorldMode worldMode;
 static LifeMode lifeMode;
 static AmbientMode ambientMode(false);
 static AmbientMode gamesMode(true);
@@ -39,7 +41,7 @@ static DemoMode demoModeInstance;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
-Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance, &canvasMode,
+Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &worldMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance, &canvasMode,
                         &countdownMode, &hourglassMode, &petMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 

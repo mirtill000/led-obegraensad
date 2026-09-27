@@ -370,6 +370,11 @@ function renderExtras() {
   $('cdInfo').textContent = s.countdown.sentence;
   if (!editing('hgMin')) $('hgMin').value = String(s.hourglass.minutes);
   renderPet(s.pet);
+  const w = s.world;
+  $('worldInfo').textContent = [w.air !== null ? 'Aria ' + w.airBand + ' (indice ' + w.air + ')' : '',
+    w.iss !== null ? 'Stazione spaziale a ' + w.iss.toLocaleString('it') + ' km' : '',
+    w.launch ? 'Prossimo lancio: ' + w.launch : ''].filter(Boolean).join('\n') || 'Dati in arrivo…';
+  $('worldStatus').textContent = 'Stato: ' + w.status;
   $('notifyNight').checked = s.notifyNight;
   $('bleOn').checked = s.ble.on;
   $('bleInfo').innerHTML = s.ble.on ? 'Nome: <b>obegransad</b> · PIN: <b>' + String(s.ble.pin).padStart(6, '0') + '</b> · '
