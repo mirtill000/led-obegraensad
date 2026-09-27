@@ -333,8 +333,10 @@ Current modes:
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
     into the Mandelbrot set
 - **Giochi** - one game, or "automatic" (a different one every 5
-  minutes, always as a demo); button: next game. The games, also in
-  `src/animations/`: **Super Mario** - side-scrolling platformer (Mario is a
+  minutes, always as a demo); button: next game. Every game derives from
+  `ArcadeGame` (`src/animations/arcade_game.h`), which gives them the
+  group, the demo switch and the same ending: "Punti N" scrolls by, then a
+  new game. The games, also in `src/animations/`: **Super Mario** - side-scrolling platformer (Mario is a
   5x7 sprite in grayscale: cap, face and moustache, overalls, shoes)
   with pipes, pits, goombas (stomp them) and coins; in demo mode an
   autopilot simulates the next moves and jumps at the best moment,
@@ -342,8 +344,9 @@ Current modes:
   (it used to be a mode of its own: a saved choice moves here by
   itself); **Tetris** - a well 10 columns wide, 14 (the whole panel) with the lamp vertical; in demo mode, for each piece the computer tries
   every rotation and column and picks the best by stack height, holes and
-  surface; **Snake** - in demo mode it takes the shortest way to the food
-  only if it can still reach its tail afterwards; **Pong** - you against
+  surface (points: the lines cleared); **Snake** - in demo mode it takes the shortest way to the food
+  only if it can still reach its tail afterwards (after a long hunger it
+  risks it anyway; points: the food eaten); **Pong** - you against
   the computer, first to 5; **Breakout** - 3 lives, faster at each level;
   **Flappy Bird**; **Space Invaders** - waves that get faster; **Labirinto 3D** - a first-person
   maze drawn by raycasting (one ray per column, walls shaded by

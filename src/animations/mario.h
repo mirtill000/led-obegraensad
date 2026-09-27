@@ -1,23 +1,19 @@
 #pragma once
 
-#include "animation.h"
+#include "arcade_game.h"
 #include "constants.h"
-#include "scroller.h"
 
 // Side-scrolling platformer in the style of Super Mario, one of the games
 // in "Animazioni": the level scrolls by with pipes, pits, goombas and
 // coins. In demo mode (the default) an autopilot plays; otherwise the
 // player jumps with the page's controls.
-class MarioGame : public Animation {
+class MarioGame : public ArcadeGame {
  public:
   const char *id() const override { return "mario"; }
   const char *name() const override { return "Super Mario"; }
-  const char *group() const override { return "Giochi"; }
   uint16_t frameMs() const override;
-  bool isGame() const override { return true; }
-  void setDemo(bool demo) override { demo_ = demo; }
   void start() override;
-  void frame(uint32_t now) override;
+  void tick(uint32_t now) override;
   void input(char key) override;
 
   // World column heights live in a ring buffer this long; it must cover
@@ -50,7 +46,7 @@ class MarioGame : public Animation {
   };
 
  private:
-  enum Phase { PLAYING, DYING, SCORE };
+  enum Phase { PLAYING, DYING };
 
   void extendWorld();
   bool shouldJump() const;
@@ -62,6 +58,4 @@ class MarioGame : public Animation {
   uint32_t jumpQueuedUntil_ = 0;  // a press just before landing still counts
   uint32_t frame_ = 0;
   float deathY_ = 0, deathVy_ = 0;
-  Scroller score_;
-  bool demo_ = true;
 };

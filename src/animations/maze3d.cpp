@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "animation.h"
+#include "arcade_game.h"
 #include "display.h"
 #include "settings.h"
 
@@ -20,14 +20,11 @@
 // The map (1 pixel per cell) is shown for a moment at the start of every
 // maze: walls dim, the exit bright, the player blinking.
 // ---------------------------------------------------------------------------
-class Maze3dAnimation : public Animation {
+class Maze3dAnimation : public ArcadeGame {
  public:
   const char *id() const override { return "maze"; }
   const char *name() const override { return "Labirinto 3D"; }
-  const char *group() const override { return "Giochi"; }
   uint16_t frameMs() const override { return 40; }
-  bool isGame() const override { return true; }
-  void setDemo(bool demo) override { demo_ = demo; }
 
   void input(char key) override { queued_ = key; }
 
@@ -38,7 +35,8 @@ class Maze3dAnimation : public Animation {
     queued_ = 0;
   }
 
-  void frame(uint32_t) override {
+  // No score: a solved maze just dissolves into the next one.
+  void tick(uint32_t) override {
     tick_++;
     switch (phase_) {
       case MAP:
@@ -377,7 +375,6 @@ class Maze3dAnimation : public Animation {
   int phaseFrames_ = 0;
   uint32_t tick_ = 0;
   char queued_ = 0;
-  bool demo_ = true;
   bool lastTurnedRight_ = false;
 };
 

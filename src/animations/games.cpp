@@ -1,5 +1,5 @@
 // Games that play themselves: Tetris and Snake.
-#include "animation.h"
+#include "arcade_game.h"
 #include "display.h"
 #include "settings.h"
 
@@ -10,14 +10,11 @@
 // cleared lines), then moves the piece there in view as it falls. Otherwise
 // the player moves (L/R), rotates (U) and drops (D or A) it.
 // ---------------------------------------------------------------------------
-class TetrisAnimation : public Animation {
+class TetrisAnimation : public ArcadeGame {
  public:
   const char *id() const override { return "tetris"; }
   const char *name() const override { return "Tetris"; }
-  const char *group() const override { return "Giochi"; }
   uint16_t frameMs() const override { return 60; }
-  bool isGame() const override { return true; }
-  void setDemo(bool demo) override { demo_ = demo; }
 
   void input(char key) override {
     if (phase_ != DROPPING) return;
@@ -44,11 +41,12 @@ class TetrisAnimation : public Animation {
     W = settings.vertical ? MAXW : 10;
     LEFT = (COLS - W) / 2;
     memset(board_, 0, sizeof(board_));
+    lines_ = 0;
     phase_ = DROPPING;
     spawn();
   }
 
-  void frame(uint32_t) override {
+  void tick(uint32_t) override {
     if (W != (settings.vertical ? MAXW : 10)) start();  // the lamp was turned
     tick_++;
     switch (phase_) {
@@ -60,7 +58,10 @@ class TetrisAnimation : public Animation {
         }
         break;
       case GAME_OVER:
-        if (++phaseFrames_ >= 30) start();
+        if (++phaseFrames_ >= 30) {
+          gameOver(lines_);  // "Punti N": the lines cleared
+          return;
+        }
         break;
     }
     draw();
@@ -228,6 +229,7 @@ class TetrisAnimation : public Animation {
   void removeFullRows() {
     for (int y = 0; y < H; y++) {
       if (!rowFull(y)) continue;
+      lines_++;
       for (int yy = y; yy > 0; yy--) memcpy(board_[yy], board_[yy - 1], W);
       memset(board_[0], 0, W);
     }
@@ -282,7 +284,7 @@ class TetrisAnimation : public Animation {
   Phase phase_ = DROPPING;
   int piece_ = 0, rotation_ = 0, x_ = 0, y_ = 0;
   int targetRotation_ = 0, targetX_ = 0;
-  bool demo_ = true;
+  int lines_ = 0;  // cleared this game: the score
   bool dropNow_ = false;  // hard drop pressed: lock without waiting
   uint32_t tick_ = 0;
   int phaseFrames_ = 0;
@@ -294,14 +296,11 @@ class TetrisAnimation : public Animation {
 // it doesn't trap itself); otherwise it follows its tail until the way is
 // safe. Otherwise the player steers it with the arrows.
 // ---------------------------------------------------------------------------
-class SnakeAnimation : public Animation {
+class SnakeAnimation : public ArcadeGame {
  public:
   const char *id() const override { return "snake"; }
   const char *name() const override { return "Snake"; }
-  const char *group() const override { return "Giochi"; }
   uint16_t frameMs() const override { return 110; }
-  bool isGame() const override { return true; }
-  void setDemo(bool demo) override { demo_ = demo; }
 
   void input(char key) override {
     int dx = 0, dy = 0;
@@ -321,12 +320,16 @@ class SnakeAnimation : public Animation {
     dx_ = nextDx_ = 1;
     dy_ = nextDy_ = 0;
     over_ = 0;
+    hungry_ = 0;
     placeFood();
   }
 
-  void frame(uint32_t now) override {
+  void tick(uint32_t now) override {
     if (over_) {
-      if (++over_ > 25) start();
+      if (++over_ > 25) {
+        gameOver(length_ - 3);  // "Punti N": the food eaten
+        return;
+      }
     } else {
       step();
     }
@@ -447,7 +450,10 @@ class SnakeAnimation : public Animation {
       advance(next);
       return;
     }
-    bool found = bfs(body_[0], food_, blocked, next) >= 0 && safeAfterEating();
+    // Chasing its tail can go on forever when the food never looks safe:
+    // after a while it takes the risk.
+    const bool bold = ++hungry_ > 2 * N;
+    bool found = bfs(body_[0], food_, blocked, next) >= 0 && (bold || safeAfterEating());
     if (!found) found = bfs(body_[0], body_[length_ - 1], blocked, next) >= 0 && next != body_[length_ - 1];
     if (!found) {
       // Last resort: the neighbour with the most room.
@@ -478,7 +484,10 @@ class SnakeAnimation : public Animation {
 
   void advance(uint8_t next) {
     const bool eats = next == food_;
-    if (eats) length_++;
+    if (eats) {
+      length_++;
+      hungry_ = 0;
+    }
     memmove(body_ + 1, body_, length_ - 1);
     body_[0] = next;
     if (eats) {
@@ -520,11 +529,11 @@ class SnakeAnimation : public Animation {
 
   uint8_t body_[N];
   int length_ = 3;
-  bool demo_ = true;
   int dx_ = 1, dy_ = 0;          // current direction
   int nextDx_ = 1, nextDy_ = 0;  // requested by the player for the next step
   uint8_t food_ = 0;
   int over_ = 0;  // frames since game over, 0 while playing
+  int hungry_ = 0;  // steps since the last food
 };
 
 static TetrisAnimation tetris;

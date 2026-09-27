@@ -3,7 +3,8 @@
 #include "animation.h"
 #include "scroller.h"
 
-// Common plumbing for the arcade games (arcade.cpp, runner.cpp, kong.cpp):
+// Common plumbing for every game (Tetris, Snake, Labirinto 3D, Super Mario,
+// the arcade classics, Sonic, Donkey Kong):
 // the "Giochi" group, demo mode and, at game over, the score scrolling by
 // before the game starts again. Subclasses implement tick() and call
 // gameOver(points).

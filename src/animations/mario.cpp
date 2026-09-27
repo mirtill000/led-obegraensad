@@ -273,11 +273,7 @@ void MarioGame::input(char key) {
 }
 
 // Called every FRAME_MS (scaled by the animations' speed setting).
-void MarioGame::frame(uint32_t now) {
-  if (phase_ == SCORE) {
-    if (score_.update(now, 0)) start();  // a pixel per frame
-    return;
-  }
+void MarioGame::tick(uint32_t now) {
   frame_++;
 
   if (phase_ == DYING) {
@@ -286,8 +282,7 @@ void MarioGame::frame(uint32_t now) {
     deathY_ += deathVy_;
     draw(now);
     if (deathY_ > ROWS + 10) {
-      phase_ = SCORE;
-      score_.start(String("Punti ") + s_.score);
+      gameOver(s_.score);
     }
     return;
   }
