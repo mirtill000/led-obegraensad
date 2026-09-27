@@ -52,19 +52,6 @@ const char *compassName(float bearing) {
   return NAMES[(int)floorf(fmodf(bearing + 22.5f, 360) / 45) % 8];
 }
 
-time_t parseIsoUtc(const String &s) {
-  int y, mo, d, h, mi, sec;
-  if (sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d", &y, &mo, &d, &h, &mi, &sec) != 6) return 0;
-  // Days from the civil date (Howard Hinnant's algorithm), no timegm needed.
-  y -= mo <= 2;
-  const long era = (y >= 0 ? y : y - 399) / 400;
-  const unsigned yoe = (unsigned)(y - era * 400);
-  const unsigned doy = (153 * (mo + (mo > 2 ? -3 : 9)) + 2) / 5 + d - 1;
-  const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-  const long days = era * 146097 + (long)doe - 719468;
-  return (time_t)days * 86400 + h * 3600 + mi * 60 + sec;
-}
-
 // The text after "key": up to the next , } or ] (numbers), or the string.
 static String valueAfter(const String &json, const char *key, int from = 0) {
   const String k = String("\"") + key + "\":";
@@ -104,22 +91,6 @@ bool parseIss(const String &json, float &lat, float &lon) {
   return true;
 }
 
-bool parseLaunch(const String &json, String &name, time_t &when) {
-  const int results = json.indexOf("\"results\":");
-  if (results < 0) return false;
-  name = valueAfter(json, "name", results);
-  when = parseIsoUtc(valueAfter(json, "net", results));
-  return name.length() && when;
-}
-
-String countdownText(long s) {
-  if (s <= 0) return "in corso";
-  const long days = s / 86400, hours = s % 86400 / 3600, minutes = s % 3600 / 60;
-  if (days) return "tra " + String(days) + " g " + String(hours) + " h";
-  if (hours) return "tra " + String(hours) + " h " + String(minutes) + " min";
-  return "tra " + String(max(1L, minutes)) + " min";
-}
-
 // ---------------------------------------------------------------------------
 
 static bool get(const String &url, String &body, int &code) {
@@ -137,8 +108,8 @@ static bool get(const String &url, String &body, int &code) {
 }
 
 void worldTick() {
-  static uint32_t airAt = 0, issAt = 0, launchAt = 0;
-  static bool airDone = false, launchDone = false;
+  static uint32_t airAt = 0, issAt = 0;
+  static bool airDone = false;
   const uint32_t now = millis();
   if (!everWanted || now - wantedAt > 15 * 60000UL) return;  // nobody is looking
   if (WiFi.status() != WL_CONNECTED) return;
@@ -188,27 +159,6 @@ void worldTick() {
       latest.airStatus = "ok";
     } else {
       latest.airStatus = String("non disponibile (") + code + ")";
-    }
-    xSemaphoreGive(lock);
-  }
-
-  if (!launchDone || now - launchAt >= 60 * 60000UL) {
-    launchAt = now;
-    launchDone = true;
-    String body;
-    int code = 0;
-    String name;
-    time_t when;
-    const bool ok = get("https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=1&mode=list", body, code) &&
-                    parseLaunch(body, name, when);
-    xSemaphoreTake(lock, portMAX_DELAY);
-    if (ok) {
-      latest.launchOk = true;
-      latest.launchName = name;
-      latest.launchTime = when;
-      latest.launchStatus = "ok";
-    } else {
-      latest.launchStatus = String("non disponibile (") + code + ")";
     }
     xSemaphoreGive(lock);
   }

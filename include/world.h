@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include <time.h>
 
 // News from the world for the "Mondo" mode, fetched by the network task
 // while that mode is on show (and for 15 minutes after):
@@ -9,7 +8,6 @@
 //    every 30 minutes)
 //  - where the International Space Station is (wheretheiss.at, every
 //    20 seconds), with its last positions for a trail
-//  - the next rocket launch anywhere (The Space Devs, every hour)
 struct WorldInfo {
   bool airOk = false;
   int aqi = -1;
@@ -19,10 +17,7 @@ struct WorldInfo {
   static const int TRAIL = 12;
   float trailLat[TRAIL], trailLon[TRAIL];
   uint8_t trailCount = 0;
-  bool launchOk = false;
-  String launchName;
-  time_t launchTime = 0;
-  String airStatus, issStatus, launchStatus;  // for the page
+  String airStatus, issStatus;  // for the page
 };
 
 WorldInfo worldInfoNow();
@@ -38,11 +33,6 @@ const char *aqiBand(int aqi);
 float distanceKm(float lat1, float lon1, float lat2, float lon2, float *bearing = nullptr);
 // "nord-est" etc. for a bearing in degrees.
 const char *compassName(float bearing);
-// "2026-09-28T03:21:00Z" -> epoch seconds (UTC); 0 if malformed.
-time_t parseIsoUtc(const String &s);
-// Parsers of the three responses.
+// Parsers of the two responses.
 bool parseAir(const String &json, int &aqi, float &pm25);
 bool parseIss(const String &json, float &lat, float &lon);
-bool parseLaunch(const String &json, String &name, time_t &when);
-// "tra 2 g 4 h", "tra 35 min", "in corso" (seconds from now).
-String countdownText(long seconds);

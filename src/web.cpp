@@ -143,10 +143,8 @@ static String stateJson() {
   json += ",\"world\":{\"air\":" + (world.airOk ? String(world.aqi) : String("null")) +
           ",\"airBand\":" + jsonString(world.airOk ? aqiBand(world.aqi) : "") +
           ",\"iss\":" + (world.issOk ? String((long)distanceKm(settings.latitude, settings.longitude, world.issLat, world.issLon)) : String("null")) +
-          ",\"launch\":" + jsonString(world.launchOk ? world.launchName + " " + countdownText((long)(world.launchTime - time(nullptr))) : String("")) +
           ",\"status\":" + jsonString("aria " + (world.airStatus.length() ? world.airStatus : String("in attesa")) + " · ISS " +
-                                        (world.issStatus.length() ? world.issStatus : String("in attesa")) + " · lanci " +
-                                        (world.launchStatus.length() ? world.launchStatus : String("in attesa"))) + "}";
+                                        (world.issStatus.length() ? world.issStatus : String("in attesa"))) + "}";
   const PetMode::Status pet = PetMode::status();
   json += ",\"pet\":{\"name\":" + jsonString(pet.name) + ",\"stage\":" + jsonString(pet.stage) +
           ",\"mood\":" + jsonString(pet.mood) + ",\"food\":" + String(pet.food) + ",\"joy\":" + String(pet.joy) +

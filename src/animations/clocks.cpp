@@ -1,5 +1,5 @@
 // Alternative clock faces: binary, in words (Italian and English), flip
-// cards, a pile of sand growing by the minute, the moon.
+// cards, a pile of sand growing by the minute.
 #include <math.h>
 #include <string.h>
 
@@ -7,9 +7,7 @@
 #include "bigdigits.h"
 #include "display.h"
 #include "gfx.h"
-#include "moon.h"
 #include "scroller.h"
-#include "settings.h"
 #include "timekeeping.h"
 #include "ui.h"
 
@@ -335,64 +333,6 @@ class SandClockAnimation : public Animation {
   }
 };
 
-// ---------------------------------------------------------------------------
-// Lunar clock: tonight's moon, its phase shaded on a sphere (lit from the
-// right while waxing, from the left while waning; mirrored south of the
-// equator) with a few darker "seas". Every 12 seconds the time appears
-// over it for a few seconds, the moon dimmed behind the digits.
-class MoonClockAnimation : public Animation {
- public:
-  const char *id() const override { return "moonclock"; }
-  const char *name() const override { return "Orologio lunare"; }
-  const char *group() const override { return "Orologi"; }
-  uint16_t frameMs() const override { return 50; }
-  bool needsTime() const override { return true; }
-
-  void frame(uint32_t now) override {
-    struct tm t;
-    if (!localTime(t)) return drawNoTime();
-    const float phase = moonPhase(time(nullptr));
-    const float angle = phase * 2 * (float)M_PI;
-    float lx = sinf(angle), lz = -cosf(angle);  // from behind (new) to in front (full)
-    if (settings.latitude < 0) lx = -lx;
-    // Time shown 4 s out of 12, fading in and out.
-    const uint32_t cycle = now % 12000;
-    float timeShow = 0;
-    if (cycle >= 8000) timeShow = min(1.0f, min((cycle - 8000) / 400.0f, (12000 - cycle) / 400.0f));
-    const float moonLevel = 1 - 0.8f * timeShow;
-    display.clear();
-    for (int y = 0; y < ROWS; y++) {
-      for (int x = 0; x < COLS; x++) {
-        float sum = 0;
-        for (int s = 0; s < 4; s++) {
-          const float sx = (x + 0.25f + 0.5f * (s & 1) - 8) / 7.2f, sy = (y + 0.25f + 0.5f * (s >> 1) - 8) / 7.2f;
-          const float d2 = sx * sx + sy * sy;
-          if (d2 > 1) continue;
-          const float sz = sqrtf(1 - d2);
-          const float lit = sx * lx + sz * lz;
-          float albedo = 1;
-          for (const auto &m : SEAS) {
-            const float dx = sx - m[0], dy = sy - m[1];
-            if (dx * dx + dy * dy < m[2] * m[2]) albedo = 0.6f;
-          }
-          sum += lit > 0 ? albedo * (0.25f + 0.75f * min(1.0f, lit * 2.5f)) : 0.04f;  // earthshine
-        }
-        if (sum > 0) display.setLevel(x, y, gfx::level(sum / 4 * moonLevel));
-      }
-    }
-    if (timeShow > 0) {
-      const uint8_t l = (uint8_t)(255 * timeShow);
-      drawBigNumber(t.tm_hour, 1, l);
-      drawBigNumber(t.tm_min, 9, l);
-    }
-  }
-
- private:
-  // Darker patches (x, y, radius) on the unit disc, roughly the Moon's maria.
-  static constexpr float SEAS[4][3] = {{-0.25f, -0.35f, 0.28f}, {0.2f, -0.2f, 0.22f}, {-0.35f, 0.15f, 0.2f}, {0.3f, 0.3f, 0.16f}};
-};
-constexpr float MoonClockAnimation::SEAS[4][3];
-
 static BinaryClockAnimation binaryClock;
 extern Animation *const binaryClockAnimation = &binaryClock;
 static WordClockAnimation wordClock;
@@ -403,5 +343,3 @@ static FlipClockAnimation flipClock;
 extern Animation *const flipClockAnimation = &flipClock;
 static SandClockAnimation sandClock;
 extern Animation *const sandClockAnimation = &sandClock;
-static MoonClockAnimation moonClock;
-extern Animation *const moonClockAnimation = &moonClock;

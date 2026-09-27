@@ -400,8 +400,7 @@ function renderExtras() {
   if (!dirty.formula && !editing('formulaText')) $('formulaText').value = s.formula;
   const w = s.world;
   $('worldInfo').textContent = [w.air !== null ? 'Aria ' + w.airBand + ' (indice ' + w.air + ')' : '',
-    w.iss !== null ? 'Stazione spaziale a ' + w.iss.toLocaleString('it') + ' km' : '',
-    w.launch ? 'Prossimo lancio: ' + w.launch : ''].filter(Boolean).join('\n') || 'Dati in arrivo…';
+    w.iss !== null ? 'Stazione spaziale a ' + w.iss.toLocaleString('it') + ' km' : ''].filter(Boolean).join('\n') || 'Dati in arrivo…';
   $('worldStatus').textContent = 'Stato: ' + w.status;
   $('notifyNight').checked = s.notifyNight;
   $('bleOn').checked = s.ble.on;

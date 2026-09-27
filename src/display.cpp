@@ -300,6 +300,16 @@ void Display::beginTransition() {
   if (transition_ == Transition::None) return;
   memcpy(from_, shown_, sizeof(from_));
   blending_ = true;
+  blendStyle_ = transition_;
+  blendMs_ = transition_ == Transition::Wipe ? WIPE_MS : FADE_MS;
+  blendStart_ = millis();
+}
+
+void Display::beginFade(uint16_t ms) {
+  memcpy(from_, shown_, sizeof(from_));
+  blending_ = true;
+  blendStyle_ = Transition::Fade;
+  blendMs_ = ms;
   blendStart_ = millis();
 }
 
@@ -315,14 +325,14 @@ uint8_t Display::shownLevel(int x, int y) const {
 void Display::output() {
   const uint32_t now = millis();
   lastBlend_ = now;
-  const uint32_t duration = transition_ == Transition::Wipe ? WIPE_MS : FADE_MS;
-  if (blending_ && (transition_ == Transition::None || now - blendStart_ >= duration)) blending_ = false;
+  const uint32_t duration = blendMs_;
+  if (blending_ && (blendStyle_ == Transition::None || now - blendStart_ >= duration)) blending_ = false;
   if (!blending_) {
     memcpy(shown_, target_, sizeof(shown_));
   } else {
     float t = (now - blendStart_) / (float)duration;
     t = t * t * (3 - 2 * t);  // ease in and out
-    if (transition_ == Transition::Fade) {
+    if (blendStyle_ == Transition::Fade) {
       for (int i = 0; i < TOTAL_PIXELS; i++) shown_[i] = (uint8_t)(from_[i] + (target_[i] - from_[i]) * t + 0.5f);
     } else {
       // The edge moves across the logical columns (whatever the rotation),

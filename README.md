@@ -123,7 +123,7 @@ src/
   net.cpp            - background task for everything downloaded
   weather.cpp        - weather, 12-hour forecast, sunrise/sunset (Open-Meteo)
   webinfo.cpp        - word of the day, Wikipedia "on this day", iCal calendar
-  world.cpp          - air quality, Space Station position, next rocket launch
+  world.cpp          - air quality and the Space Station's position
   formula.cpp        - the Formule mode's expression compiler and evaluator
   moon.cpp           - moon phase from the date
   gallery.cpp        - drawings saved in flash (LittleFS)
@@ -314,15 +314,15 @@ Current modes:
   still pages, like the hourly quote). Until
   the first data arrives it shows the waiting dots
 - **Mondo** - news from the world in pixels (`src/modes/world_mode.cpp`,
-  data from `src/world.cpp`), in turn: the air quality where the lamp is -
-  "ARIA" at the top, the European index in big digits in the middle, its
-  band at the bottom ("BUONA", "MODERATA", ...; scrolling when it's long;
-  Open-Meteo, every 30 minutes); the International Space Station on a
-  16x8 world map with its trail and you as a steady dot (with the lamp
-  vertical, "ISS" above the map; wheretheiss.at, every 20 seconds); the
-  next rocket launch anywhere, shown as a lift-off followed by its name
-  and countdown scrolling by (The Space Devs, every hour). Downloads run
-  only while the mode is shown and for 15 minutes after; button: next
+  data from `src/world.cpp`): two cards taking turns with a cross-fade
+  (`Display::beginFade()`). The air quality where the lamp is - "ARIA" at
+  the top, the European index in big digits in the middle, its band at
+  the bottom ("BUONA", "MODERATA", ...; scrolling when it's long;
+  Open-Meteo, every 30 minutes) - for 8 seconds; then the International
+  Space Station on a 16x8 world map with its trail and you as a steady dot
+  (with the lamp vertical, "ISS" above the map; wheretheiss.at, every 20
+  seconds) for 10. Downloads run only while the mode is shown and for 15
+  minutes after; button: the other card
 - **Gioco della vita** - Conway's Game of Life with wrap-around edges, 4
   generations a second. Each game starts from an empty board with a small
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
@@ -348,10 +348,7 @@ Current modes:
     folds its upper flap down, then the new lower flap falls open; a dot
     runs between the rows with the seconds); *di sabbia* (the hour in big
     digits, and a grain of sand for every minute piling up with
-    falling-sand physics; at the new hour the floor opens and it drains);
-    *lunare* (tonight's moon shaded on a sphere, waxing lit from the right
-    - mirrored south of the equator - with darker seas; every 12 seconds
-    the time appears over it)
+    falling-sand physics; at the new hour the floor opens and it drains)
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
     into the Mandelbrot set; and, rendered per pixel with 2x2
     supersampling (`src/animations/demos3d.cpp`): *Cubo solido* (a ray per

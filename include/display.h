@@ -47,6 +47,9 @@ class Display {
   // new mode renders only once.
   void setTransition(Transition style) { transition_ = style; }
   void beginTransition();
+  // A cross-fade of `ms` whatever the transition setting (e.g. between the
+  // pages of one mode).
+  void beginFade(uint16_t ms);
   void tick(uint32_t now);
 
   // How steady the grayscale refresh is, for the diagnostics page: plane
@@ -131,6 +134,8 @@ class Display {
   uint8_t shown_[TOTAL_PIXELS] = {0};   // on the panel now
   Transition transition_ = Transition::Fade;
   bool blending_ = false;
+  Transition blendStyle_ = Transition::Fade;  // of the blend in progress
+  uint16_t blendMs_ = 600;
   uint32_t blendStart_ = 0;
   uint32_t lastBlend_ = 0;
   uint16_t rotation_ = ROTATION_HORIZONTAL;
