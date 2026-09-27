@@ -2,6 +2,7 @@
 
 #include "animation.h"
 #include "modes.h"
+#include "modes/canvas_mode.h"
 #include "modes/notify_mode.h"
 #include "remote_protocol.h"
 #include "settings.h"
@@ -68,6 +69,26 @@ const char *runCommand(const String &command) {
       const int bar = arg.indexOf('|');
       if (!NotifyMode::push(bar >= 0 ? arg.substring(bar + 1) : arg, bar >= 0 ? arg.substring(0, bar) : String())) {
         return "Serve un testo o un'icona conosciuta";
+      }
+      return nullptr;
+    }
+    case 'w': {
+      if (arg == "l") {
+        CanvasMode::toLife();
+        return nullptr;
+      }
+      if (arg == "c") {
+        CanvasMode::clear();
+      } else {
+        int x, y, level;
+        if (sscanf(arg.c_str(), "%d %d %d", &x, &y, &level) != 3 || x < 0 || x >= COLS || y < 0 || y >= ROWS) {
+          return "Pixel non valido";
+        }
+        CanvasMode::paint(x, y, constrain(level, 0, 255));
+      }
+      if (strcmp(currentMode()->id(), "canvas") != 0) {
+        setMode("canvas");
+        saveSettings();
       }
       return nullptr;
     }

@@ -1,5 +1,7 @@
 #include "modes/life_mode.h"
 
+#include <string.h>
+
 #include "display.h"
 
 static const uint32_t STEP_MS = 250;
@@ -21,8 +23,20 @@ static const Seed SEEDS[] = {
 };
 static const uint16_t MAX_GENERATIONS = 1000;
 
+static bool handSeed[ROWS][COLS];
+static bool handSeedPending = false;
+
+void LifeMode::seedWith(const bool cells[ROWS][COLS]) {
+  memcpy(handSeed, cells, sizeof(handSeed));
+  handSeedPending = true;
+}
+
 void LifeMode::start() {
   seed();
+  if (handSeedPending) {
+    handSeedPending = false;
+    memcpy(cells_, handSeed, sizeof(cells_));
+  }
   draw();
   lastStep_ = millis() + SEED_PAUSE_MS;
 }

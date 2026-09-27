@@ -186,6 +186,23 @@
     <p class="hint">Ogni granello è un LED e cade davvero: la sabbia si ammucchia, scivola e lascia un cratere in alto. «Gira» la capovolge come una vera clessidra (il tempo che resta è quello già trascorso); alla fine la sabbia pulsa per qualche secondo.</p>
   </section>
 
+  <section data-mode="canvas" hidden>
+    <h2>Lavagna</h2>
+    <div class="board" id="board"></div>
+    <div class="row inks" id="inks">
+      <button data-level="255" class="on">Pieno</button>
+      <button data-level="110">Medio</button>
+      <button data-level="35">Tenue</button>
+      <button data-level="0">Gomma</button>
+    </div>
+    <div class="row">
+      <button class="save" id="canvasLife">Fai vivere</button>
+      <button class="save" id="canvasSave" title="Salva nei Disegni">Salva</button>
+      <button class="save" id="canvasClear">Cancella</button>
+    </div>
+    <p class="hint">Disegna col dito o col mouse: la lampada segue in tempo reale, e chi ha la pagina aperta su un altro telefono vede i tuoi tratti (e tu i suoi) entro un secondo. Dal Cardputer: le frecce muovono un cursore lampeggiante, lo spazio accende o spegne il pixel. «Fai vivere» usa i pixel accesi come prima generazione del Gioco della vita. Il disegno resta anche dopo un riavvio.</p>
+  </section>
+
   <section data-mode="pet" hidden>
     <h2 id="petTitle">Animaletto</h2>
     <p id="petMood"></p>

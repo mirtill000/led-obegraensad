@@ -6,7 +6,8 @@
 // Conway's Game of Life on a 16x16 torus (edges wrap around). Each game
 // starts from an empty board with just a handful of cells in the middle - a
 // small "methuselah" pattern that grows into a lot of activity - and starts
-// over with another one when the board dies out, freezes or loops.
+// over with another one when the board dies out, freezes or loops. A game
+// can also start from a pattern drawn by hand on the Lavagna.
 class LifeMode : public Mode {
  public:
   const char *id() const override { return "life"; }
@@ -15,6 +16,9 @@ class LifeMode : public Mode {
   void update(uint32_t now) override;
   const char *actionName() const override { return "Ricomincia"; }
   void action() override { start(); }
+  // The next start() begins from these cells instead of a random pattern
+  // (the Lavagna's drawing).
+  static void seedWith(const bool cells[ROWS][COLS]);
 
  private:
   void seed();

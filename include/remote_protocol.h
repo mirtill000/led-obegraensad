@@ -23,4 +23,6 @@
 //   b <1-255>            brightness
 //   t <text>             show this text         p <icon>|<text>   notification
 //   s <1-9> [mode id]    speed (of the mode on show if no id)
+//   w <x> <y> <0-255>    paint a pixel of the Lavagna (shows it)
+//   w c                  clear the Lavagna    w l   Game of Life from it
 #define REMOTE_KEYS "LRUDA"

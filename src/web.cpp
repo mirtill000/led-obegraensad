@@ -19,6 +19,7 @@
 #include "modes/countdown_mode.h"
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
+#include "modes/canvas_mode.h"
 #include "modes/hourglass_mode.h"
 #include "modes/pet_mode.h"
 #include "modes/notify_mode.h"
@@ -515,6 +516,43 @@ static void handleHourglass() {
   sendState();
 }
 
+// The Lavagna: GET gives its pixels (512 hex digits, row by row) and a
+// version that changes with every stroke; POST /api/paint takes a batch of
+// strokes p="x,y,level;x,y,level;..." (the page sends one every ~60 ms
+// while you draw) and shows the Lavagna. Clear and "Fai vivere" are the
+// commands "w c" and "w l".
+static void handleCanvas() {
+  static const char DIGITS[] = "0123456789abcdef";
+  const uint8_t *px = CanvasMode::pixels();
+  String hex;
+  hex.reserve(ROWS * COLS * 2);
+  for (int i = 0; i < ROWS * COLS; i++) {
+    hex += DIGITS[px[i] >> 4];
+    hex += DIGITS[px[i] & 15];
+  }
+  server.send(200, "application/json", "{\"v\":" + String(CanvasMode::version()) + ",\"px\":\"" + hex + "\"}");
+}
+
+static void handlePaint() {
+  const String p = server.arg("p");
+  int start = 0, painted = 0;
+  while (start < (int)p.length() && painted < 256) {
+    int end = p.indexOf(';', start);
+    if (end < 0) end = p.length();
+    int x, y, level;
+    if (sscanf(p.substring(start, end).c_str(), "%d,%d,%d", &x, &y, &level) == 3) {
+      CanvasMode::paint(x, y, constrain(level, 0, 255));
+      painted++;
+    }
+    start = end + 1;
+  }
+  if (strcmp(currentMode()->id(), "canvas") != 0) {
+    setMode("canvas");
+    saveSettings();
+  }
+  handleCanvas();
+}
+
 // The pet's name (name=) or a new egg (reset=1); care goes through /api/cmd.
 static void handlePet() {
   if (server.hasArg("name")) {
@@ -830,6 +868,8 @@ void webBegin() {
   server.on("/api/countdown", HTTP_POST, handleCountdown);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/pet", HTTP_POST, handlePet);
+  server.on("/api/canvas", HTTP_GET, handleCanvas);
+  server.on("/api/paint", HTTP_POST, handlePaint);
   server.on("/api/notify", HTTP_ANY, handleNotify);
   server.on("/api/ble", HTTP_POST, handleBle);
   server.on("/api/backup", HTTP_GET, handleBackup);

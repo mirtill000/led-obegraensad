@@ -84,3 +84,8 @@
   .petStats meter { flex: 0 0 60%; height: 14px; }
   .petCare { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; }
   .petCare button { padding: 12px 6px; border-radius: 8px; border: 1px solid var(--line); background: transparent; }
+  .board { display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); touch-action: none; user-select: none; aspect-ratio: 1; max-width: 360px; }
+  .board div { background: #000; }
+  .inks { margin-top: 8px; }
+  .inks button { padding: 8px 4px; border-radius: 8px; border: 1px solid var(--line); background: transparent; }
+  .inks button.on { background: var(--accent); color: var(--bg); border-color: var(--accent); }

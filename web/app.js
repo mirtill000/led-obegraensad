@@ -227,6 +227,72 @@ $('demo').onchange = (e) => (e.target.blur(), post('/api/demo', { id: state.game
   }).catch(fail);
 
 // ---------------------------------------------------------------------------
+// The Lavagna, shared: strokes go out in batches every 60 ms; the lamp's
+// copy is fetched every second (when nobody here is drawing), so drawings
+// made elsewhere show up.
+const canvasCells = [];
+let ink = 255, canvasPending = [], canvasDrawing = false, canvasVersion = -1, canvasBusy = false;
+function cellShade(level) { const v = Math.round(40 + level * 215 / 255); return level ? 'rgb(' + v + ',' + Math.round(v * 0.8) + ',' + Math.round(v * 0.45) + ')' : '#000'; }
+function setCell(i, level) { canvasCells[i].dataset.level = level; canvasCells[i].style.background = cellShade(level); }
+(function buildCanvas() {
+  const c = $('board');
+  for (let i = 0; i < 256; i++) { const d = document.createElement('div'); c.appendChild(d); canvasCells.push(d); setCell(i, 0); }
+  const dot = (x, y) => {
+    if (x < 0 || x > 15 || y < 0 || y > 15) return;
+    const i = y * 16 + x;
+    if (+canvasCells[i].dataset.level === ink) return;
+    setCell(i, ink);
+    canvasPending.push(x + ',' + y + ',' + ink);
+  };
+  let last = null;
+  const paintAt = (e) => {
+    const r = c.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * 16), y = Math.floor((e.clientY - r.top) / r.height * 16);
+    // A fast stroke skips cells: fill the line from the previous point.
+    const steps = last ? Math.max(Math.abs(x - last[0]), Math.abs(y - last[1])) : 0;
+    for (let k = 1; k < steps; k++) dot(Math.round(last[0] + (x - last[0]) * k / steps), Math.round(last[1] + (y - last[1]) * k / steps));
+    dot(x, y);
+    last = [x, y];
+  };
+  c.addEventListener('pointerdown', (e) => { e.preventDefault(); c.setPointerCapture(e.pointerId); canvasDrawing = true; last = null; paintAt(e); });
+  c.addEventListener('pointermove', (e) => { if (canvasDrawing) paintAt(e); });
+  for (const ev of ['pointerup', 'pointercancel']) c.addEventListener(ev, () => { canvasDrawing = false; });
+})();
+for (const b of $('inks').children) {
+  b.onclick = () => { ink = +b.dataset.level; for (const o of $('inks').children) o.classList.toggle('on', o === b); };
+}
+function showCanvas(data) {
+  if (canvasDrawing || canvasPending.length || data.v === canvasVersion) return;
+  canvasVersion = data.v;
+  for (let i = 0; i < 256; i++) setCell(i, parseInt(data.px.substr(i * 2, 2), 16));
+}
+setInterval(() => {
+  if (canvasPending.length && !canvasBusy) {
+    canvasBusy = true;
+    const batch = canvasPending.splice(0, 200).join(';');
+    fetch('/api/paint', { method: 'POST', body: new URLSearchParams({ p: batch }) })
+      .then((r) => r.json()).then((d) => { canvasVersion = d.v; }).catch(() => {}).finally(() => { canvasBusy = false; });
+  }
+}, 60);
+setInterval(() => {
+  if ($('board').closest('section').hidden || canvasBusy || canvasDrawing) return;
+  fetch('/api/canvas').then((r) => r.json()).then(showCanvas).catch(() => {});
+}, 1000);
+$('canvasClear').onclick = () => confirm('Cancellare la lavagna (anche per gli altri)?')
+  && post('/api/cmd', { c: 'w c' }).then(() => { for (let i = 0; i < 256; i++) setCell(i, 0); status('Lavagna pulita'); }).catch(fail);
+$('canvasLife').onclick = () => post('/api/cmd', { c: 'w l' }).then(() => status('Ora vive: Gioco della vita')).catch(fail);
+$('canvasSave').onclick = async () => {
+  const name = prompt('Nome del disegno', 'Lavagna');
+  if (name === null) return;
+  const px = new Uint8Array(canvasCells.map((d) => +d.dataset.level));
+  try {
+    const res = await fetch('/api/gallery/save', { method: 'POST', body: new URLSearchParams({ name: name.trim() || 'Lavagna', frameMs: 200, data: b64(px) }) });
+    if (!res.ok) throw new Error(await res.text());
+    status('Salvato nei disegni');
+  } catch (e) { fail(e); }
+};
+
+// ---------------------------------------------------------------------------
 // The pet: its needs, and a button per key it listens to (from the firmware).
 function renderPet(p) {
   $('petTitle').textContent = p.name + ' · ' + p.stage.toLowerCase() + (p.hours >= 24 ? ', ' + Math.floor(p.hours / 24) + (p.hours >= 48 ? ' giorni' : ' giorno') : '');

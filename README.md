@@ -315,7 +315,8 @@ Current modes:
   generations a second. Each game starts from an empty board with a small
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
   40-150 generations; when the board dies, freezes or loops a new game
-  starts; button: restart
+  starts; button: restart. A game can also start from a pattern drawn by hand on
+  the Lavagna (*Fai vivere*)
 - **Animazioni** - one animation, or "automatic" (a different one every 5
   minutes); button: next animation. The animations (the games have their
   own mode, below), in `src/animations/`:
@@ -401,6 +402,16 @@ Current modes:
   in a pit, a life. 3 lives; the score is distance, rings and enemies. In
   demo mode the computer simulates running on and jumping at every moment
   ahead, and jumps at the first moment that clears everything
+- **Lavagna** - a live drawing shared by everyone
+  (`src/modes/canvas_mode.cpp`): on the page you paint with the finger or
+  the mouse in four inks (full, medium, faint, eraser); strokes go to the
+  lamp in batches every 60 ms (`POST /api/paint`, `p=x,y,level;...`) and
+  every open page fetches the drawing each second (`GET /api/canvas`), so
+  two phones draw together. The Cardputer draws with a blinking cursor
+  (arrows, space lights or clears a pixel). *Fai vivere* (also the mode's
+  button) makes the lit pixels the first generation of the Game of Life;
+  *Salva* stores it among the Disegni. The drawing survives restarts (NVS
+  blob `canvas`, in the settings backup)
 - **Disegni** - your drawings and animations, one or all in turn; the
   gallery starts with a few examples (a beating heart, the Super Mario
   mushroom, a cat, a flower, Pac-Man, a space invader). On the page there
@@ -584,8 +595,8 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 
 | Characteristic | | |
 |---|---|---|
-| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9) |
-| state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","b":200,"t":"15:42"}`, sent when it changes |
+| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9), `w 3 4 255` (paint a pixel of the Lavagna), `w c` (clear it), `w l` (Game of Life from it) |
+| state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","cl":"↶|↷|||Spara","b":200,"t":"15:42"}`, sent when it changes |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
 | catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |
 
