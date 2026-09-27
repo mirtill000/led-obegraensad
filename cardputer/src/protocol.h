@@ -1,9 +1,10 @@
 #pragma once
 
-// The lamp's Bluetooth LE service - keep in sync with ../../include/ble.h
-// (the commands are described in ../../src/ble.cpp).
-#define LAMP_SERVICE_UUID "8f3e0000-5c1a-4a6b-9b8e-0b5e6a1d0bea"
-#define LAMP_COMMAND_UUID "8f3e0001-5c1a-4a6b-9b8e-0b5e6a1d0bea"
-#define LAMP_STATE_UUID "8f3e0002-5c1a-4a6b-9b8e-0b5e6a1d0bea"
-#define LAMP_FRAME_UUID "8f3e0003-5c1a-4a6b-9b8e-0b5e6a1d0bea"
-#define LAMP_CATALOG_UUID "8f3e0004-5c1a-4a6b-9b8e-0b5e6a1d0bea"
+// The lamp's protocol: one definition shared with the lamp's firmware.
+#include "../../include/remote_protocol.h"
+
+#define LAMP_SERVICE_UUID REMOTE_SERVICE_UUID
+#define LAMP_COMMAND_UUID REMOTE_COMMAND_UUID
+#define LAMP_STATE_UUID REMOTE_STATE_UUID
+#define LAMP_FRAME_UUID REMOTE_FRAME_UUID
+#define LAMP_CATALOG_UUID REMOTE_CATALOG_UUID

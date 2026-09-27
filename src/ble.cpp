@@ -3,13 +3,8 @@
 // shown on the web page (static passkey, bonding, MITM protection) and is
 // remembered after that.
 //
-//   command (write)       one UTF-8 command per write, e.g. "k L":
-//     k <L|R|U|D|A>       game key          m <mode id>     show a mode
-//     g <game id|auto>    play a game       a <anim id|auto> an animation
-//     d <0|1>             demo off/on       x               the mode's button
-//     n                   next mode         b <1-255>       brightness
-//     t <text>            show this text    p <icon>|<text> notification
-//     s <1-9>             speed of the mode being shown
+//   command (write)       one command per write, e.g. "k L" (the list is in
+//                          include/remote_protocol.h; run by src/commands.cpp)
 //   state (read, notify)  {"m":mode,"mn":name,"x":button name,"g":game,
 //                          "gn":game name,"d":demo,"f":demo forced,"b":brightness,
 //                          "t":"HH:MM"} - sent when it changes
@@ -30,6 +25,7 @@
 #include <host/ble_store.h>
 
 #include "animation.h"
+#include "commands.h"
 #include "display.h"
 #include "modes.h"
 #include "modes/ambient_mode.h"
@@ -99,61 +95,6 @@ String stateJson() {
   return j + "}";
 }
 
-void run(const char *text) {
-  const char op = text[0];
-  const String arg = text[0] && text[1] == ' ' ? String(text + 2) : String();
-  switch (op) {
-    case 'k':
-      if (arg.length() == 1 && strchr("LRUDA", arg[0])) currentMode()->input(arg[0]);
-      return;
-    case 'm':
-      if (setMode(arg)) saveSettings();
-      return;
-    case 'g':
-    case 'a': {
-      const Animation *a = findAnimation(arg);
-      if (arg != "auto" && !(a && a->isGame() == (op == 'g'))) return;
-      (op == 'g' ? settings.game : settings.ambient) = arg;
-      setMode(op == 'g' ? "games" : "ambient");
-      restartMode();
-      saveSettings();
-      return;
-    }
-    case 'd':
-      if (currentMode()->gameId()) {
-        setDemoMode(currentMode()->gameId(), arg == "1");
-        saveSettings();
-      }
-      return;
-    case 'x':
-      currentMode()->action();
-      return;
-    case 'n':
-      nextMode();
-      saveSettings();
-      return;
-    case 'b':
-      settings.brightness = constrain(arg.toInt(), 1, 255);
-      saveSettings();
-      refreshModes();
-      return;
-    case 't':
-      if (!arg.length()) return;
-      settings.text = arg.substring(0, 200);
-      setMode("text");
-      saveSettings();
-      return;
-    case 'p': {
-      const int bar = arg.indexOf('|');
-      NotifyMode::push(bar >= 0 ? arg.substring(bar + 1) : arg, bar >= 0 ? arg.substring(0, bar) : String());
-      return;
-    }
-    case 's':
-      setSpeedLevel(currentMode()->id(), arg.toInt());
-      saveSettings();
-      return;
-  }
-}
 
 class ServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *) override { Serial.println("BLE: remote connected"); }
@@ -176,21 +117,21 @@ void bleBegin() {
   server = BLEDevice::createServer();
   server->setCallbacks(new ServerCallbacks());
   server->advertiseOnDisconnect(true);
-  BLEService *service = server->createService(BLE_SERVICE_UUID);
+  BLEService *service = server->createService(REMOTE_SERVICE_UUID);
   const uint32_t readSecure = BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_READ_AUTHEN;
 
   BLECharacteristic *command = service->createCharacteristic(
-      BLE_COMMAND_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR |
+      REMOTE_COMMAND_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR |
                             BLECharacteristic::PROPERTY_WRITE_AUTHEN);
   command->setCallbacks(new CommandCallbacks());
-  stateChar = service->createCharacteristic(BLE_STATE_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
-  frameChar = service->createCharacteristic(BLE_FRAME_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
-  catalogChar = service->createCharacteristic(BLE_CATALOG_UUID, readSecure);
+  stateChar = service->createCharacteristic(REMOTE_STATE_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
+  frameChar = service->createCharacteristic(REMOTE_FRAME_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
+  catalogChar = service->createCharacteristic(REMOTE_CATALOG_UUID, readSecure);
   catalogChar->setValue(catalog());
   service->start();
 
   BLEAdvertising *adv = BLEDevice::getAdvertising();
-  adv->addServiceUUID(BLE_SERVICE_UUID);
+  adv->addServiceUUID(REMOTE_SERVICE_UUID);
   adv->setScanResponse(true);
   BLEDevice::startAdvertising();
   running = true;
@@ -208,7 +149,7 @@ void bleForgetRemotes() {
 void bleLoop() {
   if (!running) return;
   Command cmd;
-  while (xQueueReceive(commands, &cmd, 0) == pdTRUE) run(cmd.text);
+  while (xQueueReceive(commands, &cmd, 0) == pdTRUE) runCommand(cmd.text);
   if (!bleConnected()) return;
 
   const uint32_t now = millis();

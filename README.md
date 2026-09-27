@@ -124,6 +124,7 @@ src/
   moon.cpp           - moon phase from the date
   gallery.cpp        - drawings saved in flash (LittleFS)
   ble.cpp            - Bluetooth LE remote control (see "Bluetooth remote")
+  commands.cpp       - the remote commands, the same for Bluetooth, /api/cmd and the page
   web.cpp            - web server: JSON API, live updates (the page itself is in web/)
   main.cpp           - WiFi, button, main loop
 web/
@@ -521,9 +522,13 @@ core 0 and reaches the UI only through thread-safe snapshots and a command
 queue. That split is what keeps the screen from flickering or freezing
 while it searches or reconnects.
 
-**The protocol**, for other remotes: service
+**The protocol**, for other remotes, is defined once in
+`include/remote_protocol.h` (the Cardputer firmware includes the same
+file) and the commands are carried out by `src/commands.cpp` for every
+source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
+(e.g. `curl -d "c=g sonic" http://obegransad.local/api/cmd`). Service
 `8f3e0000-5c1a-4a6b-9b8e-0b5e6a1d0bea` with four characteristics
-(`...0001` to `...0004`, see `include/ble.h`):
+(`...0001` to `...0004`):
 
 | Characteristic | | |
 |---|---|---|

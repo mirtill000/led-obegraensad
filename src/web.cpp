@@ -9,6 +9,7 @@
 #include "animation.h"
 #include "ble.h"
 #include "build_info.h"
+#include "commands.h"
 #include "display.h"
 #include "modes.h"
 #include "modes/ambient_mode.h"
@@ -183,40 +184,28 @@ static void sendState() { server.send(200, "application/json", stateJson()); }
 
 static void badRequest(const char *message) { server.send(400, "text/plain", message); }
 
-static void handleMode() {
-  if (!setMode(server.arg("id"))) return badRequest("Modalità sconosciuta");
-  saveSettings();
+// Runs a remote command (remote_protocol.h), the same as Bluetooth's, and
+// answers with the state, or 400 and why not.
+static void command(const String &cmd) {
+  if (const char *error = runCommand(cmd)) return badRequest(error);
   sendState();
 }
 
-static void handleAction() {
-  currentMode()->action();
-  sendState();
-}
+// POST /api/cmd c=<command>: any remote command.
+static void handleCommand() { command(server.arg("c")); }
+
+static void handleMode() { command("m " + server.arg("id")); }
+
+static void handleAction() { command("x"); }
 
 static void handleInput() {
-  const String key = server.arg("key");
-  if (key.length() != 1 || !strchr("LRUDA", key[0])) return badRequest("Tasto sconosciuto");
-  currentMode()->input(key[0]);
+  if (const char *error = runCommand("k " + server.arg("key"))) return badRequest(error);
   server.send(204);
 }
 
-static void handleDemo() {
-  const String id = server.arg("id");
-  const Animation *a = findAnimation(id);
-  if (!(a && a->isGame())) return badRequest("Gioco sconosciuto");
-  setDemoMode(id.c_str(), server.arg("on") == "1");
-  saveSettings();
-  sendState();
-}
+static void handleDemo() { command("d " + String(server.arg("on") == "1" ? "1" : "0") + " " + server.arg("id")); }
 
-static void handleSpeed() {
-  const String id = server.arg("id");
-  if (!validModeId(id)) return badRequest("Modalità sconosciuta");
-  setSpeedLevel(id.c_str(), server.arg("level").toInt());
-  saveSettings();
-  sendState();
-}
+static void handleSpeed() { command("s " + server.arg("level") + " " + server.arg("id")); }
 
 static void handleText() {
   // One line only: '|' would split the text in two.
@@ -784,6 +773,7 @@ void webBegin() {
     loopSince = millis();
     server.send(204);
   });
+  server.on("/api/cmd", HTTP_POST, handleCommand);
   server.on("/api/mode", HTTP_POST, handleMode);
   server.on("/api/action", HTTP_POST, handleAction);
   server.on("/api/speed", HTTP_POST, handleSpeed);
@@ -917,7 +907,7 @@ static void answer(LiveClient &c, uint32_t now) {
     return;
   }
   if (path.startsWith("/input?k=") && path.length() == 10 && strchr("LRUDA", path[9])) {
-    currentMode()->input(path[9]);
+    runCommand(String("k ") + path[9]);
     queue(c, "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nCache-Control: no-store\r\n"
              "Connection: keep-alive\r\nContent-Length: 0\r\n\r\n");
     return;
