@@ -27,6 +27,10 @@ extern Animation *const batteryIconAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
 extern Animation *const cubeAnimation;
+extern Animation *const solidCubeAnimation;
+extern Animation *const tunnelAnimation;
+extern Animation *const sunSphereAnimation;
+extern Animation *const voxelAnimation;
 extern Animation *const plasmaAnimation;
 extern Animation *const metaballsAnimation;
 extern Animation *const mandelbrotAnimation;
@@ -59,6 +63,10 @@ Animation *const ANIMATIONS[] = {
     binaryClockAnimation,
     wordClockAnimation,
     cubeAnimation,
+    solidCubeAnimation,
+    tunnelAnimation,
+    sunSphereAnimation,
+    voxelAnimation,
     plasmaAnimation,
     metaballsAnimation,
     mandelbrotAnimation,

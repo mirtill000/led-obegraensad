@@ -9,3 +9,8 @@ float moonPhase(time_t when);
 const char *moonPhaseName(float phase);
 // Lit fraction of the disc, 0-1.
 float moonIllumination(float phase);
+
+// Where the sun is in the sky at `when`, seen from lat/lon (degrees):
+// azimuth from north through east and elevation above the horizon, both
+// in radians (simplified NOAA formulas, well within a degree).
+void sunPosition(time_t when, float latitude, float longitude, float &azimuth, float &elevation);

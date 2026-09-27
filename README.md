@@ -331,7 +331,16 @@ Current modes:
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...)
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
-    into the Mandelbrot set
+    into the Mandelbrot set; and, rendered per pixel with 2x2
+    supersampling (`src/animations/demos3d.cpp`): *Cubo solido* (a ray per
+    sub-pixel against the spinning cube, faces shaded by the light),
+    *Tunnel* (a twisting tiled pipe you fly down), *Sfera al sole* (a
+    turning globe lit from where the sun really is in your sky, from the
+    lamp's latitude and longitude, as if you faced north: sunrise lights
+    its right side, noon the front, sunset the left; at night just its
+    outline among a few stars - `sunPosition()` in `moon.cpp`) and *Volo
+    sulle colline* (a voxel landscape, Comanche style: hills brighter
+    with height, fog in the distance)
 - **Giochi** - one game, or "automatic" (a different one every 5
   minutes, always as a demo); button: next game. Every game derives from
   `ArcadeGame` (`src/animations/arcade_game.h`), which gives them the
