@@ -7,7 +7,7 @@
 #include <vector>
 
 // A text shown as still pages in the font picked on the page (Display's
-// scroll font): 3 lines per page in the Tiny font, 2 in Attuale (its compact
+// scroll font): 3 lines per page in the Tiny font, 2 in Media (its compact
 // letters) or Mini; each line up to 16 pixels, words kept whole where they
 // fit and split by Italian syllables where they don't (CON / SAPE / VO /
 // LEZ / ZA), every line centred and the block centred vertically. The Big

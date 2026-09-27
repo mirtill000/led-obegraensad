@@ -517,7 +517,7 @@ int Display::textRow(const String &position, int previous) {
   return row;
 }
 
-// The font scrolling text is drawn in: Small ("Attuale") scrolls with its
+// The font scrolling text is drawn in: Small ("Media") scrolls with its
 // compact letters.
 static TextFont scrollingFont() {
   if (scrollFont_ != TextFont::Small) return scrollFont_;

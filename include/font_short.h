@@ -2,7 +2,7 @@
 
 #include "font_compact.h"
 
-// Short variant of the text font: the same look as "Attuale" (font A) but 6
+// Short variant of the text font: the same look as "Media" (font A) but 6
 // rows tall instead of 8, used for scrolling text and pages when the lamp
 // hangs vertically. Capitals, ascenders and x-height letters already fit in
 // rows 0-5 of the compact font, so they are reused as they are (only rows

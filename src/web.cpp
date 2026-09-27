@@ -817,7 +817,7 @@ void webBegin() {
   server.on("/api/gallery/show", HTTP_POST, handleGalleryShow);
   server.on("/api/draw", HTTP_POST, handleDraw);
   server.on("/api/update", HTTP_POST, handleUpdateDone, handleUpdateUpload);
-  server.onNotFound([] { server.send(404, "text/plain", "Not found"); });
+  server.onNotFound([] { server.send(404, "text/plain", "Pagina non trovata"); });
   server.begin();
   events.begin();
 }

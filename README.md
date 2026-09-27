@@ -136,6 +136,8 @@ scripts/
   build_info.py      - firmware version (git commit, build time) for the page
   quotes.py          - content/frasi_dell_ora.txt -> include/quotes_builtin.h
   webpage.py         - web/ -> include/webpage.h (one page, CSS and JS inlined, gzipped)
+  check_texts.py     - stops the build if a retired name (e.g. an old font name) comes back
+                       in the page, the README or a string shown on the panel
 cardputer/           - Bluetooth remote for the M5Stack Cardputer ADV (its own PlatformIO project)
 platformio.ini
 ```
@@ -313,7 +315,7 @@ Current modes:
   minutes); button: next animation. The animations (the games have their
   own mode, below), in `src/animations/`:
   - *Atmosfere*: digital rain, fire, stars, waves
-  - *Icone geek*: a walking Space Invader, Pac-Man chased by a ghost, a
+  - *Icone geek*: *Alieno* (a walking Space Invader), Pac-Man chased by a ghost, a
     terminal (four lines in a 3x3 font) typing commands whose answers are
     the lamp's own - `ls` its files, `w` the time and uptime, `ip` its
     address, `df` free flash, `top` free memory and chip temperature,

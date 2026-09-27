@@ -18,7 +18,7 @@
 //  Compact - Small with letters one pixel narrower (font_compact.h): what
 //            scrolling text actually uses when Small is picked
 //  Tiny  - 4-row capitals (font_tiny.h): three lines fit on the panel
-//  Short - Small/Compact folded to 6 rows (font_short.h): "Attuale" when vertical
+//  Short - Small/Compact folded to 6 rows (font_short.h): "Media" when vertical
 enum class TextFont : uint8_t { Small, Big, Mini, Compact, Tiny, Short };
 
 // How the panel goes from one mode to the next (see beginTransition()).
@@ -78,7 +78,7 @@ class Display {
   static int scrollWidth(const char *text);
   static void setScrollFont(TextFont font);
   static TextFont scrollFont();
-  // When vertical, the "Attuale" font scrolls/pages 6 rows tall (Short).
+  // When vertical, the "Media" font scrolls/pages 6 rows tall (Short).
   static void setVerticalText(bool vertical);
   static bool verticalText();
   // Rows of a line of scrolling text in the current font.

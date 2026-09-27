@@ -34,7 +34,7 @@ class GeekAnimation : public Animation {
 class InvaderIcon : public GeekAnimation {
  public:
   const char *id() const override { return "invader"; }
-  const char *name() const override { return "Space Invader"; }
+  const char *name() const override { return "Alieno"; }
   uint16_t frameMs() const override { return 500; }
   void frame(uint32_t) override {
     static const char *const CRAB[2][8] = {
