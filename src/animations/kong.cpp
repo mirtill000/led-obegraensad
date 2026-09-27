@@ -25,7 +25,6 @@
 //   row 15   floor 0
 #include "animations/arcade_game.h"
 #include "display.h"
-#include "pager.h"
 #include "settings.h"
 
 namespace {
@@ -38,7 +37,6 @@ const int KONG_X = 0;
 const int MARIO_STEP = 3;   // ticks per Mario step
 const int JUMP_TICKS = 12;  // time in the air
 const int MAX_BARRELS = 8, MAX_FIRES = 4;
-const int INTRO_FRAMES = 45;
 
 struct Level {
   int8_t ladders[FLOORS - 1][2];  // x of the ladders from floor i up to i + 1 (-1: none)
@@ -98,7 +96,7 @@ class KongGame : public ArcadeGame {
   }
 
   void input(char key) override {
-    if (dying_ || won_ || intro_) return;
+    if (dying_ || won_) return;
     if (key == 'L' || key == 'R') walk(key == 'L' ? -1 : 1);
     if (key == 'U') climb(1);
     if (key == 'D') climb(-1);
@@ -108,10 +106,6 @@ class KongGame : public ArcadeGame {
  protected:
   void tick(uint32_t) override {
     tick_++;
-    if (intro_) {  // "LIV 2" before each level
-      intro_--;
-      return drawIntro();
-    }
     if (dying_) {
       if (--dying_ == 0) {
         if (--lives_ <= 0) return gameOver(points_);
@@ -154,10 +148,9 @@ class KongGame : public ArcadeGame {
     for (Barrel &b : barrels_) b.used = false;
     for (Fire &f : fires_) f.used = false;
     placeMario();
-    nextThrow_ = tick_ + INTRO_FRAMES + 30;
-    nextFire_ = tick_ + INTRO_FRAMES + 15;
+    nextThrow_ = tick_ + 30;  // a moment before the first barrel
+    nextFire_ = tick_ + 15;
     firesOut_ = 0;
-    intro_ = INTRO_FRAMES;
   }
 
   void placeMario() {
@@ -468,13 +461,6 @@ class KongGame : public ArcadeGame {
     }
   }
 
-  void drawIntro() {
-    display.clear();
-    Pager::drawText((COLS - Pager::textWidth("LIV")) / 2, 3, "LIV");
-    const String n(round_ % 3 + 1);
-    Pager::drawText((COLS - Pager::textWidth(n)) / 2, 9, n);
-  }
-
   void draw() {
     display.clear();
     const bool flash = won_ > 0 && (won_ / 4) % 2;
@@ -533,7 +519,7 @@ class KongGame : public ArcadeGame {
   Fire fires_[MAX_FIRES] = {};
   int floor_ = 0, x_ = 1, climb_ = 0, jump_ = 0, facing_ = 1, walkAnim_ = 0;
   int lives_ = 3, points_ = 0, round_ = 0, firesOut_ = 0;
-  int dying_ = 0, won_ = 0, throwing_ = 0, intro_ = 0;
+  int dying_ = 0, won_ = 0, throwing_ = 0;
   uint32_t tick_ = 0, nextThrow_ = 0, nextFire_ = 0;
 };
 

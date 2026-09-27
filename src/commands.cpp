@@ -2,7 +2,8 @@
 
 #include "animation.h"
 #include "modes.h"
-#include "modes/canvas_mode.h"
+#include "modes/board.h"
+#include "modes/life_mode.h"
 #include "modes/notify_mode.h"
 #include "remote_protocol.h"
 #include "settings.h"
@@ -73,21 +74,20 @@ const char *runCommand(const String &command) {
       return nullptr;
     }
     case 'w': {
+      // The Gioco della vita's drawing board: paint, clear, set it going.
       if (arg == "l") {
-        CanvasMode::toLife();
-        return nullptr;
-      }
-      if (arg == "c") {
-        CanvasMode::clear();
+        LifeMode::fromBoard();
+      } else if (arg == "c") {
+        board::clear();
       } else {
         int x, y, level;
         if (sscanf(arg.c_str(), "%d %d %d", &x, &y, &level) != 3 || x < 0 || x >= COLS || y < 0 || y >= ROWS) {
           return "Pixel non valido";
         }
-        CanvasMode::paint(x, y, constrain(level, 0, 255));
+        board::paint(x, y, constrain(level, 0, 255));
       }
-      if (strcmp(currentMode()->id(), "canvas") != 0) {
-        setMode("canvas");
+      if (strcmp(currentMode()->id(), "life") != 0) {
+        setMode("life");
         saveSettings();
       }
       return nullptr;

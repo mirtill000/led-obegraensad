@@ -2,9 +2,7 @@
 
 #include "display.h"
 #include "modes/ambient_mode.h"
-#include "modes/canvas_mode.h"
 #include "modes/clock_mode.h"
-#include "modes/countdown_mode.h"
 #include "modes/hourglass_mode.h"
 #include "modes/notify_mode.h"
 #include "modes/demo_mode.h"
@@ -33,18 +31,16 @@ static LifeMode lifeMode;
 static AmbientMode ambientMode(false);
 static AmbientMode gamesMode(true);
 static GalleryMode galleryModeInstance;
-static CountdownMode countdownMode;
 static HourglassMode hourglassMode;
 static PetMode petMode;
-static CanvasMode canvasMode;
 static FormulaMode formulaMode;
 static NotifyMode notifyMode;
 static DemoMode demoModeInstance;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
-Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &worldMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance, &canvasMode, &formulaMode,
-                        &countdownMode, &hourglassMode, &petMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
+Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &worldMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance, &formulaMode,
+                        &hourglassMode, &petMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 
 static uint8_t current = 0;       // index of the mode being shown

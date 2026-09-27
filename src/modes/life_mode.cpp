@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "display.h"
+#include "modes/board.h"
 
 static const uint32_t STEP_MS = 250;
 static const uint32_t SEED_PAUSE_MS = 1000;  // show the starting cells before evolving
@@ -23,25 +24,60 @@ static const Seed SEEDS[] = {
 };
 static const uint16_t MAX_GENERATIONS = 1000;
 
-static bool handSeed[ROWS][COLS];
-static bool handSeedPending = false;
+static volatile bool boardRequested = false;
 
-void LifeMode::seedWith(const bool cells[ROWS][COLS]) {
-  memcpy(handSeed, cells, sizeof(handSeed));
-  handSeedPending = true;
-}
+void LifeMode::fromBoard() { boardRequested = true; }
 
 void LifeMode::start() {
+  drawing_ = false;  // strokes made since it was last shown bring the board back
   seed();
-  if (handSeedPending) {
-    handSeedPending = false;
-    memcpy(cells_, handSeed, sizeof(cells_));
-  }
   draw();
   lastStep_ = millis() + SEED_PAUSE_MS;
 }
 
+void LifeMode::action() {
+  if (drawing_) fromBoard();
+  else start();
+}
+
+bool LifeMode::input(char key) {
+  if (!board::input(key)) return false;
+  drawing_ = true;
+  return true;
+}
+
+const GameControls *LifeMode::controls() const {
+  static const GameControls c = {"LRUDA", {nullptr, nullptr, nullptr, nullptr, "Punto"}, true,
+                                 "Le frecce muovono il cursore, «Punto» (spazio) accende o spegne una cellula."};
+  return &c;
+}
+
 void LifeMode::update(uint32_t now) {
+  board::saveIfChanged();
+  if (board::version() != seenVersion_) {  // someone is drawing
+    seenVersion_ = board::version();
+    drawing_ = true;
+  }
+  if (boardRequested) {
+    // The drawing becomes generation zero.
+    boardRequested = false;
+    drawing_ = false;
+    const uint8_t *px = board::pixels();
+    for (int i = 0; i < ROWS * COLS; i++) cells_[i / COLS][i % COLS] = px[i] > 0;
+    memset(previous_, 0, sizeof(previous_));
+    memset(history_, 0, sizeof(history_));
+    generation_ = 0;
+    display.beginTransition();
+    draw();
+    lastStep_ = now + SEED_PAUSE_MS;
+    return;
+  }
+  if (drawing_) {
+    if (now - lastBoardDraw_ < 50) return;
+    lastBoardDraw_ = now;
+    board::draw(now);
+    return;
+  }
   if ((int32_t)(now - lastStep_) < (int32_t)interval(STEP_MS)) return;
   lastStep_ = now;
 

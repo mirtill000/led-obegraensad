@@ -52,11 +52,8 @@ struct Settings {
   // player controls the game from the page instead of the computer.
   String demoOff;
 
-  // Timers: countdown target, sunrise alarm.
-  String countdownLabel;
+  // Timers: sunrise alarm.
   String formula;  // the Formule mode's expression (see formula.h)
-  String countdownDate;  // "YYYY-MM-DD"
-  String countdownTime;  // "HH:MM"
   uint8_t hourglassMinutes;  // the sand timer's time (1-120)
   bool notifyNight;
   bool bleOn;        // Bluetooth remote control
@@ -79,7 +76,7 @@ extern Settings settings;
 
 void loadSettings();
 // Version of the saved settings' layout: loadSettings() migrates older ones.
-static const uint8_t SETTINGS_VERSION = 2;
+static const uint8_t SETTINGS_VERSION = 3;
 void saveSettings();
 
 // settings.quotes lives in its own file (/quotes.txt in LittleFS): the

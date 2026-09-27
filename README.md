@@ -6,7 +6,7 @@ flash / 8MB octal PSRAM, WiFi+BT). A small web page over WiFi switches
 between modes: scrolling text (by default **dare mighty things**), a quote
 of the hour, clock + weather, a 12-hour forecast, things from the web
 (word of the day, "on this day", your calendar), Conway's Game of Life,
-Super Mario and other games, animations, your own drawings, a countdown
+Super Mario and other games, animations, your own drawings, a sand timer
 and a sunrise alarm. (Inspired by
 [ph1p/ikea-led-obegraensad](https://github.com/ph1p/ikea-led-obegraensad),
 which this reuses the panel's shift-register wiring table from.)
@@ -114,7 +114,7 @@ src/
   display.cpp        - shift-register driver, font renderer, brightness, transitions
   ui.cpp             - scrolling header band, "waiting" and "no WiFi" signs
   modes.cpp          - list of modes + switching between them
-  modes/             - one file per mode
+  modes/             - one file per mode (board.cpp: the Game of Life's drawing board)
   animations/        - the animations and games ("Animazioni", "Giochi")
   settings.cpp       - settings saved in flash (NVS), versioned migrations
   backup.cpp         - all settings to one file and back
@@ -272,7 +272,7 @@ Current modes:
   chosen there: top, middle, bottom or variable (a different height at
   every pass, the default) - or shows it as still pages like the hourly
   quote, in the font chosen there (the same setting as
-  in Display). With *Media*, this and all other scrolling text (web info, word clock, game scores, the countdown's header) use its
+  in Display). With *Media*, this and all other scrolling text (web info, word clock, game scores) use its
   compact variant (`include/font_compact.h`): letters one pixel narrower -
   3 instead of 4 - where the shape allows it, so more text fits; the
   digits are already 3 pixels wide, the narrowest that stays readable
@@ -328,8 +328,16 @@ Current modes:
   generations a second. Each game starts from an empty board with a small
   pattern in the middle (R-pentomino, acorn, diehard, ...) that grows for
   40-150 generations; when the board dies, freezes or loops a new game
-  starts; button: restart. A game can also start from a pattern drawn by hand on
-  the Lavagna (*Fai vivere*)
+  starts; button: restart. It has a drawing board (`src/modes/board.cpp`)
+  for your own first generation, shared by everyone: on the page you
+  paint with the finger or the mouse (pencil or eraser); strokes go to the
+  lamp in batches every 60 ms (`POST /api/paint`, `p=x,y,level;...`) and
+  every open page fetches the board each second (`GET /api/canvas`), so
+  two phones draw together. The Cardputer draws with a blinking cursor
+  (arrows, space lights or clears a cell). As soon as someone draws, the
+  lamp shows the board; *Fai vivere* (then the mode's button) sets it
+  going as generation zero; *Salva* stores it among the Disegni. The
+  drawing survives restarts (NVS blob `canvas`, in the settings backup)
 - **Animazioni** - one animation, or "automatic" (a different one every 5
   minutes); button: next animation. The animations (the games have their
   own mode, below), in `src/animations/`:
@@ -338,9 +346,11 @@ Current modes:
     terminal (four lines in a 3x3 font) typing commands whose answers are
     the lamp's own - `ls` its files, `w` the time and uptime, `ip` its
     address, `df` free flash, `top` free memory and chip temperature,
-    `pwd`, `cal` today's date -, a beating 8-bit heart, a rocket among the
-    stars, a cup of coffee with steam, a charging battery (lying down, or
-    standing up when the lamp hangs vertically)
+    `pwd`, `cal` today's date -, a rocket among the stars, a cup of coffee
+    with steam, a 3.5" floppy (the shutter slides, lines get written on
+    the label), a Game Boy with a Tetris piece falling on its screen,
+    Matrix rain, the hacker emblem (a glider going through its four
+    generations in a 3x3 grid) and the Wi-Fi sign connecting arc by arc
   - *Orologi*: binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...) and in
@@ -386,8 +396,8 @@ Current modes:
   middle: duck, high: run under) faster and faster; in demo mode the
   computer simulates running, jumping and ducking and picks the first
   that keeps it alive; **Donkey Kong** - four floors joined by ladders,
-  Mario climbing up to Pauline in three levels taken in turn ("LIV 1-3"
-  before each): *1* Kong throws barrels that roll down in a zigzag (and
+  Mario climbing up to Pauline in three levels taken in turn (one follows
+  the other straight away, no title screen): *1* Kong throws barrels that roll down in a zigzag (and
   sometimes down a ladder); *2* no barrels, but fires - the first out of
   the oil drum at the bottom, the others on the middle floors - wander the
   floors, climb the ladders and drift towards Mario; *3* barrels and fires
@@ -422,16 +432,6 @@ Current modes:
   `f=`; a formula that doesn't parse is refused with the reason and the
   position, e.g. "manca «)» (posizione 12)"). The page has a dozen
   examples to start from (waves, sonar, a bouncing ball, a beating heart...)
-- **Lavagna** - a live drawing shared by everyone
-  (`src/modes/canvas_mode.cpp`): on the page you paint with the finger or
-  the mouse in four inks (full, medium, faint, eraser); strokes go to the
-  lamp in batches every 60 ms (`POST /api/paint`, `p=x,y,level;...`) and
-  every open page fetches the drawing each second (`GET /api/canvas`), so
-  two phones draw together. The Cardputer draws with a blinking cursor
-  (arrows, space lights or clears a pixel). *Fai vivere* (also the mode's
-  button) makes the lit pixels the first generation of the Game of Life;
-  *Salva* stores it among the Disegni. The drawing survives restarts (NVS
-  blob `canvas`, in the settings backup)
 - **Disegni** - your drawings and animations, one or all in turn; the
   gallery starts with a few examples (a beating heart, the Super Mario
   mushroom, a cat, a flower, Pac-Man, a space invader). On the page there
@@ -440,13 +440,12 @@ Current modes:
   the lamp while you draw; you can also import a photo or an animated GIF
   (cropped to a square, turned into grayscale, contrast stretched). Up to
   60 drawings are saved in flash
-- **Conto alla rovescia** - the event and when ("Vacanze  tra 12
-  giorni") scroll along the top, the days left sit below in big digits
-  (hours and minutes on the day itself)
 - **Clessidra** - a sand timer (1 minute to 1 hour, set on the page;
-  *Ricomincia* starts it again). 44 grains, one LED each, with real
-  falling-sand physics: they pile up in a cone, slide down the slopes and
-  open a crater in the top bulb; the neck lets one grain through at a time,
+  *Ricomincia* starts it again). A glass of two round bulbs between
+  wooden caps, with a glint on the upper left; 44 grains, one LED each,
+  with real falling-sand physics: they pile up in a cone, slide down the
+  slopes (rolling off where the glass curves in), open a crater in the top
+  bulb; the neck lets one grain through at a time,
   at the pace that empties the top in the time chosen. *Gira* turns it
   over like a real one (the time left becomes the time that had run); at
   the end the sand pulses for a few seconds. The page shows the time left
@@ -479,10 +478,10 @@ Current modes:
 - **Spento** - all LEDs off
 
 Fixed layouts use font A (proportional, 8 rows, lowercase, "Morbido"
-digits): the clock and the countdown; only Previsioni, where 8-row
+digits): the clock; only Previsioni, where 8-row
 text leaves no room for the minimum and maximum, uses the 5-row mini font
 (same rounded shapes). Scrolling text uses the font picked in Display. The information screens share one look (`include/ui.h`):
-a header band along the top (Conto alla rovescia), everything
+a header band along the top, everything
 at full brightness, and the same sign while data is missing - three dots
 filling in, or a blinking WiFi symbol when the lamp is offline - always
 on row 10.
@@ -615,7 +614,7 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 
 | Characteristic | | |
 |---|---|---|
-| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9), `w 3 4 255` (paint a pixel of the Lavagna), `w c` (clear it), `w l` (Game of Life from it) |
+| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9), `w 3 4 255` (paint a cell of the Game of Life's board), `w c` (clear it), `w l` (set it going) |
 | state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","cl":"↶|↷|||Spara","b":200,"t":"15:42"}`, sent when it changes |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
 | catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |

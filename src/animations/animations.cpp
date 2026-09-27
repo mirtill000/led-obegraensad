@@ -20,10 +20,13 @@ extern Animation *const sonicAnimation;
 extern Animation *const invaderIconAnimation;
 extern Animation *const pacmanIconAnimation;
 extern Animation *const terminalIconAnimation;
-extern Animation *const heartIconAnimation;
 extern Animation *const rocketIconAnimation;
 extern Animation *const coffeeIconAnimation;
-extern Animation *const batteryIconAnimation;
+extern Animation *const floppyIconAnimation;
+extern Animation *const gameBoyIconAnimation;
+extern Animation *const matrixIconAnimation;
+extern Animation *const gliderIconAnimation;
+extern Animation *const wifiIconAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
 extern Animation *const englishWordClockAnimation;
@@ -59,10 +62,13 @@ Animation *const ANIMATIONS[] = {
     invaderIconAnimation,
     pacmanIconAnimation,
     terminalIconAnimation,
-    heartIconAnimation,
     rocketIconAnimation,
     coffeeIconAnimation,
-    batteryIconAnimation,
+    floppyIconAnimation,
+    gameBoyIconAnimation,
+    matrixIconAnimation,
+    gliderIconAnimation,
+    wifiIconAnimation,
     binaryClockAnimation,
     wordClockAnimation,
     englishWordClockAnimation,

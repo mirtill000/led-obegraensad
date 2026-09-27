@@ -16,10 +16,9 @@
 #include "modes.h"
 #include "modes/ambient_mode.h"
 #include "gallery.h"
-#include "modes/countdown_mode.h"
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
-#include "modes/canvas_mode.h"
+#include "modes/board.h"
 #include "modes/formula_mode.h"
 #include "modes/hourglass_mode.h"
 #include "modes/pet_mode.h"
@@ -134,9 +133,6 @@ static String stateJson() {
           ",\"pos\":" + jsonString(settings.webPosition) + ",\"wordText\":" + jsonString(info.word) +
           ",\"event\":" + jsonString(info.event) + ",\"historyStatus\":" + jsonString(info.historyStatus) +
           ",\"calendarStatus\":" + jsonString(info.calendarStatus) + "}";
-  json += ",\"countdown\":{\"label\":" + jsonString(settings.countdownLabel) + ",\"date\":" +
-          jsonString(settings.countdownDate) + ",\"time\":" + jsonString(settings.countdownTime) +
-          ",\"sentence\":" + jsonString(CountdownMode::sentence()) + "}";
   json += ",\"hourglass\":{\"minutes\":" + String(settings.hourglassMinutes) + ",\"left\":" +
           String(HourglassMode::secondsLeft()) + ",\"running\":" + jsonBool(HourglassMode::running()) + "}";
   const WorldInfo world = worldInfoNow();
@@ -496,20 +492,6 @@ static void handleWeb() {
   sendState();
 }
 
-static void handleCountdown() {
-  const String date = server.arg("date"), time = server.arg("time");
-  if (date.length() && date.length() != 10) return badRequest("Data non valida");
-  if (time.length() != 5) return badRequest("Ora non valida");
-  String label = server.arg("label");
-  label.trim();
-  settings.countdownLabel = label.length() ? label.substring(0, 40) : String("L'evento");
-  settings.countdownDate = date;
-  settings.countdownTime = time;
-  saveSettings();
-  if (strcmp(currentMode()->id(), "countdown") == 0) restartMode();
-  sendState();
-}
-
 static void handleHourglass() {
   const int minutes = server.arg("minutes").toInt();
   if (minutes < 1 || minutes > 120) return badRequest("Durata non valida");
@@ -525,21 +507,21 @@ static void handleHourglass() {
   sendState();
 }
 
-// The Lavagna: GET gives its pixels (512 hex digits, row by row) and a
-// version that changes with every stroke; POST /api/paint takes a batch of
-// strokes p="x,y,level;x,y,level;..." (the page sends one every ~60 ms
-// while you draw) and shows the Lavagna. Clear and "Fai vivere" are the
-// commands "w c" and "w l".
+// The Gioco della vita's drawing board: GET gives its pixels (512 hex
+// digits, row by row) and a version that changes with every stroke; POST
+// /api/paint takes a batch of strokes p="x,y,level;x,y,level;..." (the page
+// sends one every ~60 ms while you draw) and shows the board. Clear and
+// "Fai vivere" are the commands "w c" and "w l".
 static void handleCanvas() {
   static const char DIGITS[] = "0123456789abcdef";
-  const uint8_t *px = CanvasMode::pixels();
+  const uint8_t *px = board::pixels();
   String hex;
   hex.reserve(ROWS * COLS * 2);
   for (int i = 0; i < ROWS * COLS; i++) {
     hex += DIGITS[px[i] >> 4];
     hex += DIGITS[px[i] & 15];
   }
-  server.send(200, "application/json", "{\"v\":" + String(CanvasMode::version()) + ",\"px\":\"" + hex + "\"}");
+  server.send(200, "application/json", "{\"v\":" + String(board::version()) + ",\"px\":\"" + hex + "\"}");
 }
 
 static void handlePaint() {
@@ -550,13 +532,13 @@ static void handlePaint() {
     if (end < 0) end = p.length();
     int x, y, level;
     if (sscanf(p.substring(start, end).c_str(), "%d,%d,%d", &x, &y, &level) == 3) {
-      CanvasMode::paint(x, y, constrain(level, 0, 255));
+      board::paint(x, y, constrain(level, 0, 255));
       painted++;
     }
     start = end + 1;
   }
-  if (strcmp(currentMode()->id(), "canvas") != 0) {
-    setMode("canvas");
+  if (strcmp(currentMode()->id(), "life") != 0) {
+    setMode("life");
     saveSettings();
   }
   handleCanvas();
@@ -884,7 +866,6 @@ void webBegin() {
   server.on("/api/playlist", HTTP_POST, handlePlaylist);
   server.on("/api/night", HTTP_POST, handleNight);
   server.on("/api/web", HTTP_POST, handleWeb);
-  server.on("/api/countdown", HTTP_POST, handleCountdown);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/pet", HTTP_POST, handlePet);
   server.on("/api/formula", HTTP_POST, handleFormula);

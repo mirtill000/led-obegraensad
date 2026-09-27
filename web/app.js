@@ -254,9 +254,9 @@ $('formulaShow').onclick = () => post('/api/formula', { f: $('formulaText').valu
   .catch((e) => { $('formulaError').textContent = 'Errore: ' + e.message; });
 
 // ---------------------------------------------------------------------------
-// The Lavagna, shared: strokes go out in batches every 60 ms; the lamp's
-// copy is fetched every second (when nobody here is drawing), so drawings
-// made elsewhere show up.
+// The Gioco della vita's drawing board, shared: strokes go out in batches
+// every 60 ms; the lamp's copy is fetched every second (when nobody here is
+// drawing), so drawings made elsewhere show up.
 const canvasCells = [];
 let ink = 255, canvasPending = [], canvasDrawing = false, canvasVersion = -1, canvasBusy = false;
 function cellShade(level) { const v = Math.round(40 + level * 215 / 255); return level ? 'rgb(' + v + ',' + Math.round(v * 0.8) + ',' + Math.round(v * 0.45) + ')' : '#000'; }
@@ -305,15 +305,15 @@ setInterval(() => {
   if ($('board').closest('section').hidden || canvasBusy || canvasDrawing) return;
   fetch('/api/canvas').then((r) => r.json()).then(showCanvas).catch(() => {});
 }, 1000);
-$('canvasClear').onclick = () => confirm('Cancellare la lavagna (anche per gli altri)?')
-  && post('/api/cmd', { c: 'w c' }).then(() => { for (let i = 0; i < 256; i++) setCell(i, 0); status('Lavagna pulita'); }).catch(fail);
-$('canvasLife').onclick = () => post('/api/cmd', { c: 'w l' }).then(() => status('Ora vive: Gioco della vita')).catch(fail);
+$('canvasClear').onclick = () => confirm('Cancellare il disegno (anche per gli altri)?')
+  && post('/api/cmd', { c: 'w c' }).then(() => { for (let i = 0; i < 256; i++) setCell(i, 0); status('Disegno cancellato'); }).catch(fail);
+$('canvasLife').onclick = () => post('/api/cmd', { c: 'w l' }).then(() => status('Ora vive!')).catch(fail);
 $('canvasSave').onclick = async () => {
-  const name = prompt('Nome del disegno', 'Lavagna');
+  const name = prompt('Nome del disegno', 'Vita');
   if (name === null) return;
   const px = new Uint8Array(canvasCells.map((d) => +d.dataset.level));
   try {
-    const res = await fetch('/api/gallery/save', { method: 'POST', body: new URLSearchParams({ name: name.trim() || 'Lavagna', frameMs: 200, data: b64(px) }) });
+    const res = await fetch('/api/gallery/save', { method: 'POST', body: new URLSearchParams({ name: name.trim() || 'Vita', frameMs: 200, data: b64(px) }) });
     if (!res.ok) throw new Error(await res.text());
     status('Salvato nei disegni');
   } catch (e) { fail(e); }
@@ -393,8 +393,6 @@ function renderExtras() {
   $('calendarStatus').textContent = s.web.calendar ? 'Stato: ' + (s.web.calendarStatus || 'in attesa') : '';
   $('webPreview').textContent = [s.web.wordText, s.web.event].filter(Boolean).join(' · ');
 
-  if (!dirty.cd) { $('cdLabel').value = s.countdown.label; $('cdDate').value = s.countdown.date; $('cdTime').value = s.countdown.time; }
-  $('cdInfo').textContent = s.countdown.sentence;
   if (!editing('hgMin')) $('hgMin').value = String(s.hourglass.minutes);
   renderPet(s.pet);
   if (!dirty.formula && !editing('formulaText')) $('formulaText').value = s.formula;
@@ -448,7 +446,6 @@ $('saveWeb').onclick = () => post('/api/web', {
   url: $('icalUrl').value.trim(), pos: $('webPos').value,
 }).then(() => { dirty.web = false; render(); status('Salvato: i dati arrivano in qualche secondo'); }).catch(fail);
 
-for (const id of ['cdLabel', 'cdDate', 'cdTime']) $(id).addEventListener('input', () => { dirty.cd = true; });
 function notifyAddress() {
   return 'http://' + location.host + '/api/notify?text=' + encodeURIComponent($('notifyText').value) +
     ($('notifyIcon').value ? '&icon=' + $('notifyIcon').value : '');
@@ -472,8 +469,6 @@ $('bleForget').onclick = () => {
 $('notifyNight').onchange = () => post('/api/settings', { notifyNight: $('notifyNight').checked ? 1 : 0 }).catch(fail);
 $('hgMin').onchange = () => post('/api/hourglass', { minutes: $('hgMin').value });
 $('hgStart').onclick = () => post('/api/hourglass', { minutes: $('hgMin').value, start: 1 });
-$('saveCd').onclick = () => post('/api/countdown', { label: $('cdLabel').value, date: $('cdDate').value, time: $('cdTime').value || '00:00' })
-  .then(() => { dirty.cd = false; render(); status('Conto alla rovescia salvato'); }).catch(fail);
 
 for (const id of ['alarmOn', 'alarmTime', 'alarmRamp', 'alarmHold']) $(id).addEventListener('input', () => { dirty.alarm = true; });
 $('saveAlarm').onclick = () => {

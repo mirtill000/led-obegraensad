@@ -98,6 +98,23 @@ void setDemoMode(const char *gameId, bool demo) {
   settings.demoOff = list;
 }
 
+// Removes the entries "id:N" from comma-separated lists (a playlist, or the
+// lists inside the time slots "HHMM|B|a:1,b:2;...").
+static void dropFromLists(String &lists, const char *id) {
+  const String key = String(id) + ":";
+  for (int i = lists.indexOf(key); i >= 0; i = lists.indexOf(key, i)) {
+    if (i > 0 && lists[i - 1] != ',' && lists[i - 1] != '|') {  // part of a longer id
+      i += key.length();
+      continue;
+    }
+    int end = i;
+    while (end < (int)lists.length() && lists[end] != ',' && lists[end] != ';') end++;
+    if (end < (int)lists.length() && lists[end] == ',') end++;             // "x:1," -> ""
+    else if (i > 0 && lists[i - 1] == ',') i--;                          // ",x:1" at the end
+    lists.remove(i, end - i);
+  }
+}
+
 void loadSettings() {
   prefs.begin("obegransad", true);
   settings.mode = prefs.getString("mode", "text");
@@ -140,6 +157,19 @@ void loadSettings() {
     if (settings.playlist == "clock:10,quotes:3,ambient:5") settings.playlist = "clock:10,quotes:3,ambient:5,games:5";
     settings.scenes.replace("1300|255|clock:10,web:3,ambient:10;", "1300|255|clock:10,web:3,ambient:10,games:5;");
   }
+  // 3: the Lavagna joined the Gioco della vita; the countdown is gone.
+  if (version < 3) {
+    if (settings.mode == "canvas") settings.mode = "life";
+    if (settings.mode == "countdown") settings.mode = "clock";
+    settings.playlist.replace("canvas:", "life:");
+    settings.scenes.replace("canvas:", "life:");
+    dropFromLists(settings.playlist, "countdown");
+    dropFromLists(settings.scenes, "countdown");
+    // A list left empty shows the clock instead.
+    if (!settings.playlist.length()) settings.playlist = "clock:10";
+    settings.scenes.replace("|;", "|clock:10;");
+    if (settings.scenes.endsWith("|")) settings.scenes += "clock:10";
+  }
   // Super Mario used to be a mode of its own; it is now one of the games.
   if (settings.mode == "mario") {
     settings.mode = "games";
@@ -154,10 +184,7 @@ void loadSettings() {
     if (settings.mode == "ambient") settings.mode = "games";
   }
   settings.demoOff = prefs.getString("demoOff", "");
-  settings.countdownLabel = prefs.getString("cdLabel", "Vacanze");
   settings.formula = prefs.getString("formula", "sin(t-hypot(x-7.5,y-7.5))");
-  settings.countdownDate = prefs.getString("cdDate", "");
-  settings.countdownTime = prefs.getString("cdTime", "00:00");
   settings.hourglassMinutes = constrain(prefs.getUChar("hgMin", 5), 1, 120);
   settings.notifyNight = prefs.getBool("notifyNight", false);
   settings.bleOn = prefs.getBool("bleOn", true);
@@ -210,10 +237,7 @@ void saveSettings() {
   prefs.putBool("scenesOn", settings.scenesOn);
   prefs.putString("scenes", settings.scenes);
   prefs.putString("demoOff", settings.demoOff);
-  prefs.putString("cdLabel", settings.countdownLabel);
   prefs.putString("formula", settings.formula);
-  prefs.putString("cdDate", settings.countdownDate);
-  prefs.putString("cdTime", settings.countdownTime);
   prefs.putUChar("hgMin", settings.hourglassMinutes);
   prefs.putBool("notifyNight", settings.notifyNight);
   prefs.putBool("bleOn", settings.bleOn);

@@ -1,6 +1,6 @@
 // "Icone geek": small pixel-art loops - a Space Invader, Pac-Man with a
-// ghost, a terminal typing commands, an 8-bit heart, a rocket among the
-// stars, a coffee cup, a charging battery.
+// ghost, a terminal typing commands, a rocket among the stars, a coffee
+// cup, a floppy disk, a Game Boy, Matrix rain, the hacker emblem, Wi-Fi.
 #include <math.h>
 
 #include "animation.h"
@@ -245,28 +245,6 @@ class TerminalIcon : public GeekAnimation {
 };
 
 // ---------------------------------------------------------------------------
-// An 8-bit heart beating: lub-dub, pause.
-class HeartIcon : public GeekAnimation {
- public:
-  const char *id() const override { return "heart"; }
-  const char *name() const override { return "Cuore 8-bit"; }
-  uint16_t frameMs() const override { return 150; }
-  void frame(uint32_t) override {
-    static const char *const BIG[10] = {"..###.###..", ".#########.", "###########", "###########", "###########",
-                                        ".#########.", "..#######..", "...#####...", "....###....", ".....#....."};
-    static const char *const SMALL[6] = {".##.##.", "#######", "#######", ".#####.", "..###..", "...#..."};
-    static const bool BEAT[8] = {true, false, true, false, false, false, false, false};
-    tick_++;
-    display.clear();
-    if (BEAT[tick_ % 8]) sprite(2, 3, BIG, 10);
-    else sprite(4, 5, SMALL, 6);
-  }
-
- private:
-  uint32_t tick_ = 0;
-};
-
-// ---------------------------------------------------------------------------
 // A rocket flying up through a field of stars, flame flickering.
 class RocketIcon : public GeekAnimation {
  public:
@@ -338,39 +316,198 @@ class CoffeeIcon : public GeekAnimation {
 };
 
 // ---------------------------------------------------------------------------
-// A battery charging bar by bar, then flashing full: lying down with the
-// lamp horizontal, standing up (terminal on top) with it vertical.
-class BatteryIcon : public GeekAnimation {
+// A 3.5" floppy disk: the metal shutter slides open over the disk and
+// back, while lines get "written" on the label.
+class FloppyIcon : public GeekAnimation {
  public:
-  const char *id() const override { return "battery"; }
-  const char *name() const override { return "Batteria"; }
-  uint16_t frameMs() const override { return 400; }
+  const char *id() const override { return "floppy"; }
+  const char *name() const override { return "Floppy"; }
+  uint16_t frameMs() const override { return 120; }
   void frame(uint32_t) override {
     tick_++;
     display.clear();
-    const bool up = settings.vertical;
-    // Drawn lying down (outline x0-14, rows 4-11, terminal at x15); standing
-    // up it is the same picture turned a quarter, terminal at the top.
-    auto px = [up](int x, int y) {
-      if (up) display.setPixel(y, COLS - 1 - x, true);
-      else display.setPixel(x, y, true);
-    };
-    for (int x = 0; x <= 14; x++) {
-      px(x, 4);
-      px(x, 11);
+    // The case, x1-14 and y1-14, with the write-protect corner cut.
+    for (int i = 1; i <= 14; i++) {
+      display.setLevel(i, 1, i < 14 ? 200 : 0);
+      display.setLevel(i, 14, 200);
+      display.setLevel(1, i, 200);
+      display.setLevel(14, i, i > 1 ? 200 : 0);
     }
-    for (int y = 4; y <= 11; y++) {
-      px(0, y);
-      px(14, y);
+    display.setLevel(13, 2, 200);
+    // The shutter (x4-10, y1-5), its window sliding right and back.
+    const int phase = tick_ % 40;
+    const int slide = phase < 10 ? 0 : phase < 16 ? phase - 10 : phase < 30 ? 6 : max(0, 36 - phase);
+    for (int y = 1; y <= 5; y++) {
+      for (int x = 4; x <= 10; x++) display.setLevel(x, y, 150);
     }
-    for (int y = 6; y <= 9; y++) px(15, y);
-    // Charge: 0-3 bars (3 pixels wide, a pixel apart and from the outline),
-    // then two flashes when full.
-    const int step = tick_ % 8;
-    const int bars = step < 4 ? step : ((step - 4) % 2 == 0 ? 3 : 0);
-    for (int b = 0; b < bars; b++) {
-      for (int x = 2 + b * 4; x < 5 + b * 4; x++) {
-        for (int y = 6; y <= 9; y++) px(x, y);
+    for (int y = 2; y <= 4; y++) {
+      for (int x = 0; x < 2; x++) display.setLevel(5 + x + min(slide, 4), y, slide >= 4 ? 40 : 0);  // the disk shows through
+    }
+    // The label (x3-12, y8-13) and the lines written on it, one by one.
+    for (int y = 8; y <= 13; y++) {
+      for (int x = 3; x <= 12; x++) display.setLevel(x, y, 45);
+    }
+    const int written = (tick_ / 6) % 5;
+    for (int l = 0; l < min(written, 3); l++) {
+      const int len = (l == 2) ? 5 : 8;
+      for (int x = 4; x < 4 + len; x++) display.setLevel(x, 9 + l * 2, 220);
+    }
+  }
+
+ private:
+  uint32_t tick_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// A Game Boy: the grey brick with a little Tetris game on its screen, the
+// d-pad and the A/B buttons.
+class GameBoyIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "gameboy"; }
+  const char *name() const override { return "Game Boy"; }
+  uint16_t frameMs() const override { return 180; }
+  void frame(uint32_t) override {
+    tick_++;
+    display.clear();
+    // Body x3-12, y0-15 (rounded bottom-right corner).
+    for (int y = 0; y < ROWS; y++) {
+      for (int x = 3; x <= 12; x++) {
+        const bool edge = x == 3 || x == 12 || y == 0 || y == 15;
+        if (edge && !(x == 12 && y == 15)) display.setLevel(x, y, 150);
+      }
+    }
+    display.setLevel(11, 14, 150);
+    // Screen x5-10, y2-7: a piece falling onto a stack.
+    for (int y = 2; y <= 7; y++) {
+      for (int x = 5; x <= 10; x++) display.setLevel(x, y, 30);
+    }
+    for (int x = 5; x <= 10; x++) display.setLevel(x, 7, x == 8 ? 30 : 230);  // the stack, a gap to fill
+    const int fall = tick_ % 7;  // rows 2-6, then it lands and a new one comes
+    const int py = 2 + min(fall, 4);
+    display.setLevel(8, py - 1, 255);
+    display.setLevel(8, py, 255);
+    display.setLevel(7, py - 1, 255);
+    // D-pad and the A/B buttons.
+    display.setLevel(5, 10, 230);
+    display.setLevel(4, 11, 230);
+    display.setLevel(5, 11, 230);
+    display.setLevel(6, 11, 230);
+    display.setLevel(5, 12, 230);
+    const bool press = (tick_ / 3) % 4 == 0;
+    display.setLevel(10, 10, press ? 90 : 230);
+    display.setLevel(9, 11, 230);
+    // Speaker grille.
+    display.setLevel(10, 13, 70);
+    display.setLevel(9, 14, 70);
+  }
+
+ private:
+  uint32_t tick_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// Matrix digital rain: drops of glyphs falling down every column at their
+// own pace, a bright head and a fading trail that flickers like changing
+// characters.
+class MatrixIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "matrix"; }
+  const char *name() const override { return "Matrix"; }
+  uint16_t frameMs() const override { return 60; }
+  void start() override {
+    for (Drop &d : drops_) reset(d, true);
+  }
+  void frame(uint32_t) override {
+    display.clear();
+    for (int x = 0; x < COLS; x++) {
+      Drop &d = drops_[x];
+      d.y += d.speed;
+      if (d.y - d.length > ROWS) reset(d, false);
+      const int head = (int)d.y;
+      for (int k = 0; k <= d.length; k++) {
+        const int y = head - k;
+        if (y < 0 || y >= ROWS) continue;
+        if (k > 0 && (esp_random() % 9) == 0) continue;  // a glyph changing
+        const uint8_t level = k == 0 ? 255 : (uint8_t)(170 * (d.length - k + 1) / (d.length + 1));
+        display.setLevel(x, y, level);
+      }
+    }
+  }
+
+ private:
+  struct Drop {
+    float y, speed;
+    int length;
+  };
+  static void reset(Drop &d, bool anywhere) {
+    d.speed = 0.25f + (esp_random() % 100) / 100.0f * 0.55f;
+    d.length = 4 + esp_random() % 7;
+    d.y = anywhere ? (float)(esp_random() % (ROWS + 10)) - 10 : -(float)(esp_random() % 12);
+  }
+  Drop drops_[COLS];
+};
+
+// ---------------------------------------------------------------------------
+// The hacker emblem: a glider from the Game of Life in a 3x3 grid, going
+// through its four generations.
+class GliderIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "glider"; }
+  const char *name() const override { return "Emblema hacker"; }
+  uint16_t frameMs() const override { return 600; }
+  void frame(uint32_t) override {
+    static const char *const PHASES[4][3] = {
+        {".#.", "..#", "###"}, {"#.#", ".##", ".#."}, {"..#", "#.#", ".##"}, {"#..", ".##", "##."}};
+    tick_++;
+    display.clear();
+    for (int i = 0; i < COLS; i++) {
+      for (int line = 0; line < 16; line += 5) {
+        display.setLevel(line, i, 40);
+        display.setLevel(i, line, 40);
+      }
+    }
+    const char *const *cells = PHASES[tick_ % 4];
+    for (int r = 0; r < 3; r++) {
+      for (int c = 0; c < 3; c++) {
+        if (cells[r][c] != '#') continue;
+        for (int y = 0; y < 4; y++) {
+          for (int x = 0; x < 4; x++) display.setLevel(1 + c * 5 + x, 1 + r * 5 + y, 230);
+        }
+      }
+    }
+  }
+
+ private:
+  uint32_t tick_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// The Wi-Fi sign "connecting": the dot, then the three arcs lighting one by
+// one, then all of them flashing.
+class WifiIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "wifi"; }
+  const char *name() const override { return "Wi-Fi"; }
+  uint16_t frameMs() const override { return 250; }
+  void frame(uint32_t) override {
+    tick_++;
+    display.clear();
+    const int step = tick_ % 9;  // 0 dot, 1-3 arcs, 4-8 full (blinking once)
+    const int arcs = step < 4 ? step : (step == 6 ? 0 : 3);
+    const float cx = 7.5f, cy = 13.0f;
+    for (int y = 0; y < ROWS; y++) {
+      for (int x = 0; x < COLS; x++) {
+        const float dx = x - cx, dy = cy - y;
+        const float r = sqrtf(dx * dx + dy * dy);
+        if (r < 1.3f) {
+          display.setLevel(x, y, 255);  // the dot
+          continue;
+        }
+        if (dy <= 0 || fabsf(dx) > dy * 1.05f) continue;  // a 90-degree wedge, pointing up
+        for (int a = 1; a <= arcs; a++) {
+          const float d = fabsf(r - (0.4f + a * 3.3f));
+          if (d < 0.8f) display.setLevel(x, y, gfx::level(1.0f - d * 0.9f));
+        }
       }
     }
   }
@@ -382,17 +519,23 @@ class BatteryIcon : public GeekAnimation {
 InvaderIcon invader;
 PacManIcon pacIcon;
 TerminalIcon terminal;
-HeartIcon heart;
 RocketIcon rocket;
 CoffeeIcon coffee;
-BatteryIcon battery;
+FloppyIcon floppy;
+GameBoyIcon gameBoy;
+MatrixIcon matrix;
+GliderIcon glider;
+WifiIcon wifi;
 
 }  // namespace
 
 extern Animation *const invaderIconAnimation = &invader;
 extern Animation *const pacmanIconAnimation = &pacIcon;
 extern Animation *const terminalIconAnimation = &terminal;
-extern Animation *const heartIconAnimation = &heart;
 extern Animation *const rocketIconAnimation = &rocket;
 extern Animation *const coffeeIconAnimation = &coffee;
-extern Animation *const batteryIconAnimation = &battery;
+extern Animation *const floppyIconAnimation = &floppy;
+extern Animation *const gameBoyIconAnimation = &gameBoy;
+extern Animation *const matrixIconAnimation = &matrix;
+extern Animation *const gliderIconAnimation = &glider;
+extern Animation *const wifiIconAnimation = &wifi;
