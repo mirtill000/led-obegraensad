@@ -193,6 +193,17 @@
     <p class="hint">A turno, prima come disegno e poi come testo: la qualità dell'aria dove sei (indice europeo, da Open-Meteo, ogni mezz'ora), la Stazione spaziale su una mappa del mondo con la sua scia (il punto fisso sei tu; da wheretheiss.at, ogni 20 secondi) e il prossimo lancio di un razzo nel mondo, col conto alla rovescia (da The Space Devs, ogni ora). I dati si scaricano solo mentre questa modalità è in uso. L'altezza del testo è quella di «Dal web».</p>
   </section>
 
+  <section data-mode="formula" hidden>
+    <h2>Formule</h2>
+    <label for="formulaPreset">Esempi</label>
+    <select id="formulaPreset"></select>
+    <label for="formulaText">La tua formula</label>
+    <textarea id="formulaText" rows="3" spellcheck="false" autocapitalize="off" style="font-family: ui-monospace, monospace"></textarea>
+    <button class="save" id="formulaShow">Mostra</button>
+    <p class="hint" id="formulaError"></p>
+    <p class="hint">Come su tixy.land: una formula calcolata per ogni pixel, 30 volte al secondo, con <b>t</b> (secondi), <b>i</b> (numero del pixel, 0-255), <b>x</b> e <b>y</b> (colonna e riga, 0-15). Più il risultato è alto più il pixel è acceso (1 = pieno); i valori negativi si vedono appena. Si scrive come in JavaScript: + - * / % **, confronti, &amp;&amp; || !, &amp; | ^ &lt;&lt; &gt;&gt;, a ? b : c, PI e le funzioni sin cos tan asin acos atan atan2 abs sqrt floor ceil round sign min max pow hypot log exp random. La lampada la usa subito, senza aggiornare il firmware.</p>
+  </section>
+
   <section data-mode="canvas" hidden>
     <h2>Lavagna</h2>
     <div class="board" id="board"></div>

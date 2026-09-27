@@ -20,6 +20,7 @@
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
 #include "modes/canvas_mode.h"
+#include "modes/formula_mode.h"
 #include "modes/hourglass_mode.h"
 #include "modes/pet_mode.h"
 #include "modes/notify_mode.h"
@@ -162,6 +163,7 @@ static String stateJson() {
   json += ",\"moon\":{\"name\":" + jsonString(moonPhaseName(phase)) + ",\"lit\":" +
           String((int)lroundf(moonIllumination(phase) * 100)) + "}";
   json += ",\"version\":" + jsonString(String(FIRMWARE_COMMIT) + " del " + FIRMWARE_BUILT);
+  json += ",\"formula\":" + jsonString(settings.formula);
   json += ",\"galleryCurrent\":" + jsonString(galleryMode().currentId());
   json += ",\"demoStyle\":" + jsonString(settings.demoStyle);
   json += ",\"galleryShow\":" + jsonString(settings.galleryShow) + ",\"nightSun\":" + jsonBool(settings.nightSun);
@@ -562,6 +564,16 @@ static void handlePaint() {
   handleCanvas();
 }
 
+// A new formula for the Formule mode (f=...): 400 with the reason if it
+// doesn't parse; otherwise saved and shown.
+static void handleFormula() {
+  String error;
+  if (!FormulaMode::setFormula(server.arg("f"), error)) return badRequest(error.c_str());
+  setMode("formula");
+  saveSettings();
+  sendState();
+}
+
 // The pet's name (name=) or a new egg (reset=1); care goes through /api/cmd.
 static void handlePet() {
   if (server.hasArg("name")) {
@@ -877,6 +889,7 @@ void webBegin() {
   server.on("/api/countdown", HTTP_POST, handleCountdown);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/pet", HTTP_POST, handlePet);
+  server.on("/api/formula", HTTP_POST, handleFormula);
   server.on("/api/canvas", HTTP_GET, handleCanvas);
   server.on("/api/paint", HTTP_POST, handlePaint);
   server.on("/api/notify", HTTP_ANY, handleNotify);

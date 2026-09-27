@@ -54,6 +54,7 @@ struct Settings {
 
   // Timers: countdown target, sunrise alarm.
   String countdownLabel;
+  String formula;  // the Formule mode's expression (see formula.h)
   String countdownDate;  // "YYYY-MM-DD"
   String countdownTime;  // "HH:MM"
   uint8_t hourglassMinutes;  // the sand timer's time (1-120)

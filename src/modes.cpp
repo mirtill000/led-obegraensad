@@ -9,6 +9,7 @@
 #include "modes/notify_mode.h"
 #include "modes/demo_mode.h"
 #include "modes/forecast_mode.h"
+#include "modes/formula_mode.h"
 #include "modes/gallery_mode.h"
 #include "modes/life_mode.h"
 #include "modes/off_mode.h"
@@ -36,12 +37,13 @@ static CountdownMode countdownMode;
 static HourglassMode hourglassMode;
 static PetMode petMode;
 static CanvasMode canvasMode;
+static FormulaMode formulaMode;
 static NotifyMode notifyMode;
 static DemoMode demoModeInstance;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
-Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &worldMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance, &canvasMode,
+Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &worldMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance, &canvasMode, &formulaMode,
                         &countdownMode, &hourglassMode, &petMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 

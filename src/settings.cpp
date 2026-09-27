@@ -155,6 +155,7 @@ void loadSettings() {
   }
   settings.demoOff = prefs.getString("demoOff", "");
   settings.countdownLabel = prefs.getString("cdLabel", "Vacanze");
+  settings.formula = prefs.getString("formula", "sin(t-hypot(x-7.5,y-7.5))");
   settings.countdownDate = prefs.getString("cdDate", "");
   settings.countdownTime = prefs.getString("cdTime", "00:00");
   settings.hourglassMinutes = constrain(prefs.getUChar("hgMin", 5), 1, 120);
@@ -210,6 +211,7 @@ void saveSettings() {
   prefs.putString("scenes", settings.scenes);
   prefs.putString("demoOff", settings.demoOff);
   prefs.putString("cdLabel", settings.countdownLabel);
+  prefs.putString("formula", settings.formula);
   prefs.putString("cdDate", settings.countdownDate);
   prefs.putString("cdTime", settings.countdownTime);
   prefs.putUChar("hgMin", settings.hourglassMinutes);

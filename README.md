@@ -124,6 +124,7 @@ src/
   weather.cpp        - weather, 12-hour forecast, sunrise/sunset (Open-Meteo)
   webinfo.cpp        - word of the day, Wikipedia "on this day", iCal calendar
   world.cpp          - air quality, Space Station position, next rocket launch
+  formula.cpp        - the Formule mode's expression compiler and evaluator
   moon.cpp           - moon phase from the date
   gallery.cpp        - drawings saved in flash (LittleFS)
   ble.cpp            - Bluetooth LE remote control (see "Bluetooth remote")
@@ -413,6 +414,16 @@ Current modes:
   in a pit, a life. 3 lives; the score is distance, rings and enemies. In
   demo mode the computer simulates running on and jumping at every moment
   ahead, and jumps at the first moment that clears everything
+- **Formule** - the panel drawn by a formula typed on the page, like
+  tixy.land: an expression of `t` (seconds), `i` (pixel 0-255), `x`, `y`
+  (0-15), evaluated for every pixel 30 times a second; 1 or more is full
+  brightness, 0 off, negatives faint. JavaScript syntax (arithmetic, `**`,
+  comparisons, `&& || !`, bitwise, `?:`, `PI`, the `Math` functions) is
+  compiled once into a small stack program (`src/formula.cpp`), so a new
+  formula runs at once without new firmware (`POST /api/formula` with
+  `f=`; a formula that doesn't parse is refused with the reason and the
+  position, e.g. "manca «)» (posizione 12)"). The page has a dozen
+  examples to start from (waves, sonar, a bouncing ball, a beating heart...)
 - **Lavagna** - a live drawing shared by everyone
   (`src/modes/canvas_mode.cpp`): on the page you paint with the finger or
   the mouse in four inks (full, medium, faint, eraser); strokes go to the

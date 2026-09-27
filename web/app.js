@@ -227,6 +227,33 @@ $('demo').onchange = (e) => (e.target.blur(), post('/api/demo', { id: state.game
   }).catch(fail);
 
 // ---------------------------------------------------------------------------
+// Formule: examples to start from, and the formula sent to the lamp (which
+// checks it and says where it's wrong).
+const FORMULAS = [
+  ['Onde dal centro', 'sin(t-hypot(x-7.5,y-7.5))'],
+  ['Onde che scendono', 'sin(y/8+t)'],
+  ['Scacchiera che pulsa', '(x+y)%2*sin(t*2)'],
+  ['Diagonali in corsa', 'sin(x/2+y/2-t*3)'],
+  ['Triangolo', '(y > x) && (14-x < y)'],
+  ['Righe e colonne', 'i%4 - y%4'],
+  ['Pioggia di bit', '(x ^ y) % 5 == 0'],
+  ['Sonar', 'sin(hypot(x-7.5,y-7.5)*2 - t*4) * (hypot(x-7.5,y-7.5) < t*3%12)'],
+  ['Palla che rimbalza', '1 - hypot(x - 7.5 - 6*sin(t*1.3), y - 7.5 - 6*sin(t*1.7)) / 3'],
+  ['Scintille', 'random() < 0.06'],
+  ['Spirale', 'sin(atan2(y-7.5,x-7.5)*3 + hypot(x-7.5,y-7.5)/2 - t*2)'],
+  ['Cuore', '(((x-7.5)/6)**2 + ((6-y)/6 - sqrt(abs((x-7.5)/6))*0.6)**2 < 1) * (0.6+0.4*sin(t*4))'],
+];
+(function fillFormulas() {
+  const sel = $('formulaPreset');
+  sel.innerHTML = '<option value="">Scegli un esempio…</option>' + FORMULAS.map((f, i) => '<option value="' + i + '">' + f[0] + '</option>').join('');
+  sel.onchange = () => { if (sel.value !== '') { $('formulaText').value = FORMULAS[sel.value][1]; $('formulaShow').click(); } };
+})();
+$('formulaText').oninput = () => { dirty.formula = true; };
+$('formulaShow').onclick = () => post('/api/formula', { f: $('formulaText').value.trim() })
+  .then(() => { dirty.formula = false; $('formulaError').textContent = ''; status('Formula in funzione'); })
+  .catch((e) => { $('formulaError').textContent = 'Errore: ' + e.message; });
+
+// ---------------------------------------------------------------------------
 // The Lavagna, shared: strokes go out in batches every 60 ms; the lamp's
 // copy is fetched every second (when nobody here is drawing), so drawings
 // made elsewhere show up.
@@ -370,6 +397,7 @@ function renderExtras() {
   $('cdInfo').textContent = s.countdown.sentence;
   if (!editing('hgMin')) $('hgMin').value = String(s.hourglass.minutes);
   renderPet(s.pet);
+  if (!dirty.formula && !editing('formulaText')) $('formulaText').value = s.formula;
   const w = s.world;
   $('worldInfo').textContent = [w.air !== null ? 'Aria ' + w.airBand + ' (indice ' + w.air + ')' : '',
     w.iss !== null ? 'Stazione spaziale a ' + w.iss.toLocaleString('it') + ' km' : '',
