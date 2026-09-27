@@ -26,6 +26,10 @@ extern Animation *const coffeeIconAnimation;
 extern Animation *const batteryIconAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
+extern Animation *const englishWordClockAnimation;
+extern Animation *const flipClockAnimation;
+extern Animation *const sandClockAnimation;
+extern Animation *const moonClockAnimation;
 extern Animation *const cubeAnimation;
 extern Animation *const solidCubeAnimation;
 extern Animation *const tunnelAnimation;
@@ -62,6 +66,10 @@ Animation *const ANIMATIONS[] = {
     batteryIconAnimation,
     binaryClockAnimation,
     wordClockAnimation,
+    englishWordClockAnimation,
+    flipClockAnimation,
+    sandClockAnimation,
+    moonClockAnimation,
     cubeAnimation,
     solidCubeAnimation,
     tunnelAnimation,
