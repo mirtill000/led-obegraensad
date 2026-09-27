@@ -83,6 +83,7 @@ void parseState(const String &json) {
   lampState.demoForced = field(json, "f") == "1";
   lampState.keys = field(json, "c");
   lampState.actionKey = field(json, "ca");
+  lampState.labels = field(json, "cl");
   lampState.time = field(json, "t");
   const String b = field(json, "b");
   if (b.length()) lampState.brightness = b.toInt();

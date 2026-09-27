@@ -41,6 +41,16 @@ bool send(const String &command);
 struct State {
   String mode, modeName, button, game, gameName, time;
   String keys, actionKey;  // the game's keys (of LRUDA) and what A does
+  String labels;           // "L|R|U|D|A" names, "" = the plain arrow
+  String label(int i) const {  // 0-4, in LRUDA order
+    int start = 0;
+    for (int k = 0; k < i; k++) {
+      start = labels.indexOf('|', start) + 1;
+      if (start <= 0) return "";
+    }
+    const int end = labels.indexOf('|', start);
+    return labels.substring(start, end < 0 ? labels.length() : end);
+  }
   bool demo = true, demoForced = false;
   int brightness = 255;
 };

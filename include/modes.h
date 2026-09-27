@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "animation.h"
 #include "settings.h"
 
 // A "mode" is one of the things the lamp can show (scrolling text, Game of
@@ -28,6 +29,9 @@ class Mode {
   // Game controls from the page: 'L', 'R', 'U', 'D' (arrows) or 'A' (the
   // main button: jump / drop). Returns false if nothing is listening.
   virtual bool input(char) { return false; }
+  // Keys a mode that isn't a game listens to (e.g. the pet), like
+  // Animation::controls(); nullptr for none.
+  virtual const GameControls *controls() const { return nullptr; }
   // The game being shown and whether it is in demo mode, or nullptr.
   virtual const char *gameId() const { return nullptr; }
 

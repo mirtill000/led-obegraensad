@@ -227,6 +227,28 @@ $('demo').onchange = (e) => (e.target.blur(), post('/api/demo', { id: state.game
   }).catch(fail);
 
 // ---------------------------------------------------------------------------
+// The pet: its needs, and a button per key it listens to (from the firmware).
+function renderPet(p) {
+  $('petTitle').textContent = p.name + ' · ' + p.stage.toLowerCase() + (p.hours >= 24 ? ', ' + Math.floor(p.hours / 24) + (p.hours >= 48 ? ' giorni' : ' giorno') : '');
+  $('petMood').textContent = p.mood + (p.poops ? ' · da pulire: ' + p.poops : '');
+  $('petFood').value = p.food; $('petJoy').value = p.joy; $('petEnergy').value = p.energy;
+  if (!editing('petName')) $('petName').value = p.name;
+  const care = $('petCare');
+  if (!care.children.length && p.pad) {
+    [...p.pad.keys].forEach((k) => {
+      const b = document.createElement('button');
+      b.textContent = p.pad.labels['LRUDA'.indexOf(k)] || DEFAULT_LABELS[k];
+      b.onclick = () => post('/api/cmd', { c: 'k ' + k }).catch(fail);
+      care.appendChild(b);
+    });
+    $('petHint').textContent = p.pad.hint;
+  }
+}
+$('petNameSave').onclick = () => post('/api/pet', { name: $('petName').value }).then(() => status('Nome salvato')).catch(fail);
+$('petReset').onclick = () => confirm('Il tuo animaletto lascerà il posto a un nuovo uovo. Continuare?')
+  && post('/api/pet', { reset: 1 }).then(() => status('Nuovo uovo')).catch(fail);
+
+// ---------------------------------------------------------------------------
 // Sections of the newer modes, and the general alarm/night extras.
 const DAY_NAMES = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
 function clock(minutes) { return minutes < 0 ? '?' : Math.floor(minutes / 60) + ':' + String(minutes % 60).padStart(2, '0'); }
@@ -281,6 +303,7 @@ function renderExtras() {
   if (!dirty.cd) { $('cdLabel').value = s.countdown.label; $('cdDate').value = s.countdown.date; $('cdTime').value = s.countdown.time; }
   $('cdInfo').textContent = s.countdown.sentence;
   if (!editing('hgMin')) $('hgMin').value = String(s.hourglass.minutes);
+  renderPet(s.pet);
   $('notifyNight').checked = s.notifyNight;
   $('bleOn').checked = s.ble.on;
   $('bleInfo').innerHTML = s.ble.on ? 'Nome: <b>obegransad</b> · PIN: <b>' + String(s.ble.pin).padStart(6, '0') + '</b> · '
@@ -606,7 +629,7 @@ function typing() {
 }
 document.addEventListener('keydown', (e) => {
   if (!state || typing()) return;
-  if (playable() && (ARROWS[e.code] || e.code === 'Space')) {
+  if ((playable() || state.active === 'pet') && (ARROWS[e.code] || e.code === 'Space')) {
     // Arrows and space drive the game (space: jump / drop).
     e.preventDefault();
     if (!e.repeat || e.code !== 'Space') sendKey(ARROWS[e.code] || 'A');

@@ -186,6 +186,22 @@
     <p class="hint">Ogni granello è un LED e cade davvero: la sabbia si ammucchia, scivola e lascia un cratere in alto. «Gira» la capovolge come una vera clessidra (il tempo che resta è quello già trascorso); alla fine la sabbia pulsa per qualche secondo.</p>
   </section>
 
+  <section data-mode="pet" hidden>
+    <h2 id="petTitle">Animaletto</h2>
+    <p id="petMood"></p>
+    <div class="petStats">
+      <label>Pancia <meter id="petFood" min="0" max="100" low="25" optimum="100"></meter></label>
+      <label>Allegria <meter id="petJoy" min="0" max="100" low="25" optimum="100"></meter></label>
+      <label>Energia <meter id="petEnergy" min="0" max="100" low="20" optimum="100"></meter></label>
+    </div>
+    <div class="petCare" id="petCare"></div>
+    <p class="hint" id="petHint"></p>
+    <label for="petName">Nome</label>
+    <div class="row"><input type="text" id="petName" maxlength="15"><button class="save narrow" id="petNameSave">Salva</button></div>
+    <button class="save" id="petReset">Nuovo uovo</button>
+    <p class="hint">Nasce da un uovo, cresce (piccolo, ragazzo, adulto), ha fame, si annoia, dorme dalle 22 alle 7 e sporca: se lo trascuri per un paio d'ore si ammala, ma non muore. Il tempo passa anche quando la lampada mostra altro o è spenta: al ritorno recupera fino a tre giorni. Si cura anche dal Cardputer, con le frecce e lo spazio.</p>
+  </section>
+
   <section data-mode="ambient" hidden>
     <h2>Animazioni</h2>
     <select id="ambient"></select>

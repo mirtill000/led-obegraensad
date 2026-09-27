@@ -11,6 +11,7 @@
 #include "modes/gallery_mode.h"
 #include "modes/life_mode.h"
 #include "modes/off_mode.h"
+#include "modes/pet_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
 #include "modes/text_mode.h"
@@ -30,13 +31,14 @@ static AmbientMode gamesMode(true);
 static GalleryMode galleryModeInstance;
 static CountdownMode countdownMode;
 static HourglassMode hourglassMode;
+static PetMode petMode;
 static NotifyMode notifyMode;
 static DemoMode demoModeInstance;
 static SunriseMode sunriseMode;
 static OffMode offMode;
 
 Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance,
-                        &countdownMode, &hourglassMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
+                        &countdownMode, &hourglassMode, &petMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
 
 static uint8_t current = 0;       // index of the mode being shown
@@ -260,6 +262,7 @@ void refreshModes() { evaluate(millis()); }
 
 void updateMode() {
   const uint32_t now = millis();
+  PetMode::tickClock();  // the pet lives on while other modes are shown
   // A notification arriving or ending is picked up at once.
   const bool notifyChanged = (NotifyMode::pending() > 0) != (strcmp(MODES[current]->id(), "notify") == 0);
   if (!started || now - lastCheck >= (notifyChanged ? 100u : 1000u)) {

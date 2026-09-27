@@ -20,6 +20,7 @@
 #include "modes/forecast_mode.h"
 #include "modes/gallery_mode.h"
 #include "modes/hourglass_mode.h"
+#include "modes/pet_mode.h"
 #include "modes/notify_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
@@ -61,8 +62,7 @@ static String jsonString(const String &s) {
 static String jsonBool(bool b) { return b ? "true" : "false"; }
 
 // A game's pad for the page: {"keys":"LRA","labels":[...5, null = default],"repeat":..,"hint":..}.
-static String controlsJson(const Animation *a) {
-  const GameControls *c = a ? a->controls() : nullptr;
+static String controlsJson(const GameControls *c) {
   if (!c) return "null";
   String j = "{\"keys\":" + jsonString(c->keys) + ",\"labels\":[";
   for (int i = 0; i < 5; i++) j += String(i ? "," : "") + (c->labels[i] ? jsonString(c->labels[i]) : String("null"));
@@ -119,7 +119,7 @@ static String stateJson() {
     const char *gameName = playing ? playing->name() : currentMode()->name();
     json += ",\"game\":{\"id\":" + jsonString(game) + ",\"name\":" + jsonString(gameName) +
             ",\"demo\":" + jsonBool(forced || demoMode(game)) + ",\"forced\":" + jsonBool(forced) +
-            ",\"pad\":" + controlsJson(findAnimation(game)) + "}";
+            ",\"pad\":" + controlsJson(findAnimation(game) ? findAnimation(game)->controls() : nullptr) + "}";
   } else {
     json += ",\"game\":null";
   }
@@ -136,6 +136,12 @@ static String stateJson() {
           ",\"sentence\":" + jsonString(CountdownMode::sentence()) + "}";
   json += ",\"hourglass\":{\"minutes\":" + String(settings.hourglassMinutes) + ",\"left\":" +
           String(HourglassMode::secondsLeft()) + ",\"running\":" + jsonBool(HourglassMode::running()) + "}";
+  const PetMode::Status pet = PetMode::status();
+  json += ",\"pet\":{\"name\":" + jsonString(pet.name) + ",\"stage\":" + jsonString(pet.stage) +
+          ",\"mood\":" + jsonString(pet.mood) + ",\"food\":" + String(pet.food) + ",\"joy\":" + String(pet.joy) +
+          ",\"energy\":" + String(pet.energy) + ",\"poops\":" + String(pet.poops) + ",\"sick\":" + jsonBool(pet.sick) +
+          ",\"asleep\":" + jsonBool(pet.asleep) + ",\"hours\":" + String(pet.ageHours) +
+          ",\"pad\":" + controlsJson(PetMode::keys()) + "}";
   json += ",\"ble\":{\"on\":" + jsonBool(settings.bleOn) + ",\"pin\":" + String(settings.blePin) +
           ",\"connected\":" + jsonBool(bleConnected()) + "}";
   json += ",\"notifyNight\":" + jsonBool(settings.notifyNight) + ",\"notifyPending\":" + String(NotifyMode::pending());
@@ -509,6 +515,19 @@ static void handleHourglass() {
   sendState();
 }
 
+// The pet's name (name=) or a new egg (reset=1); care goes through /api/cmd.
+static void handlePet() {
+  if (server.hasArg("name")) {
+    if (!server.arg("name").length()) return badRequest("Serve un nome");
+    PetMode::rename(server.arg("name"));
+  }
+  if (server.arg("reset") == "1") {
+    PetMode::reset();
+    logEvent("Animaletto: nuovo uovo");
+  }
+  sendState();
+}
+
 // Value of "key" in a flat JSON object (strings only), for callers that
 // POST JSON (IFTTT webhooks, some automation apps).
 static String jsonField(const String &body, const char *key) {
@@ -810,6 +829,7 @@ void webBegin() {
   server.on("/api/web", HTTP_POST, handleWeb);
   server.on("/api/countdown", HTTP_POST, handleCountdown);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
+  server.on("/api/pet", HTTP_POST, handlePet);
   server.on("/api/notify", HTTP_ANY, handleNotify);
   server.on("/api/ble", HTTP_POST, handleBle);
   server.on("/api/backup", HTTP_GET, handleBackup);

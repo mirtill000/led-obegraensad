@@ -79,3 +79,8 @@
   #status { min-height: 1.4em; font-size: 14px; color: var(--muted); text-align: center; }
   a.save { display: inline-block; text-decoration: none; }
   #diagBox h3 { font-size: 14px; margin: 14px 0 6px; }
+  .petStats { display: grid; gap: 6px; margin: 8px 0; }
+  .petStats label { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0; }
+  .petStats meter { flex: 0 0 60%; height: 14px; }
+  .petCare { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; }
+  .petCare button { padding: 12px 6px; border-radius: 8px; border: 1px solid var(--line); background: transparent; }

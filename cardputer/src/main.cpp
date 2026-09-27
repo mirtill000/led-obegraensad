@@ -148,22 +148,43 @@ void drawRemote() {
   const lamp::State &s = lamp::state();
   canvas.setTextColor(FG);
   const int x = 122;
-  canvas.drawString(s.game.length() ? plain(s.gameName) : plain(s.modeName), x, 20);
+  const bool game = s.game.length() > 0, known = s.keys.length() > 0;
+  canvas.drawString(game ? plain(s.gameName) : plain(s.modeName), x, 20);
   canvas.setTextColor(s.demo ? DIM : ACCENT);
-  canvas.drawString(!s.game.length() ? "(non e' un gioco)" : s.demo ? "Demo (D per giocare)" : "Giochi tu", x, 34);
+  if (game) canvas.drawString(s.demo ? "Demo (D per giocare)" : "Giochi tu", x, 32);
+  else if (!known) canvas.drawString("(non e' un gioco)", x, 32);
   canvas.setTextColor(DIM);
-  // The keys this game uses, as the lamp describes them.
-  const bool known = s.keys.length() > 0;
-  String arrows;
-  for (char c : s.keys) {
-    const char *name = c == 'L' ? "sx" : c == 'R' ? "dx" : c == 'U' ? "su" : c == 'D' ? "giu" : nullptr;
-    if (name) arrows += String(arrows.length() ? " " : "") + name;
+  int y = 46;
+  auto line = [&](const String &text) {
+    canvas.drawString(text, x, y);
+    y += 11;
+  };
+  // The keys the game (or the pet) uses, as the lamp describes them: a
+  // line per key with a name of its own, the plain arrows together.
+  if (!known) {
+    line("; . , /  frecce");
+    line("Spazio  salta/spara");
+  } else {
+    static const char KEYS[] = "LRUDA";
+    static const char *const CAPS[] = {",", "/", ";", ".", "Spazio"};
+    static const char *const ARROWS[] = {"sx", "dx", "su", "giu"};
+    String arrows, caps;
+    for (int i = 0; i < 5; i++) {
+      if (s.keys.indexOf(KEYS[i]) < 0) continue;
+      const String label = i == 4 ? s.actionKey : s.label(i);
+      const bool named = label.length() && isalpha((uint8_t)label[0]);
+      if (named) {
+        line(String(CAPS[i]) + "  " + plain(label));
+      } else if (i < 4) {
+        arrows += String(arrows.length() ? " " : "") + ARROWS[i];
+        caps += String(caps.length() ? " " : "") + CAPS[i];
+      }
+    }
+    if (arrows.length()) line(caps + "  " + arrows);
   }
-  if (!known || arrows.length()) canvas.drawString(known ? "; . , /  " + arrows : "; . , /  frecce", x, 54);
-  if (!known || s.keys.indexOf('A') >= 0) canvas.drawString("Spazio   " + (known ? plain(s.actionKey) : String("salta/spara")), x, 66);
-  canvas.drawString("D  demo si'/no", x, 78);
-  canvas.drawString("X  " + plain(s.button), x, 90);
-  canvas.drawString("`  indietro", x, 102);
+  if (game) line("D  demo si'/no");
+  line("X  " + plain(s.button));
+  line("`  indietro");
   if (s.demoForced) {
     canvas.setTextColor(ACCENT);
     canvas.drawString("D per giocare a questo", x, 116);

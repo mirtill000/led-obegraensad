@@ -7,7 +7,8 @@
 //                          include/remote_protocol.h; run by src/commands.cpp)
 //   state (read, notify)  {"m":mode,"mn":name,"x":button name,"g":game,
 //                          "gn":game name,"d":demo,"f":demo forced,"c":keys the
-//                          game uses (of LRUDA),"ca":what A does,"b":brightness,
+//                          game uses (of LRUDA),"ca":what A does,"cl":the five
+//                          labels L|R|U|D|A,"b":brightness,
 //                          "t":"HH:MM"} - sent when it changes
 //   frame (read, notify)  the panel as seen: 256 levels 0-15, two pixels per
 //                          byte (high nibble first), row by row - at most
@@ -74,6 +75,15 @@ String quoted(const char *s) {
   return out + "\"";
 }
 
+// "c": the keys, "ca": what A does, "cl": all five labels ("" = the plain
+// arrow), separated by '|' (e.g. "Pappa|Gioca|Pulisci|Medicina|Coccole").
+String controlsFields(const GameControls *c) {
+  String labels;
+  for (int i = 0; i < 5; i++) labels += String(i ? "|" : "") + (c->labels[i] ? c->labels[i] : "");
+  return ",\"c\":" + quoted(c->keys) + ",\"ca\":" + quoted(c->labels[4] ? c->labels[4] : "Salta") +
+         ",\"cl\":" + quoted(labels.c_str());
+}
+
 String stateJson() {
   Mode *m = currentMode();
   String j = "{\"m\":" + quoted(m->id()) + ",\"mn\":" + quoted(m->name());
@@ -87,7 +97,9 @@ String stateJson() {
     j += String(",\"d\":") + (forced || demoMode(game) ? 1 : 0) + ",\"f\":" + (forced ? 1 : 0);
     const Animation *g = findAnimation(game);
     const GameControls *c = g ? g->controls() : nullptr;
-    if (c) j += ",\"c\":" + quoted(c->keys) + ",\"ca\":" + quoted(c->labels[4] ? c->labels[4] : "Salta");
+    if (c) j += controlsFields(c);
+  } else if (m->controls()) {
+    j += controlsFields(m->controls());  // a mode that takes keys (the pet)
   }
   j += ",\"b\":" + String(settings.brightness);
   struct tm t;

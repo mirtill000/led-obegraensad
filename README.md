@@ -402,6 +402,21 @@ Current modes:
   over like a real one (the time left becomes the time that had run); at
   the end the sand pulses for a few seconds. The page shows the time left
   (`POST /api/hourglass` with `minutes` and `start=1`)
+- **Animaletto** - a Tamagotchi-style pet (`src/modes/pet_mode.cpp`). It
+  hatches from an egg after 5 minutes and grows: *piccolo* (first day),
+  *ragazzo* (up to 3 days), *adulto*, each with its own sprite. It gets
+  hungry and bored, sleeps from 22 to 7 (a "z" floats up; it naps when
+  exhausted), leaves droppings and, after about two hours of hunger, dirt
+  or sadness, falls ill (it is drawn dimmer; it never dies). Care comes as
+  keys - L *Pappa* (an apple falls and is eaten), R *Gioca* (a bouncing
+  ball), U *Pulisci* (a broom line sweeps the droppings), D *Medicina*,
+  A *Coccole* (a heart) - from the page's buttons, the keyboard arrows and
+  space, or the Cardputer; the mode's button feeds it. Its needs blink in
+  the corner (apple, note, cross). Time runs while other modes are shown
+  and, with the clock set, while the lamp is off: it catches up on up to
+  three days. The page shows name, age, mood and three bars, and can rename
+  it or start a new egg (`POST /api/pet` with `name` or `reset=1`); the
+  state is the NVS blob `pet`, so it is in the settings backup.
 - **Demo** - the hourly quotes shown three ways, to compare how a long
   text reads on 16x16 LEDs (a whole quote never fits one screen: they
   average 79 characters, a screen holds 12-16): *3 righe* - split into
