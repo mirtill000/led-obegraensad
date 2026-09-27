@@ -1,5 +1,5 @@
-// Alternative clock faces: binary, in words (Italian and English), flip
-// cards, a pile of sand growing by the minute.
+// Alternative clock faces: binary, in words (Italian and English), a pile
+// of sand growing by the minute.
 #include <math.h>
 #include <string.h>
 
@@ -160,96 +160,6 @@ class EnglishWordClockAnimation : public Animation {
 };
 
 // ---------------------------------------------------------------------------
-// Flip clock: hours on two cards at the top, minutes at the bottom, each
-// digit split by the hinge. When a digit changes the upper flap folds down
-// onto the hinge, then the new lower flap falls open.
-class FlipClockAnimation : public Animation {
- public:
-  const char *id() const override { return "flip"; }
-  const char *name() const override { return "Orologio a palette"; }
-  const char *group() const override { return "Orologi"; }
-  uint16_t frameMs() const override { return 30; }
-  bool needsTime() const override { return true; }
-
-  void start() override { memset(shown_, 0xFF, sizeof(shown_)); }
-
-  void frame(uint32_t now) override {
-    struct tm t;
-    if (!localTime(t)) return drawNoTime();
-    const int digits[4] = {t.tm_hour / 10, t.tm_hour % 10, t.tm_min / 10, t.tm_min % 10};
-    display.clear();
-    for (int i = 0; i < 4; i++) {
-      if (shown_[i] == 0xFF) shown_[i] = digits[i];  // first frame: no flip
-      if (digits[i] != shown_[i] && !flipping_[i]) {
-        from_[i] = shown_[i];
-        shown_[i] = digits[i];
-        flipping_[i] = true;
-        flipStart_[i] = now + (i % 2 ? 0 : 120);  // the tens a moment later
-      }
-      float p = 1;
-      if (flipping_[i]) {
-        p = (int32_t)(now - flipStart_[i]) < 0 ? 0 : (now - flipStart_[i]) / (float)FLIP_MS;
-        if (p >= 1) {
-          flipping_[i] = false;
-          p = 1;
-        }
-      }
-      drawCard(i % 2 ? 9 : 0, i < 2 ? 0 : 9, flipping_[i] ? from_[i] : shown_[i], shown_[i], p);
-    }
-    // The seconds: a dot moving between the rows.
-    const float sec = smoothSeconds(t);
-    display.setLevel((int)(sec / 60 * COLS), 7, 60);
-    display.setLevel((int)(sec / 60 * COLS), 8, 60);
-  }
-
- private:
-  static const uint32_t FLIP_MS = 420;
-  static const uint8_t CARD = 26, INK = 255;
-
-  // Row `r` (0-5) of digit `d`, column `c` (0-4), lit?
-  static bool ink(int d, int r, int c) { return BIG_DIGITS[d][r] & (0x8000 >> c); }
-
-  // A card 7x7 at (x, y): digit rows 0-2 above the hinge (row 3), 3-5 below.
-  // p: 0 = showing `from`, 1 = showing `to`.
-  static void drawCard(int x, int y, int from, int to, float p) {
-    for (int r = 0; r < 7; r++) {
-      if (r == 3) continue;  // the hinge
-      for (int c = 0; c < 7; c++) display.setLevel(x + c, y + r, CARD);
-    }
-    // Static halves: new top (revealed as the flap falls), old bottom (until
-    // covered by the new flap).
-    auto half = [&](int digit, bool top, float scale, float shade) {
-      // Draws half `top` of `digit`, squeezed to `scale` (0-1) of its 3 rows
-      // against the hinge.
-      const float h = 3 * scale;
-      if (h < 0.34f) return;
-      for (int r = 0; r < 3; r++) {
-        const int screenRow = top ? y + 2 - r : y + 4 + r;  // outwards from the hinge
-        if (r >= (int)ceilf(h - 0.01f)) break;
-        const int src = min(2, (int)(r * 3 / h));           // squeeze: sample the half
-        const int digitRow = top ? 2 - src : 3 + src;
-        for (int c = 0; c < 5; c++) {
-          display.setLevel(x + 1 + c, screenRow, ink(digit, digitRow, c) ? (uint8_t)(INK * shade) : (uint8_t)(CARD * shade));
-        }
-      }
-    };
-    if (p >= 1) {
-      half(to, true, 1, 1);
-      half(to, false, 1, 1);
-      return;
-    }
-    half(to, true, 1, 1);
-    half(from, false, 1, 1);
-    if (p < 0.5f) half(from, true, 1 - p * 2, 1 - p);     // the old top folding down
-    else half(to, false, p * 2 - 1, 0.5f + p / 2);       // the new bottom falling open
-  }
-
-  uint8_t shown_[4], from_[4] = {0};
-  bool flipping_[4] = {false};
-  uint32_t flipStart_[4] = {0};
-};
-
-// ---------------------------------------------------------------------------
 // Sand clock: the hour in big digits at the top; below, a grain of sand
 // falls for every minute and piles up with falling-sand physics (it
 // slides down the slopes). At the new hour the floor opens and the pile
@@ -339,7 +249,5 @@ static WordClockAnimation wordClock;
 extern Animation *const wordClockAnimation = &wordClock;
 static EnglishWordClockAnimation englishWordClock;
 extern Animation *const englishWordClockAnimation = &englishWordClock;
-static FlipClockAnimation flipClock;
-extern Animation *const flipClockAnimation = &flipClock;
 static SandClockAnimation sandClock;
 extern Animation *const sandClockAnimation = &sandClock;

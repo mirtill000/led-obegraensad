@@ -354,10 +354,7 @@ Current modes:
   - *Orologi*: binary (one
     column of bits per digit of HH:MM, a bar filling with the seconds), in
     words ("sono le tre e un quarto", "è l'una meno cinque"...) and in
-    English ("it's quarter past three"); *a palette* (flip cards: hours
-    above, minutes below, each digit split by the hinge; a changing digit
-    folds its upper flap down, then the new lower flap falls open; a dot
-    runs between the rows with the seconds); *di sabbia* (the hour in big
+    English ("it's quarter past three"); *di sabbia* (the hour in big
     digits, and a grain of sand for every minute piling up with
     falling-sand physics; at the new hour the floor opens and it drains)
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
