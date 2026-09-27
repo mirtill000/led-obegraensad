@@ -77,6 +77,8 @@ struct Settings {
 extern Settings settings;
 
 void loadSettings();
+// Version of the saved settings' layout: loadSettings() migrates older ones.
+static const uint8_t SETTINGS_VERSION = 2;
 void saveSettings();
 
 // settings.quotes lives in its own file (/quotes.txt in LittleFS): the

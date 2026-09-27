@@ -341,6 +341,16 @@
     <p class="hint">Si aggiorna ogni 2 secondi mentre questa sezione è aperta. «Cambi di livello saltati» e «ritardo» dicono quanto è stabile la scala di grigi: se crescono mentre i LED tremano, il disturbo viene dal rinfresco. «Il più lungo» del ciclo principale sopra qualche centinaio di ms vuol dire che la lampada si è fermata per quel tempo.</p>
   </details>
 
+  <details id="backupBox">
+    <summary>Backup delle impostazioni</summary>
+    <p class="hint" style="margin-top:0">Tutte le impostazioni (modalità, playlist e fasce orarie, testi, frasi aggiunte, notte, sveglia, luogo, Bluetooth…) in un file. I disegni della galleria non sono inclusi.</p>
+    <a class="save" id="backupGet" href="/api/backup" download="obegransad-backup.json">Scarica il backup</a>
+    <label for="backupFile">Ripristina da un file</label>
+    <input type="file" id="backupFile" accept=".json,application/json">
+    <button class="save" id="backupRestore" disabled>Ripristina</button>
+    <p class="hint">Il ripristino sostituisce tutte le impostazioni con quelle del file e riavvia la lampada.</p>
+  </details>
+
   <details id="updateBox">
     <summary>Aggiornamento firmware</summary>
     <p class="hint">Versione installata: <b id="fwVersion"></b></p>

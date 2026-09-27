@@ -131,6 +131,15 @@ void loadSettings() {
                                     "1300|255|clock:10,web:3,ambient:10,games:5;"
                                     "1900|120|quotes:3,ambient:10,clock:5;"
                                     "2300|25|clock:30");
+  // Migrations, by settings version (saved as "cfgVer"): each step brings
+  // settings saved by an older firmware up to date, once.
+  const uint8_t version = prefs.getUChar("cfgVer", 0);
+  // 2: new defaults reach lamps still on the old ones (Giochi joined the
+  // default playlist and the 13:00 time slot).
+  if (version < 2) {
+    if (settings.playlist == "clock:10,quotes:3,ambient:5") settings.playlist = "clock:10,quotes:3,ambient:5,games:5";
+    settings.scenes.replace("1300|255|clock:10,web:3,ambient:10;", "1300|255|clock:10,web:3,ambient:10,games:5;");
+  }
   // Super Mario used to be a mode of its own; it is now one of the games.
   if (settings.mode == "mario") {
     settings.mode = "games";
@@ -167,11 +176,12 @@ void loadSettings() {
   settings.nightBrightness = prefs.getUChar("nightBright", 20);
   parseSpeeds(prefs.getString("speeds", ""));
   prefs.end();
-  if (newPin) saveSettings();
+  if (newPin || version < SETTINGS_VERSION) saveSettings();
 }
 
 void saveSettings() {
   prefs.begin("obegransad", false);
+  prefs.putUChar("cfgVer", SETTINGS_VERSION);
   prefs.putString("mode", settings.mode);
   prefs.putString("text", settings.text);
   prefs.putString("scrollFont", settings.textFont);

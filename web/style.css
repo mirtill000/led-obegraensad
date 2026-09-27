@@ -77,3 +77,4 @@
   .diag th { text-align: left; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 12px 0 4px; }
   [hidden] { display: none !important; }
   #status { min-height: 1.4em; font-size: 14px; color: var(--muted); text-align: center; }
+  a.save { display: inline-block; text-decoration: none; }

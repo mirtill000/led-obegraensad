@@ -7,6 +7,7 @@
 #include <mbedtls/base64.h>
 
 #include "animation.h"
+#include "backup.h"
 #include "ble.h"
 #include "build_info.h"
 #include "commands.h"
@@ -558,6 +559,20 @@ static void handleBle() {
   ESP.restart();
 }
 
+// Backup: all settings as a file to download, and back.
+static void handleBackup() {
+  server.sendHeader("Content-Disposition", "attachment; filename=\"obegransad-backup.json\"");
+  server.send(200, "application/json", settingsBackup());
+}
+
+static void handleRestore() {
+  if (const char *error = restoreSettings(server.arg("plain"))) return badRequest(error);
+  server.sendHeader("Connection", "close");
+  server.send(200, "text/plain", "ok");
+  delay(500);  // let the answer reach the browser
+  ESP.restart();
+}
+
 static void handleAlarm() {
   const String cmd = server.arg("cmd");
   if (cmd == "stop") {
@@ -792,6 +807,8 @@ void webBegin() {
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/notify", HTTP_ANY, handleNotify);
   server.on("/api/ble", HTTP_POST, handleBle);
+  server.on("/api/backup", HTTP_GET, handleBackup);
+  server.on("/api/restore", HTTP_POST, handleRestore);
   server.on("/api/alarm", HTTP_POST, handleAlarm);
   server.on("/api/gallery", HTTP_GET, handleGalleryList);
   server.on("/api/gallery/item", HTTP_GET, handleGalleryItem);

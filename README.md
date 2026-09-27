@@ -116,7 +116,8 @@ src/
   modes.cpp          - list of modes + switching between them
   modes/             - one file per mode
   animations/        - the animations and games ("Animazioni", "Giochi")
-  settings.cpp       - settings saved in flash (NVS)
+  settings.cpp       - settings saved in flash (NVS), versioned migrations
+  backup.cpp         - all settings to one file and back
   timekeeping.cpp    - NTP time sync (time zone: TIMEZONE in constants.h)
   net.cpp            - background task for everything downloaded
   weather.cpp        - weather, 12-hour forecast, sunrise/sunset (Open-Meteo)
@@ -536,6 +537,23 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 | state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"b":200,"t":"15:42"}`, sent when it changes |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
 | catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |
+
+## Backup of the settings
+
+**Backup delle impostazioni** (near the bottom of the page) downloads every
+setting as one file, `obegransad-backup.json` (`GET /api/backup`): all the
+keys the lamp keeps in flash - so settings added in later versions are
+included without changing this feature - plus the added quotes; the
+drawings of the gallery aren't. Restoring a file (`POST /api/restore` with
+the file as the body) replaces all settings and restarts the lamp; the file
+is read completely before anything is changed, so a broken one changes
+nothing.
+
+Saved settings carry a version (`cfgVer`): when a new firmware changes a
+default or a setting's meaning, `loadSettings()` updates the saved values
+once. Version 2, for instance, adds Giochi to a playlist and a 13:00 time
+slot that were still the old defaults, while a playlist you edited stays as
+it is.
 
 ## Updating over WiFi
 

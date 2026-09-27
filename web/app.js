@@ -884,3 +884,15 @@ function startLive() {
   es.onerror = () => { live = false; };
 }
 startLive();
+
+// Backup: restore from a file made by "Scarica il backup".
+$('backupFile').onchange = () => { $('backupRestore').disabled = !$('backupFile').files.length; };
+$('backupRestore').onclick = async () => {
+  const file = $('backupFile').files[0];
+  if (!file || !confirm('Tutte le impostazioni verranno sostituite con quelle del file e la lampada si riavvierà. Continuare?')) return;
+  try {
+    const res = await fetch('/api/restore', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: await file.text() });
+    if (!res.ok) throw new Error(await res.text());
+    status('Impostazioni ripristinate: la lampada si riavvia…');
+  } catch (e) { fail(e); }
+};
