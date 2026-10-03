@@ -124,6 +124,7 @@ src/
   weather.cpp        - weather, 12-hour forecast, sunrise/sunset (Open-Meteo)
   webinfo.cpp        - word of the day, Wikipedia "on this day", iCal calendar
   world.cpp          - air quality and the Space Station's position
+  netfetch.cpp       - the one HTTPS client, retry rule, status and flash cache for all of them
   formula.cpp        - the Formule mode's expression compiler and evaluator
   moon.cpp           - moon phase from the date
   gallery.cpp        - drawings saved in flash (LittleFS)
@@ -649,6 +650,19 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 | state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","cl":"↶|↷|||Spara","b":200,"t":"15:42"}`, sent when it changes |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
 | catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |
+
+## Data from the web
+
+Everything the lamp downloads - weather (every 15 minutes), Wikipedia's "on
+this day" (once a day), the calendar (every 15 minutes), air quality
+(every 30 minutes) and the Space Station (every 20 seconds, only while
+Mondo is shown) - goes through `src/netfetch.cpp`: one HTTPS client, one
+retry rule (after a failure again in 1 minute, then 2, 4, ... up to the
+normal period), one status shown in the page and in Diagnostica ("aggiornato
+3 min fa", "errore 503 · riprovo tra 4 min · ultimo dato di 2 h fa"), and
+the last good answer kept in flash (`/cache/` in LittleFS) for weather,
+Wikipedia and air quality, so after a restart the lamp shows them before
+the network is back ("dalla memoria").
 
 ## Settings
 

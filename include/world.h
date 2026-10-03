@@ -17,7 +17,6 @@ struct WorldInfo {
   static const int TRAIL = 12;
   float trailLat[TRAIL], trailLon[TRAIL];
   uint8_t trailCount = 0;
-  String airStatus, issStatus;  // for the page
 };
 
 WorldInfo worldInfoNow();
@@ -25,6 +24,9 @@ WorldInfo worldInfoNow();
 void worldWanted();
 // Called by the network task.
 void worldTick();
+// For the page (see netfetch.h).
+String airStatus();
+String issStatus();
 
 // Helpers, exposed for tests.
 // Air quality band name for a European AQI value ("buona" ... "pessima").

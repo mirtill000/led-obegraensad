@@ -27,6 +27,7 @@
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
 #include "moon.h"
+#include "netfetch.h"
 #include "occasions.h"
 #include "pager.h"
 #include "webinfo.h"
@@ -130,16 +131,15 @@ static String stateJson() {
   json += ",\"forecast\":" + jsonString(ForecastMode::summary());
   const WebInfo info = webInfoNow();
   json += ",\"web\":{\"wordText\":" + jsonString(info.word) +
-          ",\"event\":" + jsonString(info.event) + ",\"historyStatus\":" + jsonString(info.historyStatus) +
-          ",\"calendarStatus\":" + jsonString(info.calendarStatus) + "}";
+          ",\"event\":" + jsonString(info.event) + ",\"historyStatus\":" + jsonString(historyStatus()) +
+          ",\"calendarStatus\":" + jsonString(calendarStatus()) + "}";
   json += ",\"hourglass\":{\"left\":" +
           String(HourglassMode::secondsLeft()) + ",\"running\":" + jsonBool(HourglassMode::running()) + "}";
   const WorldInfo world = worldInfoNow();
   json += ",\"world\":{\"air\":" + (world.airOk ? String(world.aqi) : String("null")) +
           ",\"airBand\":" + jsonString(world.airOk ? aqiBand(world.aqi) : "") +
           ",\"iss\":" + (world.issOk ? String((long)distanceKm(settings.latitude, settings.longitude, world.issLat, world.issLon)) : String("null")) +
-          ",\"status\":" + jsonString("aria " + (world.airStatus.length() ? world.airStatus : String("in attesa")) + " · ISS " +
-                                        (world.issStatus.length() ? world.issStatus : String("in attesa"))) + "}";
+          ",\"status\":" + jsonString("aria " + airStatus() + " · ISS " + issStatus()) + "}";
   const PetMode::Status pet = PetMode::status();
   json += ",\"pet\":{\"name\":" + jsonString(pet.name) + ",\"stage\":" + jsonString(pet.stage) +
           ",\"mood\":" + jsonString(pet.mood) + ",\"food\":" + String(pet.food) + ",\"joy\":" + String(pet.joy) +
@@ -262,8 +262,6 @@ void noteLoopTime(uint32_t us) {
 }
 
 static void handleDiag() {
-  const Weather w = weatherNow();
-  const WebInfo info = webInfoNow();
   const Display::RefreshStats r = Display::refreshStats();
   String json = "{\"uptime\":" + String(millis() / 1000) + ",\"reset\":" + jsonString(resetReasonText());
   json += ",\"heap\":" + String(ESP.getFreeHeap()) + ",\"minHeap\":" + String(ESP.getMinFreeHeap());
@@ -271,10 +269,7 @@ static void handleDiag() {
   json += ",\"version\":" + jsonString(String(FIRMWARE_COMMIT) + " del " + FIRMWARE_BUILT);
   json += ",\"ssid\":" + jsonString(WiFi.SSID()) + ",\"rssi\":" + String(WiFi.RSSI());
   json += ",\"ip\":" + jsonString(WiFi.localIP().toString()) + ",\"live\":" + String(liveClients());
-  json += ",\"weather\":" + jsonString(weatherStatus());
-  json += ",\"weatherAge\":" + String(w.valid ? (long)((millis() - w.fetchedAt) / 1000) : -1L);
-  json += ",\"history\":" + jsonString(settings.infoHistory ? info.historyStatus : String(""));
-  json += ",\"calendar\":" + jsonString(settings.infoCalendar ? info.calendarStatus : String(""));
+  json += ",\"sources\":" + sourcesJson();
   json += ",\"refresh\":{\"hw\":" + jsonBool(r.hardwareTimer) + ",\"planes\":" + String(r.planes);
   json += ",\"missed\":" + String(r.missed) + ",\"avg\":" + String(r.avgLatencyUs) + ",\"max\":" + String(r.maxLatencyUs);
   json += ",\"cycleUs\":" + String(r.cycleUs) + "}";

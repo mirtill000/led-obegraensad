@@ -2,19 +2,15 @@
 
 #include <string.h>
 
-#include <HTTPClient.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 
+#include "netfetch.h"
 #include "settings.h"
 
 static Weather latest;
 static portMUX_TYPE lock = portMUX_INITIALIZER_UNLOCKED;
-static char lastStatus[32] = "";  // outcome of the last fetch, for the diagnostics
-static volatile bool requested = true;  // fetch as soon as there is WiFi
-
-static const uint32_t REFRESH_MS = 15 * 60 * 1000;
-static const uint32_t RETRY_MS = 60 * 1000;
+// Every 15 minutes; the last forecast is kept in flash for after a restart.
+static Source source("Meteo", 15 * 60 * 1000, "weather");
 
 Weather weatherNow() {
   portENTER_CRITICAL(&lock);
@@ -23,7 +19,7 @@ Weather weatherNow() {
   return copy;
 }
 
-void requestWeatherUpdate() { requested = true; }
+void requestWeatherUpdate() { source.request(); }
 
 bool rainSoon(const Weather &w) {
   if (!w.valid || w.code >= 51) return false;  // no data, or already raining/snowing
@@ -114,58 +110,41 @@ bool parseWeather(const String &json, Weather &out) {
   return true;
 }
 
-void weatherTick() {
-  static uint32_t lastAttempt = 0;
-  const uint32_t now = millis();
-  const Weather current = weatherNow();
-  const bool stale = !current.valid || now - current.fetchedAt >= REFRESH_MS;
-  if (!requested && !(stale && now - lastAttempt >= RETRY_MS)) return;
-  if (WiFi.status() != WL_CONNECTED) return;
-  requested = false;
-  lastAttempt = now;
+static void store(const Weather &fresh) {
+  portENTER_CRITICAL(&lock);
+  latest = fresh;
+  portEXIT_CRITICAL(&lock);
+}
 
-  WiFiClientSecure client;
-  client.setInsecure();  // public weather data: no need to pin certificates
-  HTTPClient http;
-  http.setTimeout(8000);
+void weatherTick() {
+  // Right after a restart: the forecast saved last time, until a new one.
+  static bool cacheTried = false;
+  if (!cacheTried) {
+    cacheTried = true;
+    String body;
+    long age;
+    Weather cached;
+    if (source.loadCache(body, age) && parseWeather(body, cached)) {
+      cached.fetchedAt = millis();
+      store(cached);
+    }
+  }
+  if (!source.due(millis()) || WiFi.status() != WL_CONNECTED) return;
   const String url = String("https://api.open-meteo.com/v1/forecast?latitude=") + String(settings.latitude, 4) +
                      "&longitude=" + String(settings.longitude, 4) +
                      "&current=temperature_2m,weather_code,is_day"
                      "&hourly=temperature_2m,precipitation_probability&forecast_hours=12"
                      "&daily=weather_code,sunrise,sunset,temperature_2m_min,temperature_2m_max,precipitation_probability_max"
                      "&forecast_days=4&timezone=auto";
-  String status;
-  if (!http.begin(client, url)) {
-    status = "connessione non riuscita";
-  } else {
-    const int code = http.GET();
-    if (code == HTTP_CODE_OK) {
-      Weather fresh;
-      if (parseWeather(http.getString(), fresh)) {
-        fresh.fetchedAt = millis();
-        portENTER_CRITICAL(&lock);
-        latest = fresh;
-        portEXIT_CRITICAL(&lock);
-        status = "ok";
-      } else {
-        status = "risposta non valida";
-      }
-    } else {
-      status = String("errore ") + code;
-    }
-    http.end();
-  }
-  char buf[sizeof(lastStatus)];
-  strlcpy(buf, status.c_str(), sizeof(buf));
-  portENTER_CRITICAL(&lock);  // no heap work inside: just the bytes
-  memcpy(lastStatus, buf, sizeof(buf));
-  portEXIT_CRITICAL(&lock);
+  String body;
+  int code;
+  Weather fresh;
+  if (!httpsGet(url, body, code)) return source.failed(code);
+  if (!parseWeather(body, fresh)) return source.failed(0);
+  fresh.fetchedAt = millis();
+  store(fresh);
+  source.succeeded();
+  source.saveCache(body);
 }
 
-String weatherStatus() {
-  char buf[sizeof(lastStatus)];
-  portENTER_CRITICAL(&lock);
-  memcpy(buf, lastStatus, sizeof(buf));
-  portEXIT_CRITICAL(&lock);
-  return buf[0] ? String(buf) : String("in attesa");
-}
+String weatherStatus() { return source.status(); }

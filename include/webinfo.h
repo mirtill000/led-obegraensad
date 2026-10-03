@@ -13,8 +13,6 @@ struct WebInfo {
   uint8_t historyCount = 0;
   String event;           // "Domani 9:30 Dentista"; empty if none/off
   String birthday;        // "Buon compleanno, Anna!" when the calendar has one today
-  String historyStatus;   // for the page: "12 eventi" / error
-  String calendarStatus;
 };
 
 WebInfo webInfoNow();
@@ -22,6 +20,9 @@ WebInfo webInfoNow();
 void requestWebInfoUpdate();
 // Called by the network task.
 void webInfoTick();
+// For the page and the diagnostics (see netfetch.h), "" when switched off.
+String historyStatus();
+String calendarStatus();
 
 // Parsers, exposed for tests: feed a whole response.
 uint8_t parseOnThisDay(const String &json, String *out, uint8_t max);

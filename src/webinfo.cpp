@@ -1,10 +1,9 @@
 #include "webinfo.h"
 
-#include <HTTPClient.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 
 #include "settings.h"
+#include "netfetch.h"
 #include "occasions.h"
 #include "timekeeping.h"
 
@@ -358,31 +357,29 @@ String describeEvent(const String &summary, time_t start, bool allDay, time_t no
 
 // ---------------------------------------------------------------------------
 
-static bool get(const String &url, Stream &sink, int &code) {
-  WiFiClientSecure client;
-  client.setInsecure();  // public/read-only data
-  HTTPClient http;
-  http.useHTTP10(true);
-  http.setTimeout(15000);
-  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.setUserAgent("OBEGRANSAD-lamp/1.0 (ESP32)");
-  if (!http.begin(client, url)) return false;
-  code = http.GET();
-  if (code == HTTP_CODE_OK) http.writeToStream(&sink);
-  http.end();
-  return code == HTTP_CODE_OK;
+// Wikipedia once a day (kept in flash for after a restart), the calendar
+// every 15 minutes.
+static Source historySource("Wikipedia", 12 * 3600 * 1000UL, "history");
+static Source calendarSource("Calendario", 15 * 60 * 1000UL);
+
+static void setHistory(String *items, uint8_t count) {
+  xSemaphoreTake(lock, portMAX_DELAY);
+  for (uint8_t k = 0; k < count; k++) latest.history[k] = items[k];
+  latest.historyCount = count;
+  xSemaphoreGive(lock);
 }
 
 void webInfoTick() {
-  static int historyDay = -1;       // day of year fetched
-  static uint32_t historyTried = 0, calendarTried = 0;
+  static int historyDay = -1;  // day of year fetched (or loaded)
   static String calendarUrl;
-  const uint32_t now = millis();
   struct tm t;
   if (!localTime(t)) return;  // everything here depends on the date
 
-  const bool force = requested;
-  requested = false;
+  if (requested) {
+    requested = false;
+    historySource.request();
+    calendarSource.request();
+  }
 
   // Word of the day: no download.
   String word = settings.infoWord ? String("Parola del giorno - ") + WORDS[(t.tm_year * 366 + t.tm_yday) % WORD_COUNT] : "";
@@ -391,55 +388,85 @@ void webInfoTick() {
   if (!settings.infoCalendar || settings.icalUrl.length() == 0) {
     latest.event = "";
     latest.birthday = "";
-    latest.calendarStatus = settings.infoCalendar ? "manca il link del calendario" : "";
   }
   xSemaphoreGive(lock);
 
-  if (WiFi.status() != WL_CONNECTED) return;
-
-  if (settings.infoHistory && (force || historyDay != t.tm_yday) && (force || now - historyTried > 10 * 60000 || historyTried == 0)) {
-    historyTried = now;
-    char url[96];
-    snprintf(url, sizeof(url), "https://api.wikimedia.org/feed/v1/wikipedia/it/onthisday/selected/%02d/%02d",
-             t.tm_mon + 1, t.tm_mday);
-    String items[12];
-    OnThisDayScanner scanner(items, 12);
-    int code = 0;
-    get(url, scanner, code);
-    const uint8_t count = scanner.count;
-    xSemaphoreTake(lock, portMAX_DELAY);
-    if (count) {
-      for (uint8_t k = 0; k < count; k++) latest.history[k] = items[k];
-      latest.historyCount = count;
-      latest.historyStatus = String(count) + " eventi";
-      historyDay = t.tm_yday;
-    } else {
-      latest.historyStatus = String("non disponibile (") + code + ")";
+  // "On this day": today's, from flash if it was saved today.
+  if (!settings.infoHistory) {
+    historySource.off();
+  } else {
+    if (historyDay < 0) {
+      String cached;
+      long age;
+      if (historySource.loadCache(cached, age) && cached.toInt() == t.tm_yday + 1) {
+        String items[12];
+        uint8_t count = 0;
+        int start = cached.indexOf('\n') + 1;
+        while (start > 0 && start < (int)cached.length() && count < 12) {
+          int end = cached.indexOf('\n', start);
+          if (end < 0) end = cached.length();
+          items[count++] = cached.substring(start, end);
+          start = end + 1;
+        }
+        if (count) {
+          setHistory(items, count);
+          historyDay = t.tm_yday;
+        }
+      }
     }
-    xSemaphoreGive(lock);
+    if (historyDay != t.tm_yday && historyDay >= 0) historySource.request();  // a new day
+    if (historySource.due(millis()) && WiFi.status() == WL_CONNECTED) {
+      char url[96];
+      snprintf(url, sizeof(url), "https://api.wikimedia.org/feed/v1/wikipedia/it/onthisday/selected/%02d/%02d",
+               t.tm_mon + 1, t.tm_mday);
+      String items[12];
+      OnThisDayScanner scanner(items, 12);
+      int code = 0;
+      httpsGet(url, scanner, code);
+      if (scanner.count) {
+        setHistory(items, scanner.count);
+        historyDay = t.tm_yday;
+        historySource.succeeded(String(scanner.count) + " eventi");
+        String cache = String(t.tm_yday + 1);
+        for (uint8_t k = 0; k < scanner.count; k++) cache += "\n" + items[k];
+        historySource.saveCache(cache);
+      } else {
+        historySource.failed(code == 200 ? 0 : code);
+      }
+    }
   }
 
-  if (settings.infoCalendar && settings.icalUrl.length() &&
-      (force || calendarUrl != settings.icalUrl || calendarTried == 0 || now - calendarTried > 15 * 60000)) {
-    calendarTried = now;
-    calendarUrl = settings.icalUrl;
-    String url = calendarUrl;
-    if (url.startsWith("webcal://")) url = String("https://") + url.substring(9);
-    CalendarScanner scanner(time(nullptr));
-    int code = 0;
-    const bool ok = get(url, scanner, code);
-    scanner.finish();
-    xSemaphoreTake(lock, portMAX_DELAY);
-    if (ok) latest.birthday = scanner.birthday.length() ? birthdayGreeting(scanner.birthday) : String();
-    if (!ok) {
-      latest.calendarStatus = String("non raggiungibile (") + code + ")";
-    } else if (scanner.found) {
-      latest.event = String("Prossimo evento - ") + describeEvent(scanner.summary, scanner.start, scanner.allDay, time(nullptr));
-      latest.calendarStatus = "ok";
-    } else {
-      latest.event = "";
-      latest.calendarStatus = "nessun evento in arrivo";
+  if (!settings.infoCalendar || !settings.icalUrl.length()) {
+    calendarSource.off();
+  } else {
+    if (calendarUrl != settings.icalUrl) {
+      calendarUrl = settings.icalUrl;
+      calendarSource.request();
     }
-    xSemaphoreGive(lock);
+    if (calendarSource.due(millis()) && WiFi.status() == WL_CONNECTED) {
+      String url = calendarUrl;
+      if (url.startsWith("webcal://")) url = String("https://") + url.substring(9);
+      CalendarScanner scanner(time(nullptr));
+      int code = 0;
+      const bool ok = httpsGet(url, scanner, code);
+      scanner.finish();
+      if (ok) {
+        xSemaphoreTake(lock, portMAX_DELAY);
+        latest.birthday = scanner.birthday.length() ? birthdayGreeting(scanner.birthday) : String();
+        latest.event = scanner.found ? String("Prossimo evento - ") +
+                                           describeEvent(scanner.summary, scanner.start, scanner.allDay, time(nullptr))
+                                     : String();
+        xSemaphoreGive(lock);
+        calendarSource.succeeded(scanner.found ? String() : String("nessun evento in arrivo"));
+      } else {
+        calendarSource.failed(code);
+      }
+    }
   }
+}
+
+String historyStatus() { return historySource.status(); }
+String calendarStatus() {
+  if (settings.infoCalendar && !settings.icalUrl.length()) return "manca il link del calendario";
+  return calendarSource.status();
 }

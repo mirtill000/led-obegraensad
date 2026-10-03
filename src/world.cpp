@@ -1,10 +1,9 @@
 #include "world.h"
 
-#include <HTTPClient.h>
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
 #include <math.h>
 
+#include "netfetch.h"
 #include "settings.h"
 #include "timekeeping.h"
 
@@ -93,35 +92,42 @@ bool parseIss(const String &json, float &lat, float &lon) {
 
 // ---------------------------------------------------------------------------
 
-static bool get(const String &url, String &body, int &code) {
-  WiFiClientSecure client;
-  client.setInsecure();  // public/read-only data
-  HTTPClient http;
-  http.setTimeout(15000);
-  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  http.setUserAgent("OBEGRANSAD-lamp/1.0 (ESP32)");
-  if (!http.begin(client, url)) return false;
-  code = http.GET();
-  if (code == HTTP_CODE_OK) body = http.getString();
-  http.end();
-  return code == HTTP_CODE_OK;
+// Air quality every 30 minutes (kept in flash for after a restart), the
+// Station every 20 seconds - both only while Mondo is in use.
+static Source airSource("Aria", 30 * 60 * 1000UL, "air");
+static Source issSource("ISS", 20 * 1000UL);
+
+String airStatus() { return airSource.status(); }
+String issStatus() { return issSource.status(); }
+
+static void setAir(int aqi, float pm25) {
+  xSemaphoreTake(lock, portMAX_DELAY);
+  latest.airOk = true;
+  latest.aqi = aqi;
+  latest.pm25 = pm25;
+  xSemaphoreGive(lock);
 }
 
 void worldTick() {
-  static uint32_t airAt = 0, issAt = 0;
-  static bool airDone = false;
+  static bool cacheTried = false;
+  if (!cacheTried) {
+    cacheTried = true;
+    String body;
+    long age;
+    int aqi;
+    float pm25;
+    if (airSource.loadCache(body, age) && parseAir(body, aqi, pm25)) setAir(aqi, pm25);
+  }
   const uint32_t now = millis();
   if (!everWanted || now - wantedAt > 15 * 60000UL) return;  // nobody is looking
   if (WiFi.status() != WL_CONNECTED) return;
 
-  if (!issAt || now - issAt >= 20000) {
-    issAt = now;
+  if (issSource.due(now)) {
     String body;
     int code = 0;
     float lat, lon;
-    const bool ok = get("https://api.wheretheiss.at/v1/satellites/25544", body, code) && parseIss(body, lat, lon);
-    xSemaphoreTake(lock, portMAX_DELAY);
-    if (ok) {
+    if (httpsGet("https://api.wheretheiss.at/v1/satellites/25544", body, code) && parseIss(body, lat, lon)) {
+      xSemaphoreTake(lock, portMAX_DELAY);
       if (latest.issOk) {
         // Keep a trail of where it has been.
         memmove(latest.trailLat + 1, latest.trailLat, sizeof(float) * (WorldInfo::TRAIL - 1));
@@ -133,16 +139,14 @@ void worldTick() {
       latest.issLat = lat;
       latest.issLon = lon;
       latest.issOk = true;
-      latest.issStatus = "ok";
+      xSemaphoreGive(lock);
+      issSource.succeeded();
     } else {
-      latest.issStatus = String("non raggiungibile (") + code + ")";
+      issSource.failed(code == 200 ? 0 : code);
     }
-    xSemaphoreGive(lock);
   }
 
-  if (!airDone || now - airAt >= 30 * 60000UL) {
-    airAt = now;
-    airDone = true;
+  if (airSource.due(now)) {
     char url[200];
     snprintf(url, sizeof(url),
              "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.4f&longitude=%.4f&current=european_aqi,pm2_5",
@@ -150,16 +154,12 @@ void worldTick() {
     String body;
     int code = 0, aqi;
     float pm25;
-    const bool ok = get(url, body, code) && parseAir(body, aqi, pm25);
-    xSemaphoreTake(lock, portMAX_DELAY);
-    if (ok) {
-      latest.airOk = true;
-      latest.aqi = aqi;
-      latest.pm25 = pm25;
-      latest.airStatus = "ok";
+    if (httpsGet(url, body, code) && parseAir(body, aqi, pm25)) {
+      setAir(aqi, pm25);
+      airSource.succeeded();
+      airSource.saveCache(body);
     } else {
-      latest.airStatus = String("non disponibile (") + code + ")";
+      airSource.failed(code == 200 ? 0 : code);
     }
-    xSemaphoreGive(lock);
   }
 }

@@ -1030,10 +1030,9 @@ function loadDiag() {
       ['Indirizzo', d.ip],
       ['Bluetooth', !d.ble.on ? 'spento' : d.ble.connected ? 'attivo, telecomando collegato' : 'attivo, nessun telecomando'],
       ['Pagine in diretta', d.live + (live ? ' (questa compresa)' : ' · questa pagina interroga ogni 0,2 s')],
-      ['Meteo', d.weather + ' · ' + ago(d.weatherAge)],
-      ['Wikipedia', d.history || '—'],
-      ['Calendario', d.calendar || '—'],
       ['Ciclo principale', d.loop.perSec.toLocaleString('it-IT') + ' giri al secondo · il più lungo ' + d.loop.maxMs.toLocaleString('it-IT') + ' ms'],
+      ['Dati dal web'],
+      ...d.sources.map((x) => [x.name, x.status]),
       ['LED (scala di grigi)'],
     ];
     if (d.refresh.hw) {
