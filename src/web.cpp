@@ -76,7 +76,7 @@ static String controlsJson(const GameControls *c) {
 static String stateJson() {
   String json;
   json.reserve(8192);  // one allocation: the state is about 6 kB
-  json = "{\"mode\":" + jsonString(settings.mode) + ",\"active\":" + jsonString(currentMode()->id());
+  json = "{\"settings\":" + settingsJson() + ",\"active\":" + jsonString(currentMode()->id());
   json += ",\"night\":" + jsonBool(isNight()) + ",\"playlistPos\":" + String(playlistPosition());
 
   auto modeJson = [](const Mode *m) {
@@ -94,14 +94,8 @@ static String stateJson() {
   }
   json += "],\"activeMode\":" + modeJson(currentMode());
 
-  json += ",\"text\":" + jsonString(settings.text) + ",\"textFont\":" + jsonString(settings.textFont);
-  json += ",\"textPos\":" + jsonString(settings.textPosition);
-  json += ",\"brightness\":" + String(settings.brightness) + ",\"vertical\":" + jsonBool(settings.vertical);
-  json += ",\"transition\":" + jsonString(settings.transition) + ",\"gameStyle\":" + jsonString(settings.gameStyle);
-  json += ",\"lat\":" + String(settings.latitude, 4) + ",\"lon\":" + String(settings.longitude, 4);
-  json += ",\"city\":" + jsonString(settings.city) + ",\"tzName\":" + jsonString(settings.timezoneName);
-
-  json += ",\"ambient\":" + jsonString(settings.ambient) + ",\"animations\":[";
+  json += ",\"brightnessNow\":" + String(sunBrightness());
+  json += ",\"animations\":[";
   for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
     if (i) json += ',';
     json += "{\"id\":" + jsonString(ANIMATIONS[i]->id()) + ",\"name\":" + jsonString(ANIMATIONS[i]->name()) +
@@ -109,7 +103,7 @@ static String stateJson() {
     if (ANIMATIONS[i]->isGame()) json += ",\"style\":" + jsonString(styleId(ANIMATIONS[i]->style()));
     json += "}";
   }
-  json += "],\"games\":" + jsonString(settings.game);
+  json += "]";
   // The animation or game on the panel (Animazioni or Giochi mode).
   const bool player = strcmp(currentMode()->id(), "ambient") == 0 || strcmp(currentMode()->id(), "games") == 0;
   const AmbientMode *ambient = player ? static_cast<const AmbientMode *>(currentMode()) : nullptr;
@@ -130,12 +124,10 @@ static String stateJson() {
 
   json += ",\"forecast\":" + jsonString(ForecastMode::summary());
   const WebInfo info = webInfoNow();
-  json += ",\"web\":{\"word\":" + jsonBool(settings.infoWord) + ",\"history\":" + jsonBool(settings.infoHistory) +
-          ",\"calendar\":" + jsonBool(settings.infoCalendar) + ",\"url\":" + jsonString(settings.icalUrl) +
-          ",\"pos\":" + jsonString(settings.webPosition) + ",\"wordText\":" + jsonString(info.word) +
+  json += ",\"web\":{\"wordText\":" + jsonString(info.word) +
           ",\"event\":" + jsonString(info.event) + ",\"historyStatus\":" + jsonString(info.historyStatus) +
           ",\"calendarStatus\":" + jsonString(info.calendarStatus) + "}";
-  json += ",\"hourglass\":{\"minutes\":" + String(settings.hourglassMinutes) + ",\"left\":" +
+  json += ",\"hourglass\":{\"left\":" +
           String(HourglassMode::secondsLeft()) + ",\"running\":" + jsonBool(HourglassMode::running()) + "}";
   const WorldInfo world = worldInfoNow();
   json += ",\"world\":{\"air\":" + (world.airOk ? String(world.aqi) : String("null")) +
@@ -149,27 +141,14 @@ static String stateJson() {
           ",\"energy\":" + String(pet.energy) + ",\"poops\":" + String(pet.poops) + ",\"sick\":" + jsonBool(pet.sick) +
           ",\"asleep\":" + jsonBool(pet.asleep) + ",\"hours\":" + String(pet.ageHours) +
           ",\"pad\":" + controlsJson(PetMode::keys()) + "}";
-  json += ",\"ble\":{\"on\":" + jsonBool(settings.bleOn) + ",\"pin\":" + String(settings.blePin) +
-          ",\"connected\":" + jsonBool(bleConnected()) + "}";
-  json += ",\"notifyNight\":" + jsonBool(settings.notifyNight) + ",\"notifyPending\":" + String(NotifyMode::pending());
-  json += ",\"alarm\":{\"on\":" + jsonBool(settings.alarmOn) + ",\"time\":" + String(settings.alarmTime) +
-          ",\"days\":" + String(settings.alarmDays) + ",\"ramp\":" + String(settings.alarmRamp) +
-          ",\"hold\":" + String(settings.alarmHold) + "}";
+  json += ",\"ble\":{\"connected\":" + jsonBool(bleConnected()) + "}";
+  json += ",\"notifyPending\":" + String(NotifyMode::pending());
   const float phase = moonPhase(time(nullptr));
   json += ",\"moon\":{\"name\":" + jsonString(moonPhaseName(phase)) + ",\"lit\":" +
           String((int)lroundf(moonIllumination(phase) * 100)) + "}";
   json += ",\"version\":" + jsonString(String(FIRMWARE_COMMIT) + " del " + FIRMWARE_BUILT);
-  json += ",\"formula\":" + jsonString(settings.formula);
   json += ",\"galleryCurrent\":" + jsonString(galleryMode().currentId());
-  json += ",\"demoStyle\":" + jsonString(settings.demoStyle);
-  json += ",\"galleryShow\":" + jsonString(settings.galleryShow) + ",\"nightSun\":" + jsonBool(settings.nightSun);
-
-  json += ",\"playlistOn\":" + jsonBool(settings.playlistOn) + ",\"playlist\":" + jsonString(settings.playlist);
-  json += ",\"scenesOn\":" + jsonBool(settings.scenesOn) + ",\"scenes\":" + jsonString(settings.scenes) +
-          ",\"scene\":" + String(activeScene());
-  json += ",\"nightOn\":" + jsonBool(settings.nightOn) + ",\"nightStart\":" + String(settings.nightStart);
-  json += ",\"nightEnd\":" + String(settings.nightEnd) + ",\"nightMode\":" + jsonString(settings.nightMode);
-  json += ",\"nightBrightness\":" + String(settings.nightBrightness);
+  json += ",\"scene\":" + String(activeScene());
 
   struct tm t;
   if (localTime(t)) {
@@ -325,186 +304,77 @@ static void handleFrame() {
   server.send(200, "text/plain", out);
 }
 
-static void handleSettings() {
-  if (server.hasArg("brightness")) settings.brightness = constrain(server.arg("brightness").toInt(), 1, 255);
-  if (server.hasArg("textFont")) {
-    const String font = server.arg("textFont");
-    if (font != "small" && font != "big" && font != "mini" && font != "tiny") return badRequest("Font sconosciuto");
-    settings.textFont = font;
-    Display::setScrollFont(fontForSettings());
-    restartMode();  // scrolling widths depend on the font
-  }
-  if (server.hasArg("gameStyle")) {
-    const String style = server.arg("gameStyle");
-    if (style != "soft" && style != "crisp") return badRequest("Stile sconosciuto");
-    settings.gameStyle = style;
-  }
-  if (server.hasArg("transition")) {
-    const String style = server.arg("transition");
-    if (style != "fade" && style != "wipe" && style != "none") return badRequest("Passaggio sconosciuto");
-    settings.transition = style;
-    display.setTransition(transitionForSettings());
-  }
-  if (server.hasArg("vertical")) {
-    settings.vertical = server.arg("vertical") == "1";
+// What a changed setting touches (see SettingEffect), once for a whole
+// request.
+static void applySettingEffects(const SettingDef *const *changed, int count) {
+  uint16_t fx = 0;
+  for (int i = 0; i < count; i++) fx |= changed[i]->effects;
+  if (fx & FX_FONT) Display::setScrollFont(fontForSettings());
+  if (fx & FX_ROTATION) {
     display.setRotation(rotationForSettings());
     Display::setVerticalText(settings.vertical);
-    restartMode();  // redraw straight away in the new orientation
   }
-  if (server.hasArg("textPos")) {
-    const String pos = server.arg("textPos");
-    if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom" && pos != "pages") return badRequest("Altezza non valida");
-    settings.textPosition = pos;
-    if (strcmp(currentMode()->id(), "text") == 0) restartMode();  // show it at the new height now
+  if (fx & FX_TRANSITION) display.setTransition(transitionForSettings());
+  if (fx & FX_TIMEZONE) applyTimezone();
+  if (fx & FX_WEATHER) requestWeatherUpdate();
+  if (fx & FX_WEB) requestWebInfoUpdate();
+  if (fx & FX_PLAYLIST) restartPlaylist();
+  bool restarted = false;
+  for (int i = 0; i < count; i++) {
+    const SettingDef &d = *changed[i];
+    if (d.effects & FX_SHOW) {
+      setMode(d.mode);
+      restarted = true;
+    } else if ((d.effects & FX_RESTART) && !restarted && (!d.mode || strcmp(currentMode()->id(), d.mode) == 0)) {
+      restartMode();
+      restarted = true;
+    }
   }
-  if (server.hasArg("demoStyle")) {
-    const String style = server.arg("demoStyle");
-    if (style != "auto" && style != "rows3" && style != "pages" && style != "rows2") return badRequest("Stile sconosciuto");
-    settings.demoStyle = style;
-    if (strcmp(currentMode()->id(), "demo") == 0) restartMode();  // a new quote in the new style
-  }
-  if (server.hasArg("notifyNight")) settings.notifyNight = server.arg("notifyNight") == "1";
-  if (server.hasArg("ambient")) {
-    const String id = server.arg("ambient");
-    const Animation *a = findAnimation(id);
-    if (id != "auto" && !(a && !a->isGame())) return badRequest("Animazione sconosciuta");
-    settings.ambient = id;
-    setMode("ambient");
-  }
-  if (server.hasArg("games")) {
-    const String id = server.arg("games");
-    const Animation *a = findAnimation(id);
-    if (id != "auto" && !(a && a->isGame())) return badRequest("Gioco sconosciuto");
-    settings.game = id;
-    setMode("games");
+  if (fx & (FX_MODES | FX_PLAYLIST)) refreshModes();
+}
+
+// POST /api/settings name=value&...: any of the settings the page may
+// change (SETTING_DEFS). All are checked first: one refused value changes
+// nothing (400 and the reason, with the setting's name).
+static void handleSettings() {
+  const SettingDef *changed[48];
+  int count = 0;
+  for (int pass = 0; pass < 2; pass++) {
+    for (int i = 0; i < server.args() && count < 48; i++) {
+      const SettingDef *d = findSetting(server.argName(i));
+      if (!d) continue;  // e.g. "plain": other fields of the request
+      if (!(d->flags & SET_WEB)) return badRequest("Impostazione non modificabile");
+      if (const char *reason = setSetting(*d, server.arg(i), pass == 1)) {
+        return badRequest((String(reason) + " (" + d->name + ")").c_str());
+      }
+      if (pass == 1) changed[count++] = d;
+    }
   }
   saveSettings();
-  refreshModes();
+  applySettingEffects(changed, count);
+  bool reboot = false;
+  for (int i = 0; i < count; i++) reboot |= (changed[i]->effects & FX_REBOOT) != 0;
+  if (reboot) {
+    server.sendHeader("Connection", "close");
+    server.send(200, "application/json", "{}");
+    delay(500);  // let the answer reach the browser
+    ESP.restart();
+  }
   sendState();
 }
 
-static void handleLocation() {
-  const float lat = server.arg("lat").toFloat(), lon = server.arg("lon").toFloat();
-  if (!server.hasArg("lat") || !server.hasArg("lon") || fabsf(lat) > 90 || fabsf(lon) > 180) {
-    return badRequest("Coordinate non valide");
-  }
-  settings.latitude = lat;
-  settings.longitude = lon;
-  String city = server.arg("city");
-  city.trim();
-  settings.city = city.length() ? city.substring(0, 60) : String("?");
-  saveSettings();
-  requestWeatherUpdate();
-  sendState();
-}
 
-static void handleTimezone() {
-  const String tz = server.arg("tz"), name = server.arg("tzName");
-  if (tz.length() == 0 || tz.length() > 60 || name.length() > 60) return badRequest("Fuso orario non valido");
-  settings.timezone = tz;
-  settings.timezoneName = name;
-  applyTimezone();
-  saveSettings();
-  refreshModes();
-  sendState();
-}
 
 // Keeps only well-formed "mode:minutes" items (at most 12); returns how
 // many there are.
-static int cleanPlaylist(const String &items, String &clean) {
-  clean = "";
-  int start = 0, count = 0;
-  while (start < (int)items.length() && count < 12) {
-    int end = items.indexOf(',', start);
-    if (end < 0) end = items.length();
-    const String item = items.substring(start, end);
-    const int colon = item.indexOf(':');
-    const long minutes = colon > 0 ? item.substring(colon + 1).toInt() : 0;
-    if (colon > 0 && validModeId(item.substring(0, colon)) && minutes >= 1 && minutes <= 240) {
-      if (clean.length()) clean += ',';
-      clean += item.substring(0, colon) + ':' + String(minutes);
-      count++;
-    }
-    start = end + 1;
-  }
-  return count;
-}
 
-static void handlePlaylist() {
-  String clean;
-  const int count = cleanPlaylist(server.arg("items"), clean);
-  // Time slots: "HHMM|brightness|items" separated by ';', at most 4, each
-  // with at least one valid item.
-  String scenes;
-  int sceneCount = 0;
-  const String raw = server.arg("scenes");
-  int start = 0;
-  while (start < (int)raw.length() && sceneCount < MAX_SCENES) {
-    int end = raw.indexOf(';', start);
-    if (end < 0) end = raw.length();
-    const String scene = raw.substring(start, end);
-    start = end + 1;
-    const int a = scene.indexOf('|'), b = scene.indexOf('|', a + 1);
-    if (a != 4 || b < 0) continue;
-    const String hhmm = scene.substring(0, 4);
-    if (hhmm.substring(0, 2).toInt() > 23 || hhmm.substring(2).toInt() > 59) continue;
-    String items;
-    if (cleanPlaylist(scene.substring(b + 1), items) == 0) continue;
-    if (scenes.length()) scenes += ';';
-    scenes += hhmm + '|' + String(constrain(scene.substring(a + 1, b).toInt(), 0, 255)) + '|' + items;
-    sceneCount++;
-  }
-  if (server.hasArg("scenes")) {
-    settings.scenes = scenes;
-    settings.scenesOn = server.arg("scenesOn") == "1" && sceneCount > 0;
-  }
-  settings.playlist = clean;
-  settings.playlistOn = server.arg("on") == "1" && (count > 0 || settings.scenesOn);
-  saveSettings();
-  restartPlaylist();
-  sendState();
-}
 
-static void handleNight() {
-  const String mode = server.arg("mode");
-  if (mode != "off" && mode != "stars" && mode != "dim") return badRequest("Modalità notte sconosciuta");
-  settings.nightOn = server.arg("on") == "1";
-  settings.nightSun = server.arg("sun") == "1";
-  settings.nightStart = constrain(server.arg("start").toInt(), 0, 1439);
-  settings.nightEnd = constrain(server.arg("end").toInt(), 0, 1439);
-  settings.nightMode = mode;
-  settings.nightBrightness = constrain(server.arg("brightness").toInt(), 1, 255);
-  saveSettings();
-  refreshModes();
-  sendState();
-}
 
-static void handleWeb() {
-  const String pos = server.arg("pos"), url = server.arg("url");
-  if (pos != "random" && pos != "top" && pos != "middle" && pos != "bottom" && pos != "pages") return badRequest("Altezza non valida");
-  if (url.length() > 500) return badRequest("Link troppo lungo");
-  settings.infoWord = server.arg("word") == "1";
-  settings.infoHistory = server.arg("history") == "1";
-  settings.infoCalendar = server.arg("calendar") == "1";
-  settings.icalUrl = url;
-  settings.webPosition = pos;
-  saveSettings();
-  requestWebInfoUpdate();
-  if (strcmp(currentMode()->id(), "web") == 0) restartMode();
-  sendState();
-}
 
+// The sand timer starts over (its time is the setting hgMin).
 static void handleHourglass() {
-  const int minutes = server.arg("minutes").toInt();
-  if (minutes < 1 || minutes > 120) return badRequest("Durata non valida");
-  const bool changed = minutes != settings.hourglassMinutes;
-  settings.hourglassMinutes = minutes;
-  if (server.arg("start") == "1") {
-    if (strcmp(currentMode()->id(), "hourglass") == 0) restartMode();
-    else setMode("hourglass");
-  } else if (changed && strcmp(currentMode()->id(), "hourglass") == 0) {
-    restartMode();
-  }
+  if (strcmp(currentMode()->id(), "hourglass") == 0) restartMode();
+  else setMode("hourglass");
   saveSettings();
   sendState();
 }
@@ -611,10 +481,10 @@ static void handleNotify() {
 
 // Bluetooth: on/off, or forget the paired remotes (new PIN). Both restart
 // the lamp, since the BLE stack is set up once at boot.
+// Forgets the paired remotes and draws a new PIN; restarts (switching
+// Bluetooth on or off is the setting bleOn).
 static void handleBle() {
-  if (server.hasArg("forget")) bleForgetRemotes();
-  if (server.hasArg("on")) settings.bleOn = server.arg("on") == "1";
-  saveSettings();
+  bleForgetRemotes();
   server.sendHeader("Connection", "close");
   server.send(200, "application/json", "{}");
   delay(500);  // let the answer reach the browser
@@ -636,20 +506,13 @@ static void handleRestore() {
   ESP.restart();
 }
 
+// The alarm's buttons: stop it, or a one-minute test (its settings go
+// through /api/settings).
 static void handleAlarm() {
   const String cmd = server.arg("cmd");
-  if (cmd == "stop") {
-    SunriseMode::dismiss();
-  } else if (cmd == "test") {
-    SunriseMode::test();
-  } else {
-    settings.alarmOn = server.arg("on") == "1";
-    settings.alarmTime = constrain(server.arg("time").toInt(), 0, 1439);
-    settings.alarmDays = server.arg("days").toInt() & 0x7F;
-    settings.alarmRamp = constrain(server.arg("ramp").toInt(), 5, 60);
-    settings.alarmHold = constrain(server.arg("hold").toInt(), 1, 120);
-    saveSettings();
-  }
+  if (cmd == "stop") SunriseMode::dismiss();
+  else if (cmd == "test") SunriseMode::test();
+  else return badRequest("Comando sconosciuto");
   refreshModes();
   sendState();
 }
@@ -863,11 +726,6 @@ void webBegin() {
   server.on("/api/quotes", HTTP_POST, handleQuotes);
   server.on("/api/quotes", HTTP_GET, sendQuotes);
   server.on("/api/settings", HTTP_POST, handleSettings);
-  server.on("/api/location", HTTP_POST, handleLocation);
-  server.on("/api/timezone", HTTP_POST, handleTimezone);
-  server.on("/api/playlist", HTTP_POST, handlePlaylist);
-  server.on("/api/night", HTTP_POST, handleNight);
-  server.on("/api/web", HTTP_POST, handleWeb);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/pet", HTTP_POST, handlePet);
   server.on("/api/formula", HTTP_POST, handleFormula);

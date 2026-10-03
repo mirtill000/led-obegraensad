@@ -1,4 +1,5 @@
 #include "modes.h"
+#include "moon.h"
 
 #include "display.h"
 #include "modes/ambient_mode.h"
@@ -61,6 +62,21 @@ static int indexOf(const String &id) {
 bool validModeId(const String &id) { return indexOf(id) >= 0 && !MODES[indexOf(id)]->hidden(); }
 
 Mode *currentMode() { return MODES[current]; }
+
+uint8_t sunBrightness() {
+  if (!settings.autoBright) return settings.brightness;
+  struct tm t;
+  if (!localTime(t)) return settings.brightness;
+  float azimuth, elevation;
+  sunPosition(time(nullptr), settings.latitude, settings.longitude, azimuth, elevation);
+  // Lowest from civil dusk (sun 6 degrees below the horizon), highest with
+  // the sun 15 degrees up, a smooth curve in between: it changes by a
+  // level now and then, which nobody notices.
+  float f = constrain((elevation * 57.2958f + 6) / 21.0f, 0.0f, 1.0f);
+  f = f * f * (3 - 2 * f);
+  const uint8_t low = min(settings.autoMin, settings.brightness);
+  return low + (uint8_t)lroundf((settings.brightness - low) * f);
+}
 GalleryMode &galleryMode() { return galleryModeInstance; }
 bool isNight() { return night; }
 int playlistPosition() { return settings.playlistOn ? playlistPos : -1; }
@@ -185,7 +201,7 @@ static void evaluate(uint32_t now) {
   }
   const bool overrideChanged = ambientMode.setOverride(override);
 
-  uint8_t brightness = settings.brightness;
+  uint8_t brightness = sunBrightness();
   if (scene >= 0) {
     const int sceneBrightness = sceneField(scene, 1).toInt();
     if (sceneBrightness > 0) brightness = min(255, sceneBrightness);

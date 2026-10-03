@@ -356,6 +356,12 @@
       </div>
       <label for="brightness">Luminosità</label>
       <input type="range" id="brightness" min="1" max="255">
+      <label class="check"><input type="checkbox" id="autoBright"> Segue il sole: piena di giorno, più bassa dopo il tramonto</label>
+      <div id="autoMinBox">
+        <label for="autoMin">Luminosità minima, a sole tramontato</label>
+        <input type="range" id="autoMin" min="1" max="255">
+      </div>
+      <p class="hint" id="brightInfo"></p>
       <label for="textFont">Font del testo</label>
       <select id="textFont">
         <option value="big">Grande (16 px)</option>

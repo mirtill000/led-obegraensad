@@ -6,6 +6,7 @@
 
 #include "animation.h"
 #include "constants.h"
+#include "modes.h"
 
 Settings settings;
 
@@ -115,42 +116,276 @@ static void dropFromLists(String &lists, const char *id) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The table. Names are what the page uses; NVS keys are kept from older
+// firmware so saved settings carry over.
+
+#define STR_(x) #x
+#define STR(x) STR_(x)
+#define F_(member) (void *)&settings.member
+
+static const char *checkMode(String &v) { return validModeId(v) ? nullptr : "Modalità sconosciuta"; }
+static const char *checkAnimation(String &v) {
+  const Animation *a = findAnimation(v);
+  return v == "auto" || (a && !a->isGame()) ? nullptr : "Animazione sconosciuta";
+}
+static const char *checkGame(String &v) {
+  const Animation *a = findAnimation(v);
+  return v == "auto" || (a && a->isGame()) ? nullptr : "Gioco sconosciuto";
+}
+static const char *checkPlaylist(String &v) {
+  String clean;
+  cleanPlaylist(v, clean);
+  v = clean;
+  return nullptr;
+}
+static const char *checkScenes(String &v) {
+  String clean;
+  cleanScenes(v, clean);
+  v = clean;
+  return nullptr;
+}
+static const char *checkCity(String &v) {
+  v.trim();
+  if (!v.length()) v = "?";
+  return nullptr;
+}
+
+using T = SettingType;
+static const uint8_t SW = SET_SHOW | SET_WEB;  // shown and changeable from the page
+const SettingDef SETTING_DEFS[] = {
+    // name           NVS key        type     field                    min  max   default        choices
+    {"mode", "mode", T::Text, F_(mode), 0, 20, "text", nullptr, SET_SHOW, 0, nullptr, checkMode},
+    {"text", "text", T::Text, F_(text), 0, 200, MESSAGE, nullptr, SW, FX_RESTART, "text", nullptr},
+    {"textFont", "scrollFont", T::Text, F_(textFont), 0, 0, "small", "small|big|mini|tiny", SW, FX_FONT | FX_RESTART, nullptr, nullptr},
+    {"textPos", "textPos", T::Text, F_(textPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "text", nullptr},
+    {"brightness", "brightness", T::U8, F_(brightness), 1, 255, "255", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"vertical", "vertical", T::Bool, F_(vertical), 0, 1, "0", nullptr, SW, FX_ROTATION | FX_RESTART, nullptr, nullptr},
+    {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|none", SW, FX_TRANSITION, nullptr, nullptr},
+    {"autoBright", "autoBright", T::Bool, F_(autoBright), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"autoMin", "autoMin", T::U8, F_(autoMin), 1, 255, "25", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"lat", "lat", T::Float, F_(latitude), -90, 90, STR(DEFAULT_LATITUDE), nullptr, SW, FX_WEATHER | FX_MODES, nullptr, nullptr},
+    {"lon", "lon", T::Float, F_(longitude), -180, 180, STR(DEFAULT_LONGITUDE), nullptr, SW, FX_WEATHER | FX_MODES, nullptr, nullptr},
+    {"city", "city", T::Text, F_(city), 0, 60, DEFAULT_CITY, nullptr, SW, 0, nullptr, checkCity},
+    {"tz", "tz", T::Text, F_(timezone), 1, 60, TIMEZONE, nullptr, SW, FX_TIMEZONE | FX_MODES, nullptr, nullptr},
+    {"tzName", "tzName", T::Text, F_(timezoneName), 0, 60, TIMEZONE_NAME, nullptr, SW, 0, nullptr, nullptr},
+    {"ambient", "ambient", T::Text, F_(ambient), 0, 20, "auto", nullptr, SW, FX_SHOW, "ambient", checkAnimation},
+    {"games", "game", T::Text, F_(game), 0, 20, "auto", nullptr, SW, FX_SHOW, "games", checkGame},
+    {"infoWord", "infoWord", T::Bool, F_(infoWord), 0, 1, "1", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr},
+    {"infoHistory", "infoHistory", T::Bool, F_(infoHistory), 0, 1, "1", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr},
+    {"infoCalendar", "infoCal", T::Bool, F_(infoCalendar), 0, 1, "0", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr},
+    {"icalUrl", "icalUrl", T::Text, F_(icalUrl), 0, 500, "", nullptr, SW, FX_WEB, nullptr, nullptr},
+    {"webPos", "webPos", T::Text, F_(webPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "web", nullptr},
+    {"galleryShow", "galleryShow", T::Text, F_(galleryShow), 0, 40, "all", nullptr, SET_SHOW, 0, nullptr, nullptr},
+    {"demoStyle", "demoStyle", T::Text, F_(demoStyle), 0, 0, "auto", "auto|rows3|pages|rows2", SW, FX_RESTART, "demo", nullptr},
+    {"gameStyle", "gameStyle", T::Text, F_(gameStyle), 0, 0, "soft", "soft|crisp", SW, 0, nullptr, nullptr},
+    {"playlistOn", "plOn", T::Bool, F_(playlistOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr},
+    {"playlist", "playlist", T::Text, F_(playlist), 0, 400, "clock:10,quotes:3,ambient:5,games:5", nullptr, SW, FX_PLAYLIST, nullptr, checkPlaylist},
+    {"scenesOn", "scenesOn", T::Bool, F_(scenesOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr},
+    {"scenes", "scenes", T::Text, F_(scenes), 0, 1000,
+     "0700|200|clock:10,forecast:1,quotes:3;1300|255|clock:10,web:3,ambient:10,games:5;"
+     "1900|120|quotes:3,ambient:10,clock:5;2300|25|clock:30",
+     nullptr, SW, FX_PLAYLIST, nullptr, checkScenes},
+    {"demoOff", "demoOff", T::Text, F_(demoOff), 0, 300, "", nullptr, 0, 0, nullptr, nullptr},
+    {"formula", "formula", T::Text, F_(formula), 0, 300, "sin(t-hypot(x-7.5,y-7.5))", nullptr, SET_SHOW, 0, nullptr, nullptr},
+    {"hgMin", "hgMin", T::U8, F_(hourglassMinutes), 1, 120, "5", nullptr, SW, FX_RESTART, "hourglass", nullptr},
+    {"notifyNight", "notifyNight", T::Bool, F_(notifyNight), 0, 1, "0", nullptr, SW, 0, nullptr, nullptr},
+    {"bleOn", "bleOn", T::Bool, F_(bleOn), 0, 1, "1", nullptr, SW, FX_REBOOT, nullptr, nullptr},
+    {"blePin", "blePin", T::U32, F_(blePin), 0, 999999, "0", nullptr, SET_SHOW, 0, nullptr, nullptr},
+    {"alarmOn", "alarmOn", T::Bool, F_(alarmOn), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"alarmTime", "alarmTime", T::U16, F_(alarmTime), 0, 1439, "420", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"alarmDays", "alarmDays", T::U8, F_(alarmDays), 0, 127, "31", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"alarmRamp", "alarmRamp", T::U8, F_(alarmRamp), 5, 60, "20", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"alarmHold", "alarmHold", T::U8, F_(alarmHold), 1, 120, "30", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"nightOn", "nightOn", T::Bool, F_(nightOn), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"nightSun", "nightSun", T::Bool, F_(nightSun), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"nightStart", "nightStart", T::U16, F_(nightStart), 0, 1439, "1380", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"nightEnd", "nightEnd", T::U16, F_(nightEnd), 0, 1439, "420", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"nightMode", "nightMode", T::Text, F_(nightMode), 0, 0, "stars", "off|stars|dim", SW, FX_MODES, nullptr, nullptr},
+    {"nightBrightness", "nightBright", T::U8, F_(nightBrightness), 1, 255, "20", nullptr, SW, FX_MODES, nullptr, nullptr},
+};
+const uint8_t SETTING_COUNT = sizeof(SETTING_DEFS) / sizeof(SETTING_DEFS[0]);
+
+// What was last read from or written to NVS, per setting, as text: what
+// saveSettings() compares against. A key missing from NVS is "\x01".
+static String stored[sizeof(SETTING_DEFS) / sizeof(SETTING_DEFS[0])];
+static String storedSpeeds = "\x01";
+static uint8_t storedVersion = 0;
+
+const SettingDef *findSetting(const String &name) {
+  for (const SettingDef &d : SETTING_DEFS) {
+    if (name == d.name) return &d;
+  }
+  return nullptr;
+}
+
+String settingText(const SettingDef &d) {
+  switch (d.type) {
+    case T::Bool: return *(bool *)d.field ? "1" : "0";
+    case T::U8: return String(*(uint8_t *)d.field);
+    case T::U16: return String(*(uint16_t *)d.field);
+    case T::U32: return String(*(uint32_t *)d.field);
+    case T::Float: return String(*(float *)d.field, 4);
+    default: return *(String *)d.field;
+  }
+}
+
+String settingJson(const SettingDef &d) {
+  if (d.type == T::Bool) return *(bool *)d.field ? "true" : "false";
+  if (d.type != T::Text) return settingText(d);
+  const String &v = *(String *)d.field;
+  String out = "\"";
+  for (unsigned i = 0; i < v.length(); i++) {
+    const char c = v[i];
+    if (c == '"' || c == '\\') out += '\\';
+    if (c == '\n') out += "\\n";
+    else if ((uint8_t)c < 0x20) out += ' ';
+    else out += c;
+  }
+  return out + "\"";
+}
+
+const char *setSetting(const SettingDef &d, const String &input, bool apply) {
+  String v = input;
+  if (d.type == T::Text) {
+    if (d.choices) {
+      // One of "a|b|c".
+      const String all = String('|') + d.choices + '|';
+      if (v.indexOf('|') >= 0 || all.indexOf(String('|') + v + '|') < 0) return "Valore non ammesso";
+    } else if (d.max && (int32_t)v.length() > d.max) {
+      return "Testo troppo lungo";
+    } else if ((int32_t)v.length() < d.min) {
+      return "Valore mancante";
+    }
+  } else if (d.type == T::Bool) {
+    if (v != "0" && v != "1" && v != "true" && v != "false") return "Valore non valido";
+  } else {
+    char *end;
+    const double n = strtod(v.c_str(), &end);
+    if (end == v.c_str() || *end || !isfinite(n)) return "Numero non valido";
+    if (n < d.min || n > d.max) return "Valore fuori dai limiti";
+  }
+  if (d.clean) {
+    if (const char *reason = d.clean(v)) return reason;
+  }
+  if (!apply) return nullptr;
+  switch (d.type) {
+    case T::Bool: *(bool *)d.field = v == "1" || v == "true"; break;
+    case T::U8: *(uint8_t *)d.field = v.toInt(); break;
+    case T::U16: *(uint16_t *)d.field = v.toInt(); break;
+    case T::U32: *(uint32_t *)d.field = strtoul(v.c_str(), nullptr, 10); break;
+    case T::Float: *(float *)d.field = v.toFloat(); break;
+    default: *(String *)d.field = v;
+  }
+  return nullptr;
+}
+
+String settingsJson() {
+  String j = "{";
+  for (const SettingDef &d : SETTING_DEFS) {
+    if (!(d.flags & SET_SHOW)) continue;
+    if (j.length() > 1) j += ',';
+    j += String('"') + d.name + "\":" + settingJson(d);
+  }
+  return j + "}";
+}
+
+// Reads one setting from NVS (its default if missing or out of range).
+static void loadSetting(const SettingDef &d, String &raw) {
+  raw = "\x01";
+  if (prefs.isKey(d.nvsKey)) {
+    switch (d.type) {
+      case T::Bool: raw = prefs.getBool(d.nvsKey, false) ? "1" : "0"; break;
+      case T::U8: raw = String(prefs.getUChar(d.nvsKey, 0)); break;
+      case T::U16: raw = String(prefs.getUShort(d.nvsKey, 0)); break;
+      case T::U32: raw = String(prefs.getUInt(d.nvsKey, 0)); break;
+      case T::Float: raw = String(prefs.getFloat(d.nvsKey, 0), 4); break;
+      default: raw = prefs.getString(d.nvsKey, "");
+    }
+  }
+  // Saved text is taken as it is (a playlist naming a mode that no longer
+  // exists is tidied by the migrations, not dropped here); numbers out of
+  // range fall back to the default.
+  if (d.type == T::Text) {
+    *(String *)d.field = raw == "\x01" ? String(d.def) : raw;
+  } else if (raw == "\x01" || setSetting(d, raw) != nullptr) {
+    // The default (numbers written like "45.4642f" in constants.h).
+    const double v = strtod(d.def, nullptr);
+    switch (d.type) {
+      case T::Bool: *(bool *)d.field = v != 0; break;
+      case T::U8: *(uint8_t *)d.field = v; break;
+      case T::U16: *(uint16_t *)d.field = v; break;
+      case T::U32: *(uint32_t *)d.field = v; break;
+      default: *(float *)d.field = v;
+    }
+  }
+}
+
+static void storeSetting(const SettingDef &d) {
+  switch (d.type) {
+    case T::Bool: prefs.putBool(d.nvsKey, *(bool *)d.field); break;
+    case T::U8: prefs.putUChar(d.nvsKey, *(uint8_t *)d.field); break;
+    case T::U16: prefs.putUShort(d.nvsKey, *(uint16_t *)d.field); break;
+    case T::U32: prefs.putUInt(d.nvsKey, *(uint32_t *)d.field); break;
+    case T::Float: prefs.putFloat(d.nvsKey, *(float *)d.field); break;
+    default: prefs.putString(d.nvsKey, *(String *)d.field);
+  }
+}
+
+int cleanPlaylist(const String &items, String &clean) {
+  clean = "";
+  int start = 0, count = 0;
+  while (start < (int)items.length() && count < 12) {
+    int end = items.indexOf(',', start);
+    if (end < 0) end = items.length();
+    const String item = items.substring(start, end);
+    const int colon = item.indexOf(':');
+    const long minutes = colon > 0 ? item.substring(colon + 1).toInt() : 0;
+    if (colon > 0 && validModeId(item.substring(0, colon)) && minutes >= 1 && minutes <= 240) {
+      if (clean.length()) clean += ',';
+      clean += item.substring(0, colon) + ':' + String(minutes);
+      count++;
+    }
+    start = end + 1;
+  }
+  return count;
+}
+
+// Time slots: "HHMM|brightness|items" separated by ';', at most 4, each
+// with at least one valid item.
+int cleanScenes(const String &raw, String &clean) {
+  clean = "";
+  int count = 0, start = 0;
+  while (start < (int)raw.length() && count < MAX_SCENES) {
+    int end = raw.indexOf(';', start);
+    if (end < 0) end = raw.length();
+    const String scene = raw.substring(start, end);
+    start = end + 1;
+    const int a = scene.indexOf('|'), b = scene.indexOf('|', a + 1);
+    if (a != 4 || b < 0) continue;
+    const String hhmm = scene.substring(0, 4);
+    if (hhmm.substring(0, 2).toInt() > 23 || hhmm.substring(2).toInt() > 59) continue;
+    String items;
+    if (cleanPlaylist(scene.substring(b + 1), items) == 0) continue;
+    if (clean.length()) clean += ';';
+    clean += hhmm + '|' + String(constrain(scene.substring(a + 1, b).toInt(), 0, 255)) + '|' + items;
+    count++;
+  }
+  return count;
+}
+
 void loadSettings() {
   prefs.begin("obegransad", true);
-  settings.mode = prefs.getString("mode", "text");
-  settings.text = prefs.getString("text", MESSAGE);
-  settings.textFont = prefs.getString("scrollFont", "small");
-  settings.textPosition = prefs.getString("textPos", "random");
-  settings.brightness = prefs.getUChar("brightness", 255);
-  settings.vertical = prefs.getBool("vertical", false);
-  settings.transition = prefs.getString("transition", "fade");
-  settings.latitude = prefs.getFloat("lat", DEFAULT_LATITUDE);
-  settings.longitude = prefs.getFloat("lon", DEFAULT_LONGITUDE);
-  settings.city = prefs.getString("city", DEFAULT_CITY);
-  settings.timezone = prefs.getString("tz", TIMEZONE);
-  settings.timezoneName = prefs.getString("tzName", TIMEZONE_NAME);
-  settings.ambient = prefs.getString("ambient", "auto");
-  settings.game = prefs.getString("game", "auto");
-  settings.infoWord = prefs.getBool("infoWord", true);
-  settings.infoHistory = prefs.getBool("infoHistory", true);
-  settings.infoCalendar = prefs.getBool("infoCal", false);
-  settings.icalUrl = prefs.getString("icalUrl", "");
-  settings.webPosition = prefs.getString("webPos", "random");
-  settings.quotes = prefs.getString("quotes", "");  // from before /quotes.txt
-  settings.galleryShow = prefs.getString("galleryShow", "all");
-  settings.demoStyle = prefs.getString("demoStyle", "auto");
-  settings.gameStyle = prefs.getString("gameStyle", "soft");
-  settings.playlistOn = prefs.getBool("plOn", false);
-  settings.playlist = prefs.getString("playlist", "clock:10,quotes:3,ambient:5,games:5");
-  settings.scenesOn = prefs.getBool("scenesOn", false);
-  settings.scenes = prefs.getString("scenes",
-                                    "0700|200|clock:10,forecast:1,quotes:3;"
-                                    "1300|255|clock:10,web:3,ambient:10,games:5;"
-                                    "1900|120|quotes:3,ambient:10,clock:5;"
-                                    "2300|25|clock:30");
+  for (uint8_t i = 0; i < SETTING_COUNT; i++) loadSetting(SETTING_DEFS[i], stored[i]);
+  if (settings.quotes.length() == 0) settings.quotes = prefs.getString("quotes", "");  // from before /quotes.txt
+  storedSpeeds = prefs.isKey("speeds") ? prefs.getString("speeds", "") : String("\x01");
+  parseSpeeds(storedSpeeds == "\x01" ? String() : storedSpeeds);
+
   // Migrations, by settings version (saved as "cfgVer"): each step brings
   // settings saved by an older firmware up to date, once.
   const uint8_t version = prefs.getUChar("cfgVer", 0);
+  storedVersion = version;
+  prefs.end();
   // 2: new defaults reach lamps still on the old ones (Giochi joined the
   // default playlist and the 13:00 time slot).
   if (version < 2) {
@@ -183,78 +418,38 @@ void loadSettings() {
     settings.ambient = "auto";
     if (settings.mode == "ambient") settings.mode = "games";
   }
-  settings.demoOff = prefs.getString("demoOff", "");
-  settings.formula = prefs.getString("formula", "sin(t-hypot(x-7.5,y-7.5))");
-  settings.hourglassMinutes = constrain(prefs.getUChar("hgMin", 5), 1, 120);
-  settings.notifyNight = prefs.getBool("notifyNight", false);
-  settings.bleOn = prefs.getBool("bleOn", true);
-  settings.blePin = prefs.getUInt("blePin", 0);
-  const bool newPin = settings.blePin < 100000 || settings.blePin > 999999;
-  if (newPin) settings.blePin = 100000 + esp_random() % 900000;  // first boot: a random PIN, kept
-  settings.alarmOn = prefs.getBool("alarmOn", false);
-  settings.alarmTime = prefs.getUShort("alarmTime", 7 * 60);
-  settings.alarmDays = prefs.getUChar("alarmDays", 0x1F);  // Monday-Friday
-  settings.alarmRamp = prefs.getUChar("alarmRamp", 20);
-  settings.alarmHold = prefs.getUChar("alarmHold", 30);
-  settings.nightOn = prefs.getBool("nightOn", false);
-  settings.nightSun = prefs.getBool("nightSun", false);
-  settings.nightStart = prefs.getUShort("nightStart", 23 * 60);
-  settings.nightEnd = prefs.getUShort("nightEnd", 7 * 60);
-  settings.nightMode = prefs.getString("nightMode", "stars");
-  settings.nightBrightness = prefs.getUChar("nightBright", 20);
-  parseSpeeds(prefs.getString("speeds", ""));
-  prefs.end();
-  if (newPin || version < SETTINGS_VERSION) saveSettings();
+  if (!validModeId(settings.mode)) settings.mode = "clock";  // a mode removed since
+  if (settings.blePin < 100000 || settings.blePin > 999999) {
+    settings.blePin = 100000 + esp_random() % 900000;  // first boot: a random PIN, kept
+  }
+  saveSettings();  // the migrations' changes and the new PIN, if any
 }
 
 void saveSettings() {
-  prefs.begin("obegransad", false);
-  prefs.putUChar("cfgVer", SETTINGS_VERSION);
-  prefs.putString("mode", settings.mode);
-  prefs.putString("text", settings.text);
-  prefs.putString("scrollFont", settings.textFont);
-  prefs.putString("textPos", settings.textPosition);
-  prefs.putUChar("brightness", settings.brightness);
-  prefs.putBool("vertical", settings.vertical);
-  prefs.putString("transition", settings.transition);
-  prefs.putFloat("lat", settings.latitude);
-  prefs.putFloat("lon", settings.longitude);
-  prefs.putString("city", settings.city);
-  prefs.putString("tz", settings.timezone);
-  prefs.putString("tzName", settings.timezoneName);
-  prefs.putString("ambient", settings.ambient);
-  prefs.putString("game", settings.game);
-  prefs.putBool("infoWord", settings.infoWord);
-  prefs.putBool("infoHistory", settings.infoHistory);
-  prefs.putBool("infoCal", settings.infoCalendar);
-  prefs.putString("icalUrl", settings.icalUrl);
-  prefs.putString("webPos", settings.webPosition);
-  prefs.putString("galleryShow", settings.galleryShow);
-  prefs.putString("demoStyle", settings.demoStyle);
-  prefs.putString("gameStyle", settings.gameStyle);
-  prefs.putBool("plOn", settings.playlistOn);
-  prefs.putString("playlist", settings.playlist);
-  prefs.putBool("scenesOn", settings.scenesOn);
-  prefs.putString("scenes", settings.scenes);
-  prefs.putString("demoOff", settings.demoOff);
-  prefs.putString("formula", settings.formula);
-  prefs.putUChar("hgMin", settings.hourglassMinutes);
-  prefs.putBool("notifyNight", settings.notifyNight);
-  prefs.putBool("bleOn", settings.bleOn);
-  prefs.putUInt("blePin", settings.blePin);
-  prefs.putBool("alarmOn", settings.alarmOn);
-  prefs.putUShort("alarmTime", settings.alarmTime);
-  prefs.putUChar("alarmDays", settings.alarmDays);
-  prefs.putUChar("alarmRamp", settings.alarmRamp);
-  prefs.putUChar("alarmHold", settings.alarmHold);
-  prefs.putBool("nightOn", settings.nightOn);
-  prefs.putBool("nightSun", settings.nightSun);
-  prefs.putUShort("nightStart", settings.nightStart);
-  prefs.putUShort("nightEnd", settings.nightEnd);
-  prefs.putString("nightMode", settings.nightMode);
-  prefs.putUChar("nightBright", settings.nightBrightness);
-  prefs.putString("speeds", formatSpeeds());
-  prefs.end();
+  bool open = false;
+  auto begin = [&] {
+    if (!open) prefs.begin("obegransad", false);
+    open = true;
+  };
+  if (storedVersion != SETTINGS_VERSION) {
+    begin();
+    prefs.putUChar("cfgVer", SETTINGS_VERSION);
+    storedVersion = SETTINGS_VERSION;
+  }
+  for (uint8_t i = 0; i < SETTING_COUNT; i++) {
+    const String now = settingText(SETTING_DEFS[i]);
+    if (now == stored[i]) continue;
+    begin();
+    storeSetting(SETTING_DEFS[i]);
+    stored[i] = now;
+  }
+  const String speedsNow = formatSpeeds();
+  if (speedsNow != storedSpeeds) {
+    begin();
+    prefs.putString("speeds", speedsNow);
+    storedSpeeds = speedsNow;
+  }
+  if (open) prefs.end();
 }
 
 TextFont fontForSettings() {

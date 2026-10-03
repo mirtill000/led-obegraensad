@@ -40,6 +40,11 @@ function status(msg) {
 }
 function fail(e) { status(e.message || 'Errore'); }
 
+// Every setting goes through POST /api/settings with its name (the lamp's
+// SETTING_DEFS); the answer is the new state.
+const saveSettings = (values) => post('/api/settings', values);
+const b01 = (checked) => (checked ? 1 : 0);
+
 async function post(path, data) {
   const res = await fetch(path, { method: 'POST', body: new URLSearchParams(data) });
   if (!res.ok) throw new Error(await res.text());
@@ -70,7 +75,7 @@ function modeName(id) { const m = state.modes.find((m) => m.id === id); return m
 function render() {
   const s = state;
   const info = [s.time ? 'Ora ' + s.time : 'Ora non ancora sincronizzata'];
-  if (s.weather) info.push(Math.round(s.weather.temp) + '° ' + weatherName(s.weather.code) + ' a ' + s.city);
+  if (s.weather) info.push(Math.round(s.weather.temp) + '° ' + weatherName(s.weather.code) + ' a ' + s.settings.city);
   if (s.night) info.push('notte');
   else if (s.playlistPos >= 0) info.push('playlist');
   $('info').textContent = info.join(' · ');
@@ -78,7 +83,7 @@ function render() {
   // Modes: the one picked is highlighted (with the playlist on, the one
   // it is showing). The night schedule or the alarm may show something
   // else for a while: that is said below the list.
-  const selected = s.playlistPos >= 0 ? s.active : s.mode;
+  const selected = s.playlistPos >= 0 ? s.active : s.settings.mode;
   const box = $('modes');
   box.innerHTML = '';
   for (const [title, ids] of groupModes(s.modes)) {
@@ -108,7 +113,7 @@ function render() {
   if (s.active === 'sunrise') {
     override.textContent = 'Sveglia in corso: la lampada mostra l\'alba. «' + modeName(selected) + '» torna dopo.';
   } else if (s.night) {
-    const until = s.nightSun && s.weather && s.weather.sunrise >= 0 ? clock(s.weather.sunrise) : clock(s.nightEnd);
+    const until = s.settings.nightSun && s.weather && s.weather.sunrise >= 0 ? clock(s.weather.sunrise) : clock(s.settings.nightEnd);
     const what = s.active === 'off' ? 'è spenta' : s.active === 'ambient' ? 'mostra le stelle' : 'mostra «' + s.activeMode.name + '»';
     override.textContent = 'Modalità notte fino alle ' + until + ': la lampada ' + what + '. «' + modeName(selected) + '» torna dopo (orari in «Giorno e notte»).';
   } else {
@@ -133,11 +138,11 @@ function render() {
   $('modeCard').hidden = !panel;
   $('modeTitle').textContent = modeName(selected);
 
-  if (!editing('text')) $('text').value = s.text;
-  $('textPos').value = s.textPos;
-  $('demoStyle').value = s.demoStyle;
+  if (!editing('text')) $('text').value = s.settings.text;
+  $('textPos').value = s.settings.textPos;
+  $('demoStyle').value = s.settings.demoStyle;
   if (selected === 'quotes' && !quotesLoaded) loadQuotes().catch(() => {});
-  $('clockInfo').textContent = 'Meteo per ' + s.city + ' (' + s.lat.toFixed(2) + ', ' + s.lon.toFixed(2) + '), fuso ' + s.tzName + '.';
+  $('clockInfo').textContent = 'Meteo per ' + s.settings.city + ' (' + s.settings.lat.toFixed(2) + ', ' + s.settings.lon.toFixed(2) + '), fuso ' + s.settings.tzName + '.';
 
   // Animazioni (grouped) and Giochi: the same list, split by kind.
   const sel = $('ambient'), gsel = $('games');
@@ -151,18 +156,18 @@ function render() {
       group.appendChild(new Option(a.name, a.id));
     }
   }
-  sel.value = s.ambient;
-  gsel.value = s.games;
+  sel.value = s.settings.ambient;
+  gsel.value = s.settings.games;
   const playing = s.animations.find((a) => a.id === s.animation);
   $('ambientInfo').textContent = playing && s.active === 'ambient' ? 'In riproduzione: ' + playing.name + (s.night ? ' (modalità notte)' : '') : '';
   $('gamesInfo').textContent = playing && s.active === 'games' ? 'In gioco: ' + playing.name : '';
 
   if (!dirty.playlist) {
-    $('playlistOn').checked = s.playlistOn;
-    $('scenesOn').checked = s.scenesOn;
-    renderPlaylist(s.playlist.split(',').filter(Boolean).map((i) => i.split(':')));
+    $('playlistOn').checked = s.settings.playlistOn;
+    $('scenesOn').checked = s.settings.scenesOn;
+    renderPlaylist(s.settings.playlist.split(',').filter(Boolean).map((i) => i.split(':')));
     $('scenes').innerHTML = '';
-    for (const scene of s.scenes.split(';').filter(Boolean)) {
+    for (const scene of s.settings.scenes.split(';').filter(Boolean)) {
       const [hhmm, bright, items] = scene.split('|');
       addScene(hhmm.slice(0, 2) + ':' + hhmm.slice(2), +bright, items);
     }
@@ -170,28 +175,28 @@ function render() {
   }
   [...$('scenes').children].forEach((el, i) => el.classList.toggle('on', i === s.scene));
   if (!dirty.night) {
-    $('nightOn').checked = s.nightOn;
-    $('nightStart').value = hhmm(s.nightStart);
-    $('nightEnd').value = hhmm(s.nightEnd);
-    $('nightMode').value = s.nightMode;
-    $('nightBrightness').value = s.nightBrightness;
+    $('nightOn').checked = s.settings.nightOn;
+    $('nightStart').value = hhmm(s.settings.nightStart);
+    $('nightEnd').value = hhmm(s.settings.nightEnd);
+    $('nightMode').value = s.settings.nightMode;
+    $('nightBrightness').value = s.settings.nightBrightness;
   }
   $('nightDimBox').hidden = $('nightMode').value !== 'dim';
 
-  $('placeInfo').textContent = 'Attuale: ' + s.city + ' (' + s.lat.toFixed(4) + ', ' + s.lon.toFixed(4) + ')';
+  $('placeInfo').textContent = 'Attuale: ' + s.settings.city + ' (' + s.settings.lat.toFixed(4) + ', ' + s.settings.lon.toFixed(4) + ')';
   const tz = $('tz');
   if (!tz.options.length) {
     for (const name of Object.keys(ZONES).sort()) tz.add(new Option(name.replace(/_/g, ' '), name));
   }
-  if (!ZONES[s.tzName] && ![...tz.options].some((o) => o.value === s.tzName)) tz.add(new Option(s.tzName, s.tzName));
-  tz.value = s.tzName;
+  if (!ZONES[s.settings.tzName] && ![...tz.options].some((o) => o.value === s.settings.tzName)) tz.add(new Option(s.settings.tzName, s.settings.tzName));
+  tz.value = s.settings.tzName;
 
-  for (const b of $('orientation').children) b.classList.toggle('on', b.dataset.vertical === (s.vertical ? '1' : '0'));
-  if (!editing('brightness')) $('brightness').value = s.brightness;
-  $('textFont').value = s.textFont;
-  $('textFontText').value = s.textFont;
-  $('transition').value = s.transition;
-  $('gameStyle').value = s.gameStyle;
+  for (const b of $('orientation').children) b.classList.toggle('on', b.dataset.vertical === (s.settings.vertical ? '1' : '0'));
+  if (!editing('brightness')) $('brightness').value = s.settings.brightness;
+  $('textFont').value = s.settings.textFont;
+  $('textFontText').value = s.settings.textFont;
+  $('transition').value = s.settings.transition;
+  $('gameStyle').value = s.settings.gameStyle;
   // Which games follow this choice, and which always look the same.
   const games = s.animations.filter((a) => a.game);
   const names = (st) => games.filter((a) => a.style === st).map((a) => a.name).join(', ');
@@ -438,23 +443,27 @@ function renderExtras() {
   $('fcInfo').textContent = s.forecast || 'Previsioni in arrivo...';
 
   if (!dirty.web) {
-    $('infoWord').checked = s.web.word; $('infoHistory').checked = s.web.history; $('infoCalendar').checked = s.web.calendar;
-    $('icalUrl').value = s.web.url; $('webPos').value = s.web.pos;
+    $('infoWord').checked = s.settings.infoWord; $('infoHistory').checked = s.settings.infoHistory; $('infoCalendar').checked = s.settings.infoCalendar;
+    $('icalUrl').value = s.settings.icalUrl; $('webPos').value = s.settings.webPos;
   }
-  $('historyStatus').textContent = s.web.history ? 'Wikipedia: ' + (s.web.historyStatus || 'in attesa') : '';
-  $('calendarStatus').textContent = s.web.calendar ? 'Stato: ' + (s.web.calendarStatus || 'in attesa') : '';
+  $('historyStatus').textContent = s.settings.infoHistory ? 'Wikipedia: ' + (s.web.historyStatus || 'in attesa') : '';
+  $('calendarStatus').textContent = s.settings.infoCalendar ? 'Stato: ' + (s.web.calendarStatus || 'in attesa') : '';
   $('webPreview').textContent = [s.web.wordText, s.web.event].filter(Boolean).join(' · ');
 
-  if (!editing('hgMin')) $('hgMin').value = String(s.hourglass.minutes);
+  $('autoBright').checked = s.settings.autoBright;
+  $('autoMinBox').hidden = !s.settings.autoBright;
+  if (!editing('autoMin')) $('autoMin').value = s.settings.autoMin;
+  $('brightInfo').textContent = s.settings.autoBright ? 'Ora: ' + Math.round(s.brightnessNow / 2.55) + '%' + (s.time ? '' : ' (in attesa dell\'ora)') : '';
+  if (!editing('hgMin')) $('hgMin').value = String(s.settings.hgMin);
   renderPet(s.pet);
-  if (!dirty.formula && !editing('formulaText')) $('formulaText').value = s.formula;
+  if (!dirty.formula && !editing('formulaText')) $('formulaText').value = s.settings.formula;
   const w = s.world;
   $('worldInfo').textContent = [w.air !== null ? 'Aria ' + w.airBand + ' (indice ' + w.air + ')' : '',
     w.iss !== null ? 'Stazione spaziale a ' + w.iss.toLocaleString('it') + ' km' : ''].filter(Boolean).join('\n') || 'Dati in arrivo…';
   $('worldStatus').textContent = 'Stato: ' + w.status;
-  $('notifyNight').checked = s.notifyNight;
-  $('bleOn').checked = s.ble.on;
-  $('bleInfo').innerHTML = s.ble.on ? 'Nome: <b>obegransad</b> · PIN: <b>' + String(s.ble.pin).padStart(6, '0') + '</b> · '
+  $('notifyNight').checked = s.settings.notifyNight;
+  $('bleOn').checked = s.settings.bleOn;
+  $('bleInfo').innerHTML = s.settings.bleOn ? 'Nome: <b>obegransad</b> · PIN: <b>' + String(s.settings.blePin).padStart(6, '0') + '</b> · '
     + (s.ble.connected ? 'telecomando collegato' : 'nessun telecomando collegato') : 'Spento.';
   const hl = s.hourglass.left;
   $('hgInfo').textContent = s.active !== 'hourglass' ? '' : !s.hourglass.running ? 'Tempo scaduto.'
@@ -470,19 +479,19 @@ function renderExtras() {
     });
   }
   if (!dirty.alarm) {
-    $('alarmOn').checked = s.alarm.on; $('alarmTime').value = hhmm(s.alarm.time);
-    $('alarmRamp').value = s.alarm.ramp; $('alarmHold').value = s.alarm.hold;
-    for (const c of days.querySelectorAll('input')) c.checked = !!(s.alarm.days & (1 << c.dataset.day));
+    $('alarmOn').checked = s.settings.alarmOn; $('alarmTime').value = hhmm(s.settings.alarmTime);
+    $('alarmRamp').value = s.settings.alarmRamp; $('alarmHold').value = s.settings.alarmHold;
+    for (const c of days.querySelectorAll('input')) c.checked = !!(s.settings.alarmDays & (1 << c.dataset.day));
   }
 
-  if (!dirty.night) $('nightSun').checked = s.nightSun;
+  if (!dirty.night) $('nightSun').checked = s.settings.nightSun;
   const sun = s.weather && s.weather.sunset >= 0 ? '(oggi ' + clock(s.weather.sunset) + ' - ' + clock(s.weather.sunrise) + ')' : '';
   $('sunTimes').textContent = sun;
   for (const id of ['nightStart', 'nightEnd']) $(id).disabled = $('nightSun').checked;
   $('skyInfo').textContent = (s.weather && s.weather.sunrise >= 0 ? 'Oggi alba ' + clock(s.weather.sunrise) + ', tramonto ' + clock(s.weather.sunset) + ' · ' : '') +
     s.moon.name + ' (illuminata al ' + s.moon.lit + '%)';
 
-  const picked = s.playlistPos >= 0 ? s.active : s.mode;
+  const picked = s.playlistPos >= 0 ? s.active : s.settings.mode;
   if (picked === 'gallery' && !galleryLoaded) loadGallery();
   // The editor opens on the drawing the lamp is showing, not a blank page.
   if (picked === 'gallery' && ed.pristine && s.galleryCurrent) {
@@ -493,9 +502,9 @@ function renderExtras() {
 }
 
 for (const id of ['infoWord', 'infoHistory', 'infoCalendar', 'icalUrl', 'webPos']) $(id).addEventListener('input', () => { dirty.web = true; });
-$('saveWeb').onclick = () => post('/api/web', {
-  word: $('infoWord').checked ? 1 : 0, history: $('infoHistory').checked ? 1 : 0, calendar: $('infoCalendar').checked ? 1 : 0,
-  url: $('icalUrl').value.trim(), pos: $('webPos').value,
+$('saveWeb').onclick = () => saveSettings({
+  infoWord: b01($('infoWord').checked), infoHistory: b01($('infoHistory').checked), infoCalendar: b01($('infoCalendar').checked),
+  icalUrl: $('icalUrl').value.trim(), webPos: $('webPos').value,
 }).then(() => { dirty.web = false; render(); status('Salvato: i dati arrivano in qualche secondo'); }).catch(fail);
 
 function notifyAddress() {
@@ -510,7 +519,7 @@ $('notifySend').onclick = () => fetch('/api/notify', { method: 'POST', body: new
   .catch(fail);
 $('bleOn').onchange = () => {
   if (!confirm('La lampada si riavvia. Continuare?')) { $('bleOn').checked = !$('bleOn').checked; return; }
-  fetch('/api/ble', { method: 'POST', body: new URLSearchParams({ on: $('bleOn').checked ? 1 : 0 }) }).catch(() => {});
+  fetch('/api/settings', { method: 'POST', body: new URLSearchParams({ bleOn: b01($('bleOn').checked) }) }).catch(() => {});
   status('Riavvio in corso…');
 };
 $('bleForget').onclick = () => {
@@ -518,16 +527,16 @@ $('bleForget').onclick = () => {
   fetch('/api/ble', { method: 'POST', body: new URLSearchParams({ forget: 1 }) }).catch(() => {});
   status('Riavvio in corso…');
 };
-$('notifyNight').onchange = () => post('/api/settings', { notifyNight: $('notifyNight').checked ? 1 : 0 }).catch(fail);
-$('hgMin').onchange = () => post('/api/hourglass', { minutes: $('hgMin').value });
-$('hgStart').onclick = () => post('/api/hourglass', { minutes: $('hgMin').value, start: 1 });
+$('notifyNight').onchange = () => saveSettings({ notifyNight: $('notifyNight').checked ? 1 : 0 }).catch(fail);
+$('hgMin').onchange = () => saveSettings({ hgMin: $('hgMin').value }).catch(fail);
+$('hgStart').onclick = () => post('/api/hourglass', {}).catch(fail);
 
 for (const id of ['alarmOn', 'alarmTime', 'alarmRamp', 'alarmHold']) $(id).addEventListener('input', () => { dirty.alarm = true; });
 $('saveAlarm').onclick = () => {
   let days = 0;
   for (const c of $('alarmDays').querySelectorAll('input')) if (c.checked) days |= 1 << c.dataset.day;
-  post('/api/alarm', { on: $('alarmOn').checked ? 1 : 0, time: minutesOf($('alarmTime').value || '07:00'), days,
-    ramp: $('alarmRamp').value, hold: $('alarmHold').value })
+  saveSettings({ alarmOn: b01($('alarmOn').checked), alarmTime: minutesOf($('alarmTime').value || '07:00'), alarmDays: days,
+    alarmRamp: $('alarmRamp').value, alarmHold: $('alarmHold').value })
     .then(() => { dirty.alarm = false; render(); status('Sveglia salvata'); }).catch(fail);
 };
 $('testAlarm').onclick = () => post('/api/alarm', { cmd: 'test' }).then(() => status('Alba di prova: 1 minuto')).catch(fail);
@@ -669,8 +678,8 @@ async function loadGallery() {
   highlightGallery();
 }
 function highlightGallery() {
-  for (const row of $('gallery').children) row.classList && row.classList.toggle('on', row.dataset.id === state.galleryShow);
-  $('showAll').classList.toggle('on', state.galleryShow === 'all');
+  for (const row of $('gallery').children) row.classList && row.classList.toggle('on', row.dataset.id === state.settings.galleryShow);
+  $('showAll').classList.toggle('on', state.settings.galleryShow === 'all');
 }
 $('showAll').onclick = () => post('/api/gallery/show', { id: 'all' }).then(() => status('Tutti i disegni a rotazione')).catch(fail);
 
@@ -790,7 +799,7 @@ $('speed').onchange = (e) => post('/api/speed', { id: state.active, level: e.tar
 $('saveText').onclick = () => post('/api/text', { text: $('text').value }).then(() => status('Testo aggiornato')).catch(fail);
 $('quotes').oninput = () => { dirty.quotes = true; };
 for (const id of ['textPos']) {
-  $(id).onchange = (e) => post('/api/settings', { [id]: e.target.value }).then(() => status('Altezza cambiata')).catch(fail);
+  $(id).onchange = (e) => saveSettings({ [id]: e.target.value }).then(() => status('Altezza cambiata')).catch(fail);
 }
 // The list can be long, so it isn't part of the state: it is fetched when
 // the quotes section is shown and after every change.
@@ -807,10 +816,10 @@ $('saveQuotes').onclick = () => post('/api/quotes', { quotes: $('quotes').value 
 $('resetQuotes').onclick = () => post('/api/quotes', { quotes: '' })
   .then(() => { dirty.quotes = false; return loadQuotes(); }).then(() => status('Frasi aggiunte cancellate')).catch(fail);
 $('openPlace').onclick = () => { $('placeBox').open = true; $('placeBox').scrollIntoView({ behavior: 'smooth' }); };
-$('demoStyle').onchange = (e) => post('/api/settings', { demoStyle: e.target.value })
+$('demoStyle').onchange = (e) => saveSettings({ demoStyle: e.target.value })
   .then(() => status('Stile cambiato')).catch(fail);
-$('ambient').onchange = (e) => post('/api/settings', { ambient: e.target.value }).then(() => status('Animazione cambiata')).catch(fail);
-$('games').onchange = (e) => post('/api/settings', { games: e.target.value }).then(() => status('Gioco cambiato')).catch(fail);
+$('ambient').onchange = (e) => saveSettings({ ambient: e.target.value }).then(() => status('Animazione cambiata')).catch(fail);
+$('games').onchange = (e) => saveSettings({ games: e.target.value }).then(() => status('Gioco cambiato')).catch(fail);
 
 $('playlistOn').onchange = () => { dirty.playlist = true; };
 // Time slots: start time, brightness (0 = as in Display) and their own list.
@@ -850,17 +859,17 @@ function scenesValue() {
 $('scenesOn').onchange = () => { dirty.playlist = true; showScenes(); };
 $('addScene').onclick = () => { addScene('12:00', 0, 'clock:10'); dirty.playlist = true; };
 $('addItem').onclick = () => { addPlaylistRow(state.modes[0].id, 5); dirty.playlist = true; };
-$('savePlaylist').onclick = () => post('/api/playlist', { on: $('playlistOn').checked ? 1 : 0, items: playlistValue(),
-    scenesOn: $('scenesOn').checked ? 1 : 0, scenes: scenesValue() })
+$('savePlaylist').onclick = () => saveSettings({ playlistOn: b01($('playlistOn').checked), playlist: playlistValue(),
+    scenesOn: b01($('scenesOn').checked), scenes: scenesValue() })
   .then(() => { dirty.playlist = false; render(); status('Playlist salvata'); }).catch(fail);
 
 for (const id of ['nightOn', 'nightStart', 'nightEnd', 'nightMode', 'nightBrightness']) {
   $(id).addEventListener('input', () => { dirty.night = true; $('nightDimBox').hidden = $('nightMode').value !== 'dim'; });
 }
-$('saveNight').onclick = () => post('/api/night', {
-  on: $('nightOn').checked ? 1 : 0, sun: $('nightSun').checked ? 1 : 0,
-  start: minutesOf($('nightStart').value), end: minutesOf($('nightEnd').value),
-  mode: $('nightMode').value, brightness: $('nightBrightness').value,
+$('saveNight').onclick = () => saveSettings({
+  nightOn: b01($('nightOn').checked), nightSun: b01($('nightSun').checked),
+  nightStart: minutesOf($('nightStart').value), nightEnd: minutesOf($('nightEnd').value),
+  nightMode: $('nightMode').value, nightBrightness: $('nightBrightness').value,
 }).then(() => { dirty.night = false; render(); status('Impostazioni della notte salvate'); }).catch(fail);
 
 // City search runs in the browser (Open-Meteo geocoding); the lamp only
@@ -891,10 +900,9 @@ async function pickCity(r) {
   $('city').value = '';
   status('Aggiorno il meteo...');
   try {
-    await post('/api/location', { lat: r.latitude, lon: r.longitude, city: r.name });
-    if (r.timezone && ZONES[r.timezone] && r.timezone !== state.tzName) {
-      await post('/api/timezone', { tz: ZONES[r.timezone], tzName: r.timezone });
-    }
+    const place = { lat: r.latitude.toFixed(4), lon: r.longitude.toFixed(4), city: r.name };
+    if (r.timezone && ZONES[r.timezone] && r.timezone !== state.settings.tzName) Object.assign(place, { tz: ZONES[r.timezone], tzName: r.timezone });
+    await saveSettings(place);
     status('Città: ' + r.name + (r.timezone && !ZONES[r.timezone] ? ' (scegli il fuso orario a mano)' : ''));
   } catch (e) { fail(e); }
 }
@@ -902,25 +910,27 @@ $('searchCity').onclick = searchCity;
 $('city').onkeydown = (e) => { if (e.key === 'Enter') searchCity(); };
 $('tz').onchange = (e) => {
   const tz = ZONES[e.target.value];
-  if (tz) post('/api/timezone', { tz, tzName: e.target.value }).then(() => status('Fuso orario aggiornato')).catch(fail);
+  if (tz) saveSettings({ tz, tzName: e.target.value }).then(() => status('Fuso orario aggiornato')).catch(fail);
 };
 
 for (const b of $('orientation').children) {
-  b.onclick = () => post('/api/settings', { vertical: b.dataset.vertical })
+  b.onclick = () => saveSettings({ vertical: b.dataset.vertical })
     .then(() => status('Orientamento: ' + b.textContent.toLowerCase())).catch(fail);
 }
 // The font can be picked in Display and in the scrolling text's section.
 for (const id of ['textFont', 'textFontText']) {
   $(id).onchange = (e) => {
     $('textFont').value = $('textFontText').value = e.target.value;
-    post('/api/settings', { textFont: e.target.value }).then(() => status('Font cambiato')).catch(fail);
+    saveSettings({ textFont: e.target.value }).then(() => status('Font cambiato')).catch(fail);
   };
 }
-$('gameStyle').onchange = (e) => post('/api/settings', { gameStyle: e.target.value })
+$('gameStyle').onchange = (e) => saveSettings({ gameStyle: e.target.value })
   .then(() => status('Grafica dei giochi: ' + e.target.selectedOptions[0].textContent.split(':')[0].toLowerCase())).catch(fail);
-$('transition').onchange = (e) => post('/api/settings', { transition: e.target.value })
+$('transition').onchange = (e) => saveSettings({ transition: e.target.value })
   .then(() => status('Passaggio: ' + e.target.selectedOptions[0].textContent.toLowerCase())).catch(fail);
-$('brightness').onchange = (e) => post('/api/settings', { brightness: e.target.value }).catch(fail);
+$('brightness').onchange = (e) => saveSettings({ brightness: e.target.value }).catch(fail);
+$('autoBright').onchange = (e) => saveSettings({ autoBright: b01(e.target.checked) }).catch(fail);
+$('autoMin').onchange = (e) => saveSettings({ autoMin: e.target.value }).catch(fail);
 
 // Firmware update: upload with progress, then wait for the lamp to come
 // back with the new version.

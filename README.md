@@ -464,7 +464,7 @@ Current modes:
   at the pace that empties the top in the time chosen. *Gira* turns it
   over like a real one (the time left becomes the time that had run); at
   the end the sand pulses for a few seconds. The page shows the time left
-  (`POST /api/hourglass` with `minutes` and `start=1`)
+  (the time is the setting `hgMin`; `POST /api/hourglass` starts it over)
 - **Animaletto** - a Tamagotchi-style pet (`src/modes/pet_mode.cpp`). It
   hatches from an egg after 5 minutes and grows: *piccolo* (first day),
   *ragazzo* (up to 3 days), *adulto*, each with its own sprite. It gets
@@ -633,6 +633,32 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 | state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","cl":"↶|↷|||Spara","b":200,"t":"15:42"}`, sent when it changes |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
 | catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |
+
+## Settings
+
+Every setting is described once, in `SETTING_DEFS` (`src/settings.cpp`):
+its name, its key in flash (NVS), its type, limits or allowed values, its
+default and what changing it affects (the font, the orientation, what is
+shown, the weather, the playlist...). From that one table:
+
+- `loadSettings()` reads them (the default for anything missing or out of
+  range) and `saveSettings()` writes **only the ones that changed** - a
+  setting saved again unchanged costs no flash write;
+- the page gets them all in its state as `"settings": {name: value}`;
+- the page changes any of them with `POST /api/settings name=value&...`:
+  every value is checked first against the table (an unknown choice, a
+  number out of range, a playlist naming a mode that doesn't exist...), so
+  one refused value changes nothing and the answer says which and why;
+  then the effects of what changed are applied once.
+
+The other `/api/...` endpoints are actions, not settings (show a text, a
+mode's button, start the hourglass, test the alarm, a game key...).
+
+**Brightness that follows the sun** (Display): with it on, the brightness
+set in Display is the one with the sun high; from 15 degrees above the
+horizon down to civil dusk (6 degrees below) it slides smoothly to the
+chosen minimum, computed from the lamp's latitude and longitude. A time
+slot with its own brightness and the night's "dim" still win.
 
 ## Backup of the settings
 

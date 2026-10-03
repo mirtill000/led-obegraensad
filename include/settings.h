@@ -70,6 +70,11 @@ struct Settings {
   uint16_t nightEnd;
   String nightMode;
   uint8_t nightBrightness;
+
+  // Brightness that follows the sun (see sunBrightness()): from
+  // `brightness` with the sun high down to autoMin after dusk.
+  bool autoBright;
+  uint8_t autoMin;
 };
 
 extern Settings settings;
@@ -77,7 +82,69 @@ extern Settings settings;
 void loadSettings();
 // Version of the saved settings' layout: loadSettings() migrates older ones.
 static const uint8_t SETTINGS_VERSION = 3;
+// Writes the settings that changed since they were last loaded or saved
+// (each NVS write wears the flash: only the differences go).
 void saveSettings();
+
+// ---------------------------------------------------------------------------
+// Every setting is described once, in SETTING_DEFS (settings.cpp): its name
+// (in the page's JSON and in POST /api/settings), its NVS key, type, limits,
+// default and what changing it affects. Loading, saving, validating, the
+// page's state and the backup all go through this table.
+enum class SettingType : uint8_t { Bool, U8, U16, U32, Float, Text };
+
+// What a change touches besides the saved value (applied by the caller,
+// see applySettingEffects() in web.cpp).
+enum SettingEffect : uint16_t {
+  FX_FONT = 1 << 0,        // the scrolling font
+  FX_ROTATION = 1 << 1,    // the orientation
+  FX_TRANSITION = 1 << 2,  // the transition style
+  FX_MODES = 1 << 3,       // what is shown (night, alarm, brightness, ...)
+  FX_RESTART = 1 << 4,     // restart def.mode if on show (any mode if none)
+  FX_SHOW = 1 << 5,        // show def.mode
+  FX_WEB = 1 << 6,         // fetch the web info again
+  FX_WEATHER = 1 << 7,     // fetch the weather again
+  FX_TIMEZONE = 1 << 8,    // switch the clock's time zone
+  FX_PLAYLIST = 1 << 9,    // start the playlist over
+  FX_REBOOT = 1 << 10,     // only takes effect after a restart
+};
+
+enum SettingFlag : uint8_t {
+  SET_SHOW = 1,  // in the page's state ("settings")
+  SET_WEB = 2,   // the page may change it with POST /api/settings
+};
+
+struct SettingDef {
+  const char *name;     // in JSON and POST /api/settings
+  const char *nvsKey;   // in NVS (kept from older firmware)
+  SettingType type;
+  void *field;          // in `settings`
+  int32_t min, max;     // numbers; for text, max = the longest allowed
+  const char *def;      // default, as text
+  const char *choices;  // text: the allowed values "a|b|c", or nullptr
+  uint8_t flags;
+  uint16_t effects;
+  const char *mode;     // for FX_RESTART / FX_SHOW
+  // Extra check that may also tidy the value (e.g. a playlist); nullptr
+  // if the limits are enough. Returns an Italian reason if it is refused.
+  const char *(*clean)(String &value);
+};
+extern const SettingDef SETTING_DEFS[];
+extern const uint8_t SETTING_COUNT;
+const SettingDef *findSetting(const String &name);
+// The value as text ("1"/"0" for booleans) and as a JSON literal.
+String settingText(const SettingDef &def);
+String settingJson(const SettingDef &def);
+// Checks `value` against the definition (limits, choices, clean()); sets it
+// if `apply`. Returns nullptr or the reason it was refused.
+const char *setSetting(const SettingDef &def, const String &value, bool apply = true);
+// {"name":value,...} of the settings marked SET_SHOW.
+String settingsJson();
+
+// Playlist and time slots in their tidy form; the number of valid items
+// (0 = nothing usable).
+int cleanPlaylist(const String &items, String &clean);
+int cleanScenes(const String &scenes, String &clean);
 
 // settings.quotes lives in its own file (/quotes.txt in LittleFS): the
 // list can be longer than NVS allows for a string. loadQuotes() needs the
@@ -91,6 +158,10 @@ TextFont fontForSettings();
 // Whether games draw with shades of gray (settings.gameStyle "soft") or
 // with LEDs only fully on or off ("crisp").
 inline bool softGames() { return settings.gameStyle != "crisp"; }
+
+// Brightness now: settings.brightness, or with autoBright on, between
+// autoMin and it following the sun's height where the lamp is.
+uint8_t sunBrightness();
 
 // Transition style from settings.transition.
 Transition transitionForSettings();
