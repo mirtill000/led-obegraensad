@@ -185,20 +185,28 @@ plain text for the destructive or minor ones; the longer explanations are
 folded behind "Come funziona"; confirmations and errors appear as a toast
 at the bottom of the screen; light and dark follow the phone.
 
-The page stays up to date by itself: it keeps a live connection to the
-lamp (Server-Sent Events, `http://<lamp>:81/events`) and gets a `frame` event whenever the panel changes (at most every
-150 ms, 256 levels in hex) and a `state` event whenever anything in
-`/api/state` changes (checked every second) - so changes made from another
-phone, the playlist or the night schedule show up within a second, and
-nothing is sent while the panel is still (state checked every 2 s). Game
-keys go to the same port (`GET :81/input?k=L`) on a kept-alive connection,
-so a held arrow doesn't open a new connection ten times a second. Port 81
-never blocks: what a connection can't take yet waits in its own buffer
-(and meanwhile only the latest frame is sent), and a page that stops
-reading for 5 s - a phone going to sleep mid-game - is dropped instead of
-freezing the panel. If port 81 can't be reached the page falls back to
-polling `GET /api/frame` five times a second, `/api/state` every 15 s and
-`POST /api/input` for keys.
+The page stays up to date by itself over one live channel (Server-Sent
+Events, `http://<lamp>:81/events`), in the same formats the Cardputer gets
+over Bluetooth (`src/live.cpp`, described in `include/remote_protocol.h`):
+
+- `frame` - the panel as seen, at most every 150 ms and only when it
+  changes: 256 levels 0-15, two pixels per byte (Bluetooth: 128 bytes;
+  here 256 hex digits);
+- `now` - the short state (mode, button, game, demo, keys, brightness,
+  time), the very JSON of the Bluetooth state: when it changes (checked
+  every 250 ms) the page fetches the whole state at once, so a mode picked
+  on another phone or by the playlist shows up immediately;
+- `state` - all of `/api/state`, when it changes (checked every 2 s);
+- `board` - the Game of Life's drawing board, whenever someone draws.
+
+Game keys go to the same port (`GET :81/input?k=L`) on a kept-alive
+connection, so a held arrow doesn't open a new connection ten times a
+second. Port 81 never blocks: what a connection can't take yet waits in its
+own buffer (and meanwhile only the latest frame is sent), and a page that
+stops reading for 5 s - a phone going to sleep mid-game - is dropped
+instead of freezing the panel. If port 81 can't be reached the page falls
+back to polling (`/api/frame` five times a second, `/api/state` every 15 s,
+`/api/canvas` every second while drawing) and `POST /api/input` for keys.
 
 If loop() ever gets stuck for 20 s a watchdog restarts the lamp (the
 diagnostics then say "watchdog" as the last restart's reason).

@@ -26,6 +26,7 @@
 #include "modes/notify_mode.h"
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
+#include "live.h"
 #include "moon.h"
 #include "netfetch.h"
 #include "occasions.h"
@@ -282,24 +283,12 @@ static void handleDiag() {
   server.send(200, "application/json", json);
 }
 
-// What the panel shows right now, for the page's preview: 256 levels as
-// hex, row by row from the top-left (as seen on the lamp).
-static void frameHex(char *out) {
-  static const char HEX_DIGITS[] = "0123456789abcdef";
-  int n = 0;
-  for (int y = 0; y < ROWS; y++) {
-    for (int x = 0; x < COLS; x++) {
-      const uint8_t v = display.shownLevel(x, y);
-      out[n++] = HEX_DIGITS[v >> 4];
-      out[n++] = HEX_DIGITS[v & 15];
-    }
-  }
-  out[n] = 0;
-}
 
+// The panel as seen, the same picture the live channels send (live.h):
+// 256 hex digits, two pixels per byte.
 static void handleFrame() {
-  char out[TOTAL_PIXELS * 2 + 1];
-  frameHex(out);
+  char out[LIVE_FRAME_BYTES * 2 + 1];
+  packedFrameHex(out);
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "text/plain", out);
 }
@@ -384,7 +373,7 @@ static void handleHourglass() {
 // /api/paint takes a batch of strokes p="x,y,level;x,y,level;..." (the page
 // sends one every ~60 ms while you draw) and shows the board. Clear and
 // "Fai vivere" are the commands "w c" and "w l".
-static void handleCanvas() {
+static String boardJson() {
   static const char DIGITS[] = "0123456789abcdef";
   const uint8_t *px = board::pixels();
   String hex;
@@ -393,8 +382,10 @@ static void handleCanvas() {
     hex += DIGITS[px[i] >> 4];
     hex += DIGITS[px[i] & 15];
   }
-  server.send(200, "application/json", "{\"v\":" + String(board::version()) + ",\"px\":\"" + hex + "\"}");
+  return "{\"v\":" + String(board::version()) + ",\"px\":\"" + hex + "\"}";
 }
+
+static void handleCanvas() { server.send(200, "application/json", boardJson()); }
 
 static void handlePaint() {
   const String p = server.arg("p");
@@ -751,9 +742,12 @@ void webBegin() {
 // ---------------------------------------------------------------------------
 // Port 81: live updates and game keys, served without ever blocking loop().
 //
-//   GET /events     Server-Sent Events: a "frame" event when the panel
-//                   changes (at most every 150 ms) and a "state" event when
-//                   /api/state changes (checked every 2 s).
+//   GET /events     Server-Sent Events, in the formats of live.h: "frame"
+//                   when the panel changes (at most every 150 ms), "now" (the
+//                   short state, as over Bluetooth) when it changes (checked
+//                   every 250 ms), "state" (all of /api/state, every 2 s if
+//                   changed) and "board" when the Game of Life's board is
+//                   drawn on.
 //   GET /input?k=L  a game key (L R U D A), answered 204 on a kept-alive
 //                   connection, so held keys don't open a TCP connection
 //                   each.
@@ -769,7 +763,7 @@ void webBegin() {
 #include <lwip/sockets.h>
 
 static const int MAX_LIVE = 5;
-static const uint32_t FRAME_EVERY_MS = 150, STATE_EVERY_MS = 2000, PING_EVERY_MS = 15000;
+static const uint32_t FRAME_EVERY_MS = 150, NOW_EVERY_MS = 250, STATE_EVERY_MS = 2000, PING_EVERY_MS = 15000;
 static const uint32_t STALL_MS = 5000, IDLE_MS = 15000, REQUEST_MS = 3000;
 static const size_t MAX_BACKLOG = 16384;
 
@@ -778,7 +772,8 @@ struct LiveClient {
   bool sse = false;         // answered /events: now only receives events
   String in, out;           // request being read; bytes not sent yet
   uint32_t since = 0, lastActive = 0, lastProgress = 0;
-  uint32_t lastFrame = 0, lastState = 0;  // hashes of what it last got
+  uint32_t lastFrame = 0, lastState = 0, lastNow = 0;  // hashes of what it last got
+  uint32_t lastBoard = 0;  // board::version() + 1 it last got (0: none)
   bool closeAfter = false;  // close once `out` is sent
 };
 static LiveClient live[MAX_LIVE];
@@ -846,7 +841,7 @@ static void answer(LiveClient &c, uint32_t now) {
     queue(c, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nCache-Control: no-store\r\n"
              "Access-Control-Allow-Origin: *\r\nConnection: keep-alive\r\n\r\nretry: 3000\n\n");
     c.sse = true;
-    c.lastFrame = c.lastState = 0;  // send both right away
+    c.lastFrame = c.lastState = c.lastNow = c.lastBoard = 0;  // send everything right away
     return;
   }
   if (path.startsWith("/input?k=") && path.length() == 10 && (strchr(REMOTE_KEYS, path[9]) || strchr(REMOTE_KEYS_P2, path[9]))) {
@@ -912,13 +907,30 @@ static void liveLoop() {
   static uint32_t lastFrameAt = 0, lastStateAt = 0, lastPingAt = 0;
   if (now - lastFrameAt >= FRAME_EVERY_MS) {
     lastFrameAt = now;
-    char frame[TOTAL_PIXELS * 2 + 1];
-    frameHex(frame);
-    const uint32_t h = hashOf(frame, TOTAL_PIXELS * 2);
+    char frame[LIVE_FRAME_BYTES * 2 + 1];
+    packedFrameHex(frame);
+    const uint32_t h = hashOf(frame, LIVE_FRAME_BYTES * 2);
     for (LiveClient &c : live) {
       if (!c.sse || c.lastFrame == h || c.out.length()) continue;  // busy: it gets a later frame
-      if (queueEvent(c, "frame", frame, TOTAL_PIXELS * 2)) c.lastFrame = h;
+      if (queueEvent(c, "frame", frame, LIVE_FRAME_BYTES * 2)) c.lastFrame = h;
     }
+  }
+  // The short state (the same JSON as Bluetooth's): a change of mode or
+  // game reaches the page within a quarter of a second.
+  static uint32_t lastNowAt = 0;
+  if (now - lastNowAt >= NOW_EVERY_MS) {
+    lastNowAt = now;
+    const String json = summaryJson();
+    const uint32_t h = hashOf(json.c_str(), json.length());
+    for (LiveClient &c : live) {
+      if (c.sse && c.lastNow != h && queueEvent(c, "now", json.c_str(), json.length())) c.lastNow = h;
+    }
+  }
+  // The Game of Life's board, when someone draws on it.
+  for (LiveClient &c : live) {
+    if (!c.sse || c.lastBoard == board::version() + 1 || c.out.length()) continue;
+    const String json = boardJson();
+    if (queueEvent(c, "board", json.c_str(), json.length())) c.lastBoard = board::version() + 1;
   }
   bool stateDue = now - lastStateAt >= STATE_EVERY_MS;
   for (LiveClient &c : live) stateDue |= c.sse && c.lastState == 0;  // just connected

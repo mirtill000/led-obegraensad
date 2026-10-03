@@ -29,6 +29,7 @@
 
 #include "animation.h"
 #include "commands.h"
+#include "live.h"
 #include "display.h"
 #include "modes.h"
 #include "modes/ambient_mode.h"
@@ -55,63 +56,6 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
     xQueueSend(commands, &cmd, 0);  // full queue: dropped (keys come again)
   }
 };
-
-String catalog() {
-  String out;
-  for (uint8_t i = 0; i < MODE_COUNT; i++) {
-    if (!MODES[i]->hidden() && !MODES[i]->tool()) out += String("M\t") + MODES[i]->id() + "\t" + MODES[i]->name() + "\n";
-  }
-  for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
-    if (ANIMATIONS[i]->isClockFace()) continue;  // styles of the Orologio
-    out += String(ANIMATIONS[i]->isGame() ? "G\t" : "A\t") + ANIMATIONS[i]->id() + "\t" + ANIMATIONS[i]->name() + "\n";
-  }
-  return out;
-}
-
-String quoted(const char *s) {
-  String out = "\"";
-  for (; *s; s++) {
-    if (*s == '"' || *s == '\\') out += '\\';
-    out += *s;
-  }
-  return out + "\"";
-}
-
-// "c": the keys, "ca": what A does, "cl": all five labels ("" = the plain
-// arrow), separated by '|' (e.g. "Pappa|Gioca|Pulisci|Medicina|Coccole").
-String controlsFields(const GameControls *c) {
-  String labels;
-  for (int i = 0; i < 5; i++) labels += String(i ? "|" : "") + (c->labels[i] ? c->labels[i] : "");
-  return ",\"c\":" + quoted(c->keys) + ",\"ca\":" + quoted(c->labels[4] ? c->labels[4] : "Salta") +
-         ",\"cl\":" + quoted(labels.c_str()) + ",\"n\":" + String(c->players);
-}
-
-String stateJson() {
-  Mode *m = currentMode();
-  String j = "{\"m\":" + quoted(m->id()) + ",\"mn\":" + quoted(m->name());
-  j += ",\"x\":" + quoted(m->actionName() ? m->actionName() : "");
-  const char *game = m->gameId();
-  if (game) {
-    const bool player = strcmp(m->id(), "ambient") == 0 || strcmp(m->id(), "games") == 0;
-    const AmbientMode *a = player ? static_cast<const AmbientMode *>(m) : nullptr;
-    const bool forced = a && a->demoForced();
-    j += ",\"g\":" + quoted(game) + ",\"gn\":" + quoted(a && a->playing() ? a->playing()->name() : m->name());
-    j += String(",\"d\":") + (forced || demoMode(game) ? 1 : 0) + ",\"f\":" + (forced ? 1 : 0);
-    const Animation *g = findAnimation(game);
-    const GameControls *c = g ? g->controls() : nullptr;
-    if (c) j += controlsFields(c);
-  } else if (m->controls()) {
-    j += controlsFields(m->controls());  // a mode that takes keys (the pet)
-  }
-  j += ",\"b\":" + String(settings.brightness);
-  struct tm t;
-  if (localTime(t)) {
-    char hhmm[6];
-    strftime(hhmm, sizeof(hhmm), "%H:%M", &t);
-    j += ",\"t\":\"" + String(hhmm) + "\"";
-  }
-  return j + "}";
-}
 
 
 class ServerCallbacks : public BLEServerCallbacks {
@@ -145,7 +89,7 @@ void bleBegin() {
   stateChar = service->createCharacteristic(REMOTE_STATE_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
   frameChar = service->createCharacteristic(REMOTE_FRAME_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
   catalogChar = service->createCharacteristic(REMOTE_CATALOG_UUID, readSecure);
-  catalogChar->setValue(catalog());
+  catalogChar->setValue(catalogText());
   service->start();
 
   BLEAdvertising *adv = BLEDevice::getAdvertising();
@@ -174,13 +118,10 @@ void bleLoop() {
   static uint32_t lastFrame = 0, lastState = 0, frameHash = 0, stateHash = 0;
   if (now - lastFrame >= 150) {
     lastFrame = now;
-    uint8_t frame[TOTAL_PIXELS / 2];
+    uint8_t frame[LIVE_FRAME_BYTES];
+    packedFrame(frame);
     uint32_t h = 2166136261u;
-    for (int i = 0; i < TOTAL_PIXELS / 2; i++) {
-      const int x = (2 * i) % COLS, y = (2 * i) / COLS;
-      frame[i] = (display.shownLevel(x, y) >> 4) << 4 | display.shownLevel(x + 1, y) >> 4;
-      h = (h ^ frame[i]) * 16777619u;
-    }
+    for (uint8_t b : frame) h = (h ^ b) * 16777619u;
     if (h != frameHash) {
       frameHash = h;
       frameChar->setValue(frame, sizeof(frame));
@@ -189,7 +130,7 @@ void bleLoop() {
   }
   if (now - lastState >= 500) {
     lastState = now;
-    const String json = stateJson();
+    const String json = summaryJson();
     uint32_t h = 2166136261u;
     for (unsigned i = 0; i < json.length(); i++) h = (h ^ (uint8_t)json[i]) * 16777619u;
     if (h != stateHash) {

@@ -12,6 +12,14 @@
 #define REMOTE_FRAME_UUID "8f3e0003-5c1a-4a6b-9b8e-0b5e6a1d0bea"    // read/notify: 128 bytes
 #define REMOTE_CATALOG_UUID "8f3e0004-5c1a-4a6b-9b8e-0b5e6a1d0bea"  // read: modes, games, animations
 
+// The same data reaches the page over WiFi (Server-Sent Events on port 81,
+// GET /events) in the same formats (src/live.cpp):
+//   frame  256 levels 0-15, two pixels per byte, high nibble first, row by
+//          row (Bluetooth: 128 bytes; SSE and /api/frame: 256 hex digits)
+//   now    the short state, JSON (Bluetooth: the state characteristic)
+//   state  (SSE only) all of /api/state; board (SSE only) the Game of Life's
+//          drawing board
+//
 // Commands: a letter, a space, the argument. The same strings go over
 // Bluetooth (command characteristic), to POST /api/cmd (field "c") and are
 // used by the web page's own buttons.

@@ -361,8 +361,8 @@ setInterval(() => {
       .then((r) => r.json()).then((d) => { canvasVersion = d.v; }).catch(() => {}).finally(() => { canvasBusy = false; });
   }
 }, 60);
-setInterval(() => {
-  if ($('board').closest('.panel').hidden || canvasBusy || canvasDrawing) return;
+setInterval(() => {  // without the live channel only: it sends "board" events
+  if (live || $('board').closest('.panel').hidden || canvasBusy || canvasDrawing) return;
   fetch('/api/canvas').then((r) => r.json()).then(showCanvas).catch(() => {});
 }, 1000);
 $('canvasClear').onclick = () => confirm('Cancellare il disegno (anche per gli altri)?')
@@ -988,13 +988,15 @@ $('fwUpload').onclick = () => {
 // the page is in view. Off LEDs are faint dots, lit ones white discs.
 const preview = $('preview'), pctx = preview.getContext('2d');
 let previewBusy = false, live = false;
+// The panel as the lamp sends it everywhere (live.h): 256 hex digits, two
+// pixels per byte, levels 0-15.
 function drawPreview(hex) {
-  if (hex.length !== 512) return;
+  if (hex.length !== 256) return;
   const cell = preview.width / 16;
   pctx.fillStyle = '#000';
   pctx.fillRect(0, 0, preview.width, preview.height);
   for (let i = 0; i < 256; i++) {
-    const v = parseInt(hex.substr(i * 2, 2), 16);
+    const v = parseInt(hex[i], 16) * 17;
     pctx.fillStyle = v ? 'rgba(255,255,255,' + (0.15 + 0.85 * v / 255).toFixed(3) + ')' : '#1c1c1c';
     pctx.beginPath();
     pctx.arc((i % 16 + 0.5) * cell, ((i >> 4) + 0.5) * cell, cell * 0.4, 0, 2 * Math.PI);
@@ -1071,6 +1073,15 @@ function startLive() {
     live = true;
     try { state = JSON.parse(e.data); render(); } catch (err) {}
   });
+  // The short state (the same as the Cardputer's): when the mode, game or
+  // button changes, fetch the whole state now instead of in 2 seconds.
+  let lastNow = '';
+  es.addEventListener('now', (e) => {
+    live = true;
+    if (lastNow && e.data !== lastNow) refresh().catch(() => {});
+    lastNow = e.data;
+  });
+  es.addEventListener('board', (e) => { try { showCanvas(JSON.parse(e.data)); } catch (err) {} });
   es.onerror = () => { live = false; };
 }
 startLive();
