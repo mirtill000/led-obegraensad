@@ -109,14 +109,15 @@ include/
   font_short.h       - font_small folded to 6 rows, lowercase (Media, when vertical)
   font_tiny.h        - 4px-tall capitals ("Minima" and Demo: three lines)
   display.h, modes.h, settings.h, web.h
-  ui.h               - shared look of the info screens (header band, waiting dots)
+  ui.h               - shared look of the panel (label, value, card, icon, brightness steps, waiting dots)
+  texts.h            - the firmware's messages (errors, download states), in one place
 src/
   display.cpp        - shift-register driver, font renderer, brightness, transitions
-  ui.cpp             - scrolling header band, "waiting" and "no WiFi" signs
+  ui.cpp             - the shared panel components, "waiting" and "no WiFi" signs
   modes.cpp          - list of modes + switching between them
   modes/             - one file per mode (board.cpp: the Game of Life's drawing board)
   animations/        - the animations and games ("Animazioni", "Giochi")
-  settings.cpp       - settings saved in flash (NVS), versioned migrations
+  settings.cpp       - SETTING_DEFS: every setting described once; flash (NVS), validation, migrations
   backup.cpp         - all settings to one file and back
   events.cpp         - event log; keeps a new firmware only once it runs fine (rollback)
   timekeeping.cpp    - NTP time sync (time zone: TIMEZONE in constants.h)
@@ -127,7 +128,8 @@ src/
   netfetch.cpp       - the one HTTPS client, retry rule, status and flash cache for all of them
   live.cpp           - the frame and short-state formats shared by the page's live channel and Bluetooth
   formula.cpp        - the Formule mode's expression compiler and evaluator
-  moon.cpp           - moon phase from the date
+  moon.cpp           - moon phase from the date, the sun's position
+  occasions.cpp      - special days (New Year, Christmas, Easter, ..., birthdays in the calendar)
   gallery.cpp        - drawings saved in flash (LittleFS)
   ble.cpp            - Bluetooth LE remote control (see "Bluetooth remote")
   commands.cpp       - the remote commands, the same for Bluetooth, /api/cmd and the page
@@ -141,8 +143,8 @@ scripts/
   build_info.py      - firmware version (git commit, build time) for the page
   quotes.py          - content/frasi_dell_ora.txt -> include/quotes_builtin.h
   webpage.py         - web/ -> include/webpage.h (one page, CSS and JS inlined, gzipped)
-  check_texts.py     - stops the build if a retired name (e.g. an old font name) comes back
-                       in the page, the README or a string shown on the panel
+  check_texts.py     - stops the build if a retired name comes back, if a texts.h message is
+                       copied into src/ or if the page lists a setting's choices by itself
 cardputer/           - Bluetooth remote for the M5Stack Cardputer ADV (its own PlatformIO project)
 platformio.ini
 ```
