@@ -30,7 +30,6 @@ extern Animation *const wifiIconAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
 extern Animation *const englishWordClockAnimation;
-extern Animation *const sandClockAnimation;
 extern Animation *const cubeAnimation;
 extern Animation *const solidCubeAnimation;
 extern Animation *const tunnelAnimation;
@@ -71,7 +70,6 @@ Animation *const ANIMATIONS[] = {
     binaryClockAnimation,
     wordClockAnimation,
     englishWordClockAnimation,
-    sandClockAnimation,
     cubeAnimation,
     solidCubeAnimation,
     tunnelAnimation,

@@ -1,10 +1,7 @@
-// Alternative clock faces: binary, in words (Italian and English), a pile
-// of sand growing by the minute.
+// Alternative clock faces: binary, in words (Italian and English).
 #include <math.h>
-#include <string.h>
 
 #include "animation.h"
-#include "bigdigits.h"
 #include "display.h"
 #include "gfx.h"
 #include "scroller.h"
@@ -159,95 +156,9 @@ class EnglishWordClockAnimation : public Animation {
   Scroller scroller_;
 };
 
-// ---------------------------------------------------------------------------
-// Sand clock: the hour in big digits at the top; below, a grain of sand
-// falls for every minute and piles up with falling-sand physics (it
-// slides down the slopes). At the new hour the floor opens and the pile
-// drains away. On start the pile rains down at once.
-class SandClockAnimation : public Animation {
- public:
-  const char *id() const override { return "sandclock"; }
-  const char *name() const override { return "Orologio di sabbia"; }
-  const char *group() const override { return "Orologi"; }
-  uint16_t frameMs() const override { return 50; }
-  bool needsTime() const override { return true; }
-
-  void start() override {
-    memset(sand_, 0, sizeof(sand_));
-    grains_ = 0;
-    draining_ = false;
-  }
-
-  void frame(uint32_t) override {
-    struct tm t;
-    if (!localTime(t)) return drawNoTime();
-    if (t.tm_min < grains_ && !draining_) draining_ = true;  // a new hour
-    if (draining_) {
-      // The floor is open: grains fall out through the bottom row.
-      for (int x = 0; x < COLS; x++) sand_[ROWS - 1][x] = false;
-      if (!any()) {
-        draining_ = false;
-        grains_ = 0;
-      }
-    } else if (grains_ < t.tm_min && !sand_[TOP][7] && !sand_[TOP][8]) {
-      sand_[TOP][(esp_random() & 1) ? 7 : 8] = true;  // the next grain
-      grains_++;
-    }
-    fall();
-    display.clear();
-    drawBigNumber(t.tm_hour, 0, 200);
-    // The spout the grains come from.
-    display.setLevel(7, TOP - 1, 50);
-    display.setLevel(8, TOP - 1, 50);
-    for (int y = TOP; y < ROWS; y++) {
-      for (int x = 0; x < COLS; x++) {
-        if (sand_[y][x]) display.setLevel(x, y, 150 + ((x * 7 + y * 3) % 5) * 20);  // a grainy texture
-      }
-    }
-  }
-
- private:
-  static const int TOP = 7;  // the sand's space: rows 7-15
-  bool sand_[ROWS][COLS];
-  int grains_ = 0;
-  bool draining_ = false;
-
-  bool any() const {
-    for (int y = TOP; y < ROWS; y++) {
-      for (int x = 0; x < COLS; x++) {
-        if (sand_[y][x]) return true;
-      }
-    }
-    return false;
-  }
-  bool freeCell(int x, int y) const { return x >= 0 && x < COLS && (y >= ROWS ? draining_ : !sand_[y][x]); }
-  void fall() {
-    for (int y = ROWS - 1; y >= TOP; y--) {
-      const bool leftFirst = esp_random() & 1;
-      for (int i = 0; i < COLS; i++) {
-        const int x = leftFirst ? i : COLS - 1 - i;
-        if (!sand_[y][x]) continue;
-        int nx = -1;
-        if (freeCell(x, y + 1)) {
-          nx = x;
-        } else {
-          const int a = (esp_random() & 1) ? -1 : 1;
-          if (freeCell(x + a, y + 1)) nx = x + a;
-          else if (freeCell(x - a, y + 1)) nx = x - a;
-        }
-        if (nx < 0) continue;
-        sand_[y][x] = false;
-        if (y + 1 < ROWS) sand_[y + 1][nx] = true;  // else it drained away
-      }
-    }
-  }
-};
-
 static BinaryClockAnimation binaryClock;
 extern Animation *const binaryClockAnimation = &binaryClock;
 static WordClockAnimation wordClock;
 extern Animation *const wordClockAnimation = &wordClock;
 static EnglishWordClockAnimation englishWordClock;
 extern Animation *const englishWordClockAnimation = &englishWordClock;
-static SandClockAnimation sandClock;
-extern Animation *const sandClockAnimation = &sandClock;
