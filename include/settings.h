@@ -136,6 +136,10 @@ struct SettingDef {
   // Extra check that may also tidy the value (e.g. a playlist); nullptr
   // if the limits are enough. Returns an Italian reason if it is refused.
   const char *(*clean)(String &value);
+  // For remotes (the Cardputer's "Impostazioni lampada"): a short name, and
+  // names for the choices ("Media|Grande|..."), or nullptr: not offered.
+  const char *label;
+  const char *choiceLabels;
 };
 extern const SettingDef SETTING_DEFS[];
 extern const uint8_t SETTING_COUNT;
@@ -148,6 +152,10 @@ String settingJson(const SettingDef &def);
 const char *setSetting(const SettingDef &def, const String &value, bool apply = true);
 // {"name":value,...} of the settings marked SET_SHOW.
 String settingsJson();
+// The settings offered to remotes, one per line:
+// name <tab> kind (B bool, C choice, N number) <tab> value <tab> label <tab>
+// choices <tab> choice names <tab> min <tab> max
+String remoteSettingsText();
 
 // Playlist and time slots in their tidy form; the number of valid items
 // (0 = nothing usable).

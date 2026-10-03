@@ -21,6 +21,10 @@ class HourglassMode : public Mode {
 
   // Seconds of sand left in the top bulb (0 when it has run out), and
   // whether it is still running.
+  String status() const override {
+    const uint32_t s = secondsLeft();
+    return running() ? "Resta " + String(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + String(s % 60) : String("Tempo scaduto");
+  }
   static uint32_t secondsLeft();
   static bool running();
 };

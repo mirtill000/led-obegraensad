@@ -19,6 +19,9 @@ class LifeMode : public Mode {
   void start() override;
   void update(uint32_t now) override;
   const char *actionName() const override { return drawing_ ? "Fai vivere" : "Ricomincia"; }
+  String status() const override {
+    return drawing_ ? String("Disegno: X lo fa vivere") : "Generazione " + String(generation_);
+  }
   void action() override;
   bool input(char key) override;
   const GameControls *controls() const override;

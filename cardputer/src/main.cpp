@@ -1,7 +1,7 @@
 // OBEGRÄNSAD remote on an M5Stack Cardputer ADV.
 //
 // A menu (; . to move, Enter to choose, ` to go back) with:
-//   Telecomando giochi  - the lamp's picture on screen; ; . , / are the
+//   Telecomando         - the lamp's picture on screen; ; . , / are the
 //                         arrows, Space/Enter the main button, D demo on/off,
 //                         X the lamp's mode button (next game), Esc back
 //   Giochi / Modalita' / Animazioni - pick one from the lamp's own lists
@@ -9,7 +9,9 @@
 //   Notifica            - an icon (, /) and a text, Enter: sent as a
 //                         notification
 //   Luminosita'         - , / to change it
-//   Impostazioni        - forget the lamp (pair again with a new PIN)
+//   Impostazioni lampada - the lamp's settings, as its page offers them
+//                         (the list comes from the lamp): , / change one
+//   Abbinamento (PIN)   - forget the lamp (pair again with a new PIN)
 // The first time it asks for the PIN shown in the lamp's web page
 // (Bluetooth section).
 #include <M5Cardputer.h>
@@ -23,11 +25,11 @@ M5Canvas canvas(&M5Cardputer.Display);
 const uint16_t BG = TFT_BLACK, FG = TFT_WHITE, DIM = 0x8410, ACCENT = 0xFD20;  // orange
 const int W = 240, H = 135;
 
-enum class Screen : uint8_t { Menu, Remote, List, Text, Notify, Brightness, Settings };
+enum class Screen : uint8_t { Menu, Remote, List, Text, Notify, Brightness, LampSettings, Settings };
 Screen screen = Screen::Menu;
 
-const char *const MENU[] = {"Telecomando giochi", "Giochi",   "Modalita'",  "Animazioni",
-                            "Scrivi un testo",    "Notifica", "Luminosita'", "Impostazioni"};
+const char *const MENU[] = {"Telecomando",      "Giochi",   "Modalita'",   "Animazioni",           "Scrivi un testo",
+                            "Notifica",         "Luminosita'", "Impostazioni lampada", "Abbinamento (PIN)"};
 const int MENU_COUNT = sizeof(MENU) / sizeof(MENU[0]);
 int menuPos = 0;
 
@@ -141,8 +143,8 @@ void drawSearching() {
 
 void drawMenu() {
   for (int i = 0; i < MENU_COUNT; i++) {
-    const int y = 18 + i * 14;
-    if (i == menuPos) canvas.fillRoundRect(2, y - 2, 150, 13, 3, ACCENT);
+    const int y = 17 + i * 12;  // nine rows above the footer
+    if (i == menuPos) canvas.fillRoundRect(2, y - 2, 150, 12, 3, ACCENT);
     canvas.setTextColor(i == menuPos ? BG : FG);
     canvas.drawString(MENU[i], 8, y);
   }
@@ -159,6 +161,7 @@ void drawRemote() {
   canvas.drawString(game ? plain(s.gameName) : plain(s.modeName), x, 20);
   canvas.setTextColor(s.demo ? DIM : ACCENT);
   if (game) canvas.drawString(s.demo ? "Demo (D per giocare)" : "Giochi tu", x, 32);
+  else if (s.status.length()) canvas.drawString(plain(s.status).substring(0, 19), x, 32);  // what it shows
   else if (!known) canvas.drawString("(non e' un gioco)", x, 32);
   canvas.setTextColor(DIM);
   int y = 46;
@@ -242,9 +245,50 @@ void drawBrightness() {
   footer(", / cambia  ` indietro");
 }
 
+int settingPos = 0;
+
+// The lamp's own settings, as its page offers them: , / change the one
+// selected (on/off, the next choice, a number by steps).
+void drawLampSettings() {
+  const std::vector<lamp::Setting> list = lamp::settings();
+  if (list.empty()) {
+    canvas.setTextColor(DIM);
+    canvas.drawString("La lampada non le offre:", 10, 30);
+    canvas.drawString("aggiorna il suo firmware.", 10, 44);
+    footer("` indietro");
+    return;
+  }
+  settingPos = constrain(settingPos, 0, (int)list.size() - 1);
+  const int rows = 7;
+  const int first = max(0, min(settingPos - rows / 2, (int)list.size() - rows));
+  for (int i = first; i < (int)list.size() && i < first + rows; i++) {
+    const int y = 18 + (i - first) * 14;
+    if (i == settingPos) canvas.fillRoundRect(2, y - 2, W - 4, 13, 3, ACCENT);
+    canvas.setTextColor(i == settingPos ? BG : FG);
+    canvas.drawString(plain(list[i].label), 8, y);
+    canvas.setTextColor(i == settingPos ? BG : ACCENT);
+    canvas.drawString(plain(list[i].shown()), 150, y);
+  }
+  footer("; . sposta  , / cambia  ` indietro");
+}
+
+// The new value after , (-1) or / (+1).
+String nextValue(const lamp::Setting &st, int dir) {
+  if (st.kind == 'B') return st.value == "1" ? "0" : "1";
+  if (st.kind == 'C' && !st.choices.empty()) {
+    int at = 0;
+    for (size_t i = 0; i < st.choices.size(); i++) {
+      if (st.choices[i] == st.value) at = i;
+    }
+    return st.choices[(at + dir + st.choices.size()) % st.choices.size()];
+  }
+  const long step = max(1L, (st.max - st.min) / 16);
+  return String(constrain(st.value.toInt() + dir * step, st.min, st.max));
+}
+
 void drawSettings() {
   canvas.setTextColor(FG);
-  canvas.drawString("Impostazioni", 10, 22);
+  canvas.drawString("Abbinamento", 10, 22);
   canvas.setTextColor(DIM);
   canvas.drawString("PIN abbinato: " + (lamp::pin() ? String(lamp::pin()) : String("nessuno")), 10, 42);
   canvas.drawString("F: dimentica la lampada e riabbina", 10, 62);
@@ -266,6 +310,7 @@ void draw() {
       case Screen::Text: drawEditor("Testo da far scorrere", false); break;
       case Screen::Notify: drawEditor("Notifica", true); break;
       case Screen::Brightness: drawBrightness(); break;
+      case Screen::LampSettings: drawLampSettings(); break;
       case Screen::Settings: drawSettings(); break;
     }
   }
@@ -335,7 +380,8 @@ void menuChoose() {
     case 4: typed = ""; screen = Screen::Text; break;
     case 5: typed = ""; screen = Screen::Notify; break;
     case 6: screen = Screen::Brightness; break;
-    case 7: screen = Screen::Settings; break;
+    case 7: settingPos = 0; screen = Screen::LampSettings; break;
+    case 8: screen = Screen::Settings; break;
   }
 }
 
@@ -411,6 +457,17 @@ void keys() {
       const int b = lamp::state().brightness;
       if (left || right) send("b " + String(constrain(b + (right ? 16 : -16), 1, 255)));
       if (back || k.enter) screen = Screen::Menu;
+      break;
+    }
+    case Screen::LampSettings: {
+      const std::vector<lamp::Setting> list = lamp::settings();
+      if (up && settingPos > 0) settingPos--;
+      if (down && settingPos + 1 < (int)list.size()) settingPos++;
+      if ((left || right || k.enter) && settingPos < (int)list.size()) {
+        const lamp::Setting &st = list[settingPos];
+        send("o " + st.name + " " + nextValue(st, left ? -1 : 1));
+      }
+      if (back) screen = Screen::Menu;
       break;
     }
     case Screen::Settings:

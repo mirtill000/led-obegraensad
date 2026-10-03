@@ -16,6 +16,9 @@
 //                          every 150 ms, when it changes
 //   catalog (read)        lines "M|G|A <tab> id <tab> name": modes, games,
 //                          animations
+//   settings (read, notify) the settings a remote may change, one per line
+//                          (remoteSettingsText(), settings.h) - sent when
+//                          any of them changes
 //
 // The BLE stack runs in its own task: commands are queued there and run
 // here, in loop(), like the web page's.
@@ -45,7 +48,7 @@ struct Command {
 
 QueueHandle_t commands = nullptr;
 BLEServer *server = nullptr;
-BLECharacteristic *stateChar = nullptr, *frameChar = nullptr, *catalogChar = nullptr;
+BLECharacteristic *stateChar = nullptr, *frameChar = nullptr, *catalogChar = nullptr, *settingsChar = nullptr;
 bool running = false;
 
 class CommandCallbacks : public BLECharacteristicCallbacks {
@@ -90,6 +93,8 @@ void bleBegin() {
   frameChar = service->createCharacteristic(REMOTE_FRAME_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
   catalogChar = service->createCharacteristic(REMOTE_CATALOG_UUID, readSecure);
   catalogChar->setValue(catalogText());
+  settingsChar = service->createCharacteristic(REMOTE_SETTINGS_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
+  settingsChar->setValue(remoteSettingsText());
   service->start();
 
   BLEAdvertising *adv = BLEDevice::getAdvertising();
@@ -126,6 +131,17 @@ void bleLoop() {
       frameHash = h;
       frameChar->setValue(frame, sizeof(frame));
       frameChar->notify();
+    }
+  }
+  static uint32_t settingsHash = 0;
+  if (now - lastState >= 500) {
+    const String list = remoteSettingsText();
+    uint32_t sh = 2166136261u;
+    for (unsigned i = 0; i < list.length(); i++) sh = (sh ^ (uint8_t)list[i]) * 16777619u;
+    if (sh != settingsHash) {
+      settingsHash = sh;
+      settingsChar->setValue(list);
+      settingsChar->notify();
     }
   }
   if (now - lastState >= 500) {

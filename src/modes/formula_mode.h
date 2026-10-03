@@ -2,6 +2,7 @@
 
 #include "formula.h"
 #include "modes.h"
+#include "settings.h"
 
 // "Formule": the panel drawn by a formula of t, i, x, y typed on the page
 // (settings.formula, see formula.h), tixy.land style: brighter where the
@@ -15,6 +16,7 @@ class FormulaMode : public Mode {
   void update(uint32_t now) override;
   bool hasSpeed() const override { return false; }
   const char *actionName() const override { return "Da capo"; }
+  String status() const override { return settings.formula; }
   void action() override { start(); }
 
   // Checks and installs a new formula; false with the reason if it doesn't

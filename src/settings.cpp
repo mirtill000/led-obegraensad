@@ -157,15 +157,15 @@ const SettingDef SETTING_DEFS[] = {
     // name           NVS key        type     field                    min  max   default        choices
     {"mode", "mode", T::Text, F_(mode), 0, 20, "text", nullptr, SET_SHOW, 0, nullptr, checkMode},
     {"text", "text", T::Text, F_(text), 0, 200, MESSAGE, nullptr, SW, FX_RESTART, "text", nullptr},
-    {"textFont", "scrollFont", T::Text, F_(textFont), 0, 0, "small", "small|big|mini|tiny", SW, FX_FONT | FX_RESTART, nullptr, nullptr},
-    {"textPos", "textPos", T::Text, F_(textPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "text", nullptr},
-    {"brightness", "brightness", T::U8, F_(brightness), 1, 255, "255", nullptr, SW, FX_MODES, nullptr, nullptr},
-    {"vertical", "vertical", T::Bool, F_(vertical), 0, 1, "0", nullptr, SW, FX_ROTATION | FX_RESTART, nullptr, nullptr},
-    {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|none", SW, FX_TRANSITION, nullptr, nullptr},
-    {"clockStyle", "clockStyle", T::Text, F_(clockStyle), 0, 0, "weather", "weather|binary|words|wordsen", SW, FX_RESTART, "clock", nullptr},
-    {"occasions", "occasions", T::Bool, F_(occasions), 0, 1, "1", nullptr, SW, FX_MODES, nullptr, nullptr},
-    {"autoBright", "autoBright", T::Bool, F_(autoBright), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
-    {"autoMin", "autoMin", T::U8, F_(autoMin), 1, 255, "25", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"textFont", "scrollFont", T::Text, F_(textFont), 0, 0, "small", "small|big|mini|tiny", SW, FX_FONT | FX_RESTART, nullptr, nullptr, "Font del testo", "Media|Grande|Piccola|Minima"},
+    {"textPos", "textPos", T::Text, F_(textPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "text", nullptr, "Posizione del testo", "Variabile|In alto|Al centro|In basso|A pagine"},
+    {"brightness", "brightness", T::U8, F_(brightness), 1, 255, "255", nullptr, SW, FX_MODES, nullptr, nullptr, "Luminosita'", nullptr},
+    {"vertical", "vertical", T::Bool, F_(vertical), 0, 1, "0", nullptr, SW, FX_ROTATION | FX_RESTART, nullptr, nullptr, "Lampada verticale", nullptr},
+    {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|none", SW, FX_TRANSITION, nullptr, nullptr, "Passaggio", "Dissolvenza|Tendina|Stacco netto"},
+    {"clockStyle", "clockStyle", T::Text, F_(clockStyle), 0, 0, "weather", "weather|binary|words|wordsen", SW, FX_RESTART, "clock", nullptr, "Quadrante", "Ora e meteo|Binario|A parole|A parole (inglese)"},
+    {"occasions", "occasions", T::Bool, F_(occasions), 0, 1, "1", nullptr, SW, FX_MODES, nullptr, nullptr, "Ricorrenze", nullptr},
+    {"autoBright", "autoBright", T::Bool, F_(autoBright), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr, "Segue il sole", nullptr},
+    {"autoMin", "autoMin", T::U8, F_(autoMin), 1, 255, "25", nullptr, SW, FX_MODES, nullptr, nullptr, "Minima col sole giu'", nullptr},
     {"lat", "lat", T::Float, F_(latitude), -90, 90, STR(DEFAULT_LATITUDE), nullptr, SW, FX_WEATHER | FX_MODES, nullptr, nullptr},
     {"lon", "lon", T::Float, F_(longitude), -180, 180, STR(DEFAULT_LONGITUDE), nullptr, SW, FX_WEATHER | FX_MODES, nullptr, nullptr},
     {"city", "city", T::Text, F_(city), 0, 60, DEFAULT_CITY, nullptr, SW, 0, nullptr, checkCity},
@@ -173,37 +173,37 @@ const SettingDef SETTING_DEFS[] = {
     {"tzName", "tzName", T::Text, F_(timezoneName), 0, 60, TIMEZONE_NAME, nullptr, SW, 0, nullptr, nullptr},
     {"ambient", "ambient", T::Text, F_(ambient), 0, 20, "auto", nullptr, SW, FX_SHOW, "ambient", checkAnimation},
     {"games", "game", T::Text, F_(game), 0, 20, "auto", nullptr, SW, FX_SHOW, "games", checkGame},
-    {"infoWord", "infoWord", T::Bool, F_(infoWord), 0, 1, "1", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr},
-    {"infoHistory", "infoHistory", T::Bool, F_(infoHistory), 0, 1, "1", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr},
+    {"infoWord", "infoWord", T::Bool, F_(infoWord), 0, 1, "1", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr, "Parola del giorno", nullptr},
+    {"infoHistory", "infoHistory", T::Bool, F_(infoHistory), 0, 1, "1", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr, "Accadde oggi", nullptr},
     {"infoCalendar", "infoCal", T::Bool, F_(infoCalendar), 0, 1, "0", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr},
     {"icalUrl", "icalUrl", T::Text, F_(icalUrl), 0, 500, "", nullptr, SW, FX_WEB, nullptr, nullptr},
     {"webPos", "webPos", T::Text, F_(webPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "web", nullptr},
     {"galleryShow", "galleryShow", T::Text, F_(galleryShow), 0, 40, "all", nullptr, SET_SHOW, 0, nullptr, nullptr},
-    {"demoStyle", "demoStyle", T::Text, F_(demoStyle), 0, 0, "auto", "auto|rows3|pages|rows2", SW, FX_RESTART, "demo", nullptr},
-    {"gameStyle", "gameStyle", T::Text, F_(gameStyle), 0, 0, "soft", "soft|crisp", SW, 0, nullptr, nullptr},
-    {"playlistOn", "plOn", T::Bool, F_(playlistOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr},
+    {"demoStyle", "demoStyle", T::Text, F_(demoStyle), 0, 0, "auto", "auto|rows3|pages|rows2", SW, FX_RESTART, "demo", nullptr, "Demo dei font", "A turno|3 righe|A pagine|2 righe"},
+    {"gameStyle", "gameStyle", T::Text, F_(gameStyle), 0, 0, "soft", "soft|crisp", SW, 0, nullptr, nullptr, "Grafica giochi", "Sfumata|Nitida"},
+    {"playlistOn", "plOn", T::Bool, F_(playlistOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr, "Playlist", nullptr},
     {"playlist", "playlist", T::Text, F_(playlist), 0, 400, "clock:10,quotes:3,ambient:5,games:5", nullptr, SW, FX_PLAYLIST, nullptr, checkPlaylist},
-    {"scenesOn", "scenesOn", T::Bool, F_(scenesOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr},
+    {"scenesOn", "scenesOn", T::Bool, F_(scenesOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr, "Fasce orarie", nullptr},
     {"scenes", "scenes", T::Text, F_(scenes), 0, 1000,
      "0700|200|clock:10,forecast:1,quotes:3;1300|255|clock:10,web:3,ambient:10,games:5;"
      "1900|120|quotes:3,ambient:10,clock:5;2300|25|clock:30",
      nullptr, SW, FX_PLAYLIST, nullptr, checkScenes},
     {"demoOff", "demoOff", T::Text, F_(demoOff), 0, 300, "", nullptr, 0, 0, nullptr, nullptr},
     {"formula", "formula", T::Text, F_(formula), 0, 300, "sin(t-hypot(x-7.5,y-7.5))", nullptr, SET_SHOW, 0, nullptr, nullptr},
-    {"hgMin", "hgMin", T::U8, F_(hourglassMinutes), 1, 120, "5", nullptr, SW, FX_RESTART, "hourglass", nullptr},
-    {"notifyNight", "notifyNight", T::Bool, F_(notifyNight), 0, 1, "0", nullptr, SW, 0, nullptr, nullptr},
+    {"hgMin", "hgMin", T::U8, F_(hourglassMinutes), 1, 120, "5", nullptr, SW, FX_RESTART, "hourglass", nullptr, "Clessidra (minuti)", nullptr},
+    {"notifyNight", "notifyNight", T::Bool, F_(notifyNight), 0, 1, "0", nullptr, SW, 0, nullptr, nullptr, "Notifiche di notte", nullptr},
     {"bleOn", "bleOn", T::Bool, F_(bleOn), 0, 1, "1", nullptr, SW, FX_REBOOT, nullptr, nullptr},
     {"blePin", "blePin", T::U32, F_(blePin), 0, 999999, "0", nullptr, SET_SHOW, 0, nullptr, nullptr},
-    {"alarmOn", "alarmOn", T::Bool, F_(alarmOn), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"alarmOn", "alarmOn", T::Bool, F_(alarmOn), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr, "Sveglia", nullptr},
     {"alarmTime", "alarmTime", T::U16, F_(alarmTime), 0, 1439, "420", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"alarmDays", "alarmDays", T::U8, F_(alarmDays), 0, 127, "31", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"alarmRamp", "alarmRamp", T::U8, F_(alarmRamp), 5, 60, "20", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"alarmHold", "alarmHold", T::U8, F_(alarmHold), 1, 120, "30", nullptr, SW, FX_MODES, nullptr, nullptr},
-    {"nightOn", "nightOn", T::Bool, F_(nightOn), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"nightOn", "nightOn", T::Bool, F_(nightOn), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr, "Notte", nullptr},
     {"nightSun", "nightSun", T::Bool, F_(nightSun), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"nightStart", "nightStart", T::U16, F_(nightStart), 0, 1439, "1380", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"nightEnd", "nightEnd", T::U16, F_(nightEnd), 0, 1439, "420", nullptr, SW, FX_MODES, nullptr, nullptr},
-    {"nightMode", "nightMode", T::Text, F_(nightMode), 0, 0, "stars", "off|stars|dim", SW, FX_MODES, nullptr, nullptr},
+    {"nightMode", "nightMode", T::Text, F_(nightMode), 0, 0, "stars", "off|stars|dim", SW, FX_MODES, nullptr, nullptr, "Di notte", "Spenta|Solo stelle|Luce ridotta"},
     {"nightBrightness", "nightBright", T::U8, F_(nightBrightness), 1, 255, "20", nullptr, SW, FX_MODES, nullptr, nullptr},
 };
 const uint8_t SETTING_COUNT = sizeof(SETTING_DEFS) / sizeof(SETTING_DEFS[0]);
@@ -290,6 +290,17 @@ String settingsJson() {
     j += String('"') + d.name + "\":" + settingJson(d);
   }
   return j + "}";
+}
+
+String remoteSettingsText() {
+  String out;
+  for (const SettingDef &d : SETTING_DEFS) {
+    if (!d.label || !(d.flags & SET_WEB)) continue;
+    const char kind = d.type == T::Bool ? 'B' : d.choices ? 'C' : 'N';
+    out += String(d.name) + '\t' + kind + '\t' + settingText(d) + '\t' + d.label + '\t' + (d.choices ? d.choices : "") + '\t' +
+           (d.choiceLabels ? d.choiceLabels : "") + '\t' + d.min + '\t' + d.max + '\n';
+  }
+  return out;
 }
 
 // Reads one setting from NVS (its default if missing or out of range).

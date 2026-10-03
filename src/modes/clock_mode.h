@@ -16,6 +16,7 @@ class ClockMode : public Mode {
   const char *actionName() const override { return "Aggiorna meteo"; }
   void action() override;
   bool hasSpeed() const override { return false; }
+  String status() const override;
 
  private:
   uint32_t lastDraw_ = 0;

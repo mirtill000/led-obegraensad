@@ -620,12 +620,15 @@ The first time it asks for the PIN (type it, Enter), then finds the lamp,
 pairs and remembers it. Keys: `;` `.` `,` `/` are the arrows (as printed on
 the keycaps), Enter chooses, `` ` `` goes back.
 
-- **Telecomando giochi** - the lamp's panel in large on the left (sent by
+- **Telecomando** - the lamp's panel in large on the left (sent by
   the lamp as it changes, at most every 150 ms); the arrows play (held
   down they repeat), Space or Enter is the main button (jump, shoot,
   drop), `D` hands control to you (in "Automatica" it first pins the game
   showing now, so `D` always gets you out of the demo; press it again to
-  put the demo back), `X` is the mode's button (next game)
+  put the demo back), `X` is the mode's button (next game); for a mode
+  that isn't a game, the line the lamp gives about it ("Pixel · Ha fame",
+  "Aria 27 discreta · ISS a 4210 km", "Generazione 52"...) - the same line
+  the page shows under its preview - and its keys as the mode names them
 - **Giochi**, **Modalita'**, **Animazioni** - the lamp's own lists (read
   from it, so new games show up by themselves); picking a game goes
   straight to the controller
@@ -634,7 +637,14 @@ the keycaps), Enter chooses, `` ` `` goes back.
 - **Notifica** - `fn` + `,` `/` pick the icon, type the text, Enter: shown
   like a notification from `/api/notify`
 - **Luminosita'** - `,` `/` in steps of 16
-- **Impostazioni** - `F` forgets the lamp (after changing its PIN)
+- **Impostazioni lampada** - the lamp's settings as its page offers them
+  (font, text position, brightness and sun, orientation, transition, clock
+  face, game graphics, special days, playlist, time slots, night, alarm,
+  ...): the list, with names and choices, comes from the lamp (the
+  `settings` characteristic, built from `SETTING_DEFS`), so a setting added
+  to the lamp appears here without touching the Cardputer; `,` `/` change
+  the selected one (`o <name> <value>`, checked by the lamp like the page's)
+- **Abbinamento (PIN)** - `F` forgets the lamp (after changing its PIN)
 
 The screen and keyboard run on their own task pinned to core 1, redrawing
 a single full-screen off-screen canvas (in internal SRAM, this board has no
@@ -655,9 +665,10 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 | Characteristic | | |
 |---|---|---|
 | command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9), `w 3 4 255` (paint a cell of the Game of Life's board), `w c` (clear it), `w l` (set it going) |
-| state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","cl":"↶|↷|||Spara","b":200,"t":"15:42"}`, sent when it changes |
+| state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","cl":"↶|↷|||Spara","n":1,"b":200,"t":"15:42"}`, sent when it changes (`n`: players, `s`: the mode's status line, for modes that have one) |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
 | catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |
+| settings `…0005` | read, notify | the settings a remote may change, one per line: name, kind (`B` on/off, `C` choice, `N` number), value, label, choices, choice names, min, max (tabs); the notification only says "read again" |
 
 ## Data from the web
 

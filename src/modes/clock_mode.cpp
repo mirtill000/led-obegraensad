@@ -146,6 +146,13 @@ static void drawSeconds(int sec) {
   }
 }
 
+String ClockMode::status() const {
+  if (settings.clockStyle == "binary") return "Quadrante binario";
+  if (settings.clockStyle == "words") return "Quadrante a parole";
+  if (settings.clockStyle == "wordsen") return "Quadrante a parole, in inglese";
+  return "Ora e meteo";
+}
+
 void ClockMode::start() {
   lastDraw_ = 0;
   face_ = settings.clockStyle == "weather" ? nullptr : findAnimation(settings.clockStyle);

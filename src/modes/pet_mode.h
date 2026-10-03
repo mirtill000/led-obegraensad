@@ -24,6 +24,7 @@ class PetMode : public Mode {
   bool hasSpeed() const override { return false; }
   bool input(char key) override;
   const GameControls *controls() const override { return keys(); }
+  String status() const override;
   static const GameControls *keys();
 
   struct Status {
@@ -33,7 +34,7 @@ class PetMode : public Mode {
     bool sick, asleep;
     uint32_t ageHours;
   };
-  static Status status();
+  static Status info();
   static void rename(const String &name);
   static void reset();  // a new egg
   // Brings the pet up to date (called every minute from loop, shown or not).

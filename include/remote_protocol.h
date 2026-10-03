@@ -11,6 +11,7 @@
 #define REMOTE_STATE_UUID "8f3e0002-5c1a-4a6b-9b8e-0b5e6a1d0bea"    // read/notify: short JSON
 #define REMOTE_FRAME_UUID "8f3e0003-5c1a-4a6b-9b8e-0b5e6a1d0bea"    // read/notify: 128 bytes
 #define REMOTE_CATALOG_UUID "8f3e0004-5c1a-4a6b-9b8e-0b5e6a1d0bea"  // read: modes, games, animations
+#define REMOTE_SETTINGS_UUID "8f3e0005-5c1a-4a6b-9b8e-0b5e6a1d0bea" // read/notify: the settings a remote may change
 
 // The same data reaches the page over WiFi (Server-Sent Events on port 81,
 // GET /events) in the same formats (src/live.cpp):
@@ -33,6 +34,10 @@
 //   s <1-9> [mode id]    speed (of the mode on show if no id)
 //   w <x> <y> <0-255>    paint a pixel of the Game of Life's board (shows it)
 //   w c                  clear the board      w l   set it going
+//   o <name> <value>     change a setting (names and limits: the settings
+//                        characteristic, one per line "name, kind B/C/N,
+//                        value, label, choices|..., choice names|..., min,
+//                        max" separated by tabs)
 #define REMOTE_KEYS "LRUDA"
 // The second player of a two-player game (Tron) sends the same keys in
 // lower case: "k l" is player 2 turning left.

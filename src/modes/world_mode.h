@@ -14,6 +14,7 @@ class WorldMode : public Mode {
   void update(uint32_t now) override;
   bool hasSpeed() const override { return false; }
   const char *actionName() const override { return "Prossima"; }
+  String status() const override;
   void action() override { next(millis(), true); }
 
  private:

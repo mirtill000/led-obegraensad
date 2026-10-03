@@ -31,6 +31,17 @@ static int mapY(float lat) { return mapTop() + constrain((int)floorf((90 - lat) 
 
 static bool available(const WorldInfo &w, int card) { return card == 0 ? w.airOk : w.issOk; }
 
+String WorldMode::status() const {
+  const WorldInfo w = worldInfoNow();
+  String s;
+  if (w.airOk) s = String("Aria ") + w.aqi + " " + aqiBand(w.aqi);
+  if (w.issOk) {
+    s += String(s.length() ? " · " : "") + "ISS a " +
+         String((long)distanceKm(settings.latitude, settings.longitude, w.issLat, w.issLon)) + " km";
+  }
+  return s;
+}
+
 void WorldMode::start() {
   worldWanted();
   card_ = ISS;  // next() moves on to the air first

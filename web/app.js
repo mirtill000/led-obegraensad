@@ -122,6 +122,7 @@ function render() {
   }
 
   const active = s.activeMode;  // may be a hidden mode (the alarm's sunrise)
+  $('nowStatus').textContent = active.status || '';
   $('action').hidden = !active.action;
   $('action').textContent = active.action || '';
   $('speedBox').hidden = !active.hasSpeed;

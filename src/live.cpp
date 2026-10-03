@@ -74,6 +74,8 @@ String summaryJson() {
   } else if (m->controls()) {
     j += controlsFields(m->controls());  // a mode that takes keys (the pet)
   }
+  const String line = m->status();
+  if (line.length()) j += ",\"s\":" + quoted(line.c_str());
   j += ",\"b\":" + String(settings.brightness);
   struct tm t;
   if (localTime(t)) {

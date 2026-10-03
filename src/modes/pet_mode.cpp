@@ -402,7 +402,12 @@ const GameControls *PetMode::keys() {
   return &c;
 }
 
-PetMode::Status PetMode::status() {
+String PetMode::status() const {
+  const Status s = PetMode::info();
+  return s.name + " · " + s.mood;
+}
+
+PetMode::Status PetMode::info() {
   load();
   Status s;
   s.name = life.name;

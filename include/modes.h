@@ -27,6 +27,9 @@ class Mode {
   virtual bool hidden() const { return false; }
   // Tools (the font demo) are offered under Diagnostica, not with the modes.
   virtual bool tool() const { return false; }
+  // One short line about what it shows, for the page and the Cardputer
+  // ("Pixel · Ha fame", "Aria 27 · ISS a 4210 km"); "" for none.
+  virtual String status() const { return String(); }
 
   // Game controls from the page: 'L', 'R', 'U', 'D' (arrows) or 'A' (the
   // main button: jump / drop). Returns false if nothing is listening.

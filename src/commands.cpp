@@ -7,12 +7,45 @@
 #include "modes/notify_mode.h"
 #include "remote_protocol.h"
 #include "settings.h"
+#include "timekeeping.h"
+#include "weather.h"
+#include "webinfo.h"
+#include "display.h"
 
 // "d 1 dino" -> ("1", "dino"); "d 1" -> ("1", "")
 static void splitArgs(const String &arg, String &first, String &second) {
   const int space = arg.indexOf(' ');
   first = space < 0 ? arg : arg.substring(0, space);
   second = space < 0 ? String() : arg.substring(space + 1);
+}
+
+// What a changed setting touches (see SettingEffect), once for a whole
+// request.
+void applySettingEffects(const SettingDef *const *changed, int count) {
+  uint16_t fx = 0;
+  for (int i = 0; i < count; i++) fx |= changed[i]->effects;
+  if (fx & FX_FONT) Display::setScrollFont(fontForSettings());
+  if (fx & FX_ROTATION) {
+    display.setRotation(rotationForSettings());
+    Display::setVerticalText(settings.vertical);
+  }
+  if (fx & FX_TRANSITION) display.setTransition(transitionForSettings());
+  if (fx & FX_TIMEZONE) applyTimezone();
+  if (fx & FX_WEATHER) requestWeatherUpdate();
+  if (fx & FX_WEB) requestWebInfoUpdate();
+  if (fx & FX_PLAYLIST) restartPlaylist();
+  bool restarted = false;
+  for (int i = 0; i < count; i++) {
+    const SettingDef &d = *changed[i];
+    if (d.effects & FX_SHOW) {
+      setMode(d.mode);
+      restarted = true;
+    } else if ((d.effects & FX_RESTART) && !restarted && (!d.mode || strcmp(currentMode()->id(), d.mode) == 0)) {
+      restartMode();
+      restarted = true;
+    }
+  }
+  if (fx & (FX_MODES | FX_PLAYLIST)) refreshModes();
 }
 
 const char *runCommand(const String &command) {
@@ -71,6 +104,18 @@ const char *runCommand(const String &command) {
       if (!NotifyMode::push(bar >= 0 ? arg.substring(bar + 1) : arg, bar >= 0 ? arg.substring(0, bar) : String())) {
         return "Serve un testo o un'icona conosciuta";
       }
+      return nullptr;
+    }
+    case 'o': {
+      // A setting, by its name in SETTING_DEFS: "o brightness 120".
+      String name, value;
+      splitArgs(arg, name, value);
+      const SettingDef *d = findSetting(name);
+      if (!d || !(d->flags & SET_WEB)) return "Impostazione sconosciuta";
+      if (d->effects & FX_REBOOT) return "Si cambia solo dalla pagina";
+      if (const char *reason = setSetting(*d, value)) return reason;
+      saveSettings();
+      applySettingEffects(&d, 1);
       return nullptr;
     }
     case 'w': {

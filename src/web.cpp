@@ -86,7 +86,7 @@ static String stateJson() {
     String j = "{\"id\":" + jsonString(m->id()) + ",\"name\":" + jsonString(m->name());
     j += ",\"action\":" + (m->actionName() ? jsonString(m->actionName()) : String("null"));
     return j + ",\"hasSpeed\":" + jsonBool(m->hasSpeed()) + ",\"speed\":" + String(speedLevel(m->id())) +
-           ",\"tool\":" + jsonBool(m->tool()) + "}";
+           ",\"tool\":" + jsonBool(m->tool()) + ",\"status\":" + jsonString(m->status()) + "}";
   };
   json += ",\"modes\":[";
   bool first = true;
@@ -141,7 +141,7 @@ static String stateJson() {
           ",\"airBand\":" + jsonString(world.airOk ? aqiBand(world.aqi) : "") +
           ",\"iss\":" + (world.issOk ? String((long)distanceKm(settings.latitude, settings.longitude, world.issLat, world.issLon)) : String("null")) +
           ",\"status\":" + jsonString("aria " + airStatus() + " · ISS " + issStatus()) + "}";
-  const PetMode::Status pet = PetMode::status();
+  const PetMode::Status pet = PetMode::info();
   json += ",\"pet\":{\"name\":" + jsonString(pet.name) + ",\"stage\":" + jsonString(pet.stage) +
           ",\"mood\":" + jsonString(pet.mood) + ",\"food\":" + String(pet.food) + ",\"joy\":" + String(pet.joy) +
           ",\"energy\":" + String(pet.energy) + ",\"poops\":" + String(pet.poops) + ",\"sick\":" + jsonBool(pet.sick) +
@@ -291,35 +291,6 @@ static void handleFrame() {
   packedFrameHex(out);
   server.sendHeader("Cache-Control", "no-store");
   server.send(200, "text/plain", out);
-}
-
-// What a changed setting touches (see SettingEffect), once for a whole
-// request.
-static void applySettingEffects(const SettingDef *const *changed, int count) {
-  uint16_t fx = 0;
-  for (int i = 0; i < count; i++) fx |= changed[i]->effects;
-  if (fx & FX_FONT) Display::setScrollFont(fontForSettings());
-  if (fx & FX_ROTATION) {
-    display.setRotation(rotationForSettings());
-    Display::setVerticalText(settings.vertical);
-  }
-  if (fx & FX_TRANSITION) display.setTransition(transitionForSettings());
-  if (fx & FX_TIMEZONE) applyTimezone();
-  if (fx & FX_WEATHER) requestWeatherUpdate();
-  if (fx & FX_WEB) requestWebInfoUpdate();
-  if (fx & FX_PLAYLIST) restartPlaylist();
-  bool restarted = false;
-  for (int i = 0; i < count; i++) {
-    const SettingDef &d = *changed[i];
-    if (d.effects & FX_SHOW) {
-      setMode(d.mode);
-      restarted = true;
-    } else if ((d.effects & FX_RESTART) && !restarted && (!d.mode || strcmp(currentMode()->id(), d.mode) == 0)) {
-      restartMode();
-      restarted = true;
-    }
-  }
-  if (fx & (FX_MODES | FX_PLAYLIST)) refreshModes();
 }
 
 // POST /api/settings name=value&...: any of the settings the page may

@@ -23,7 +23,9 @@ volatile uint32_t pixelsVersion = 0;
 std::vector<Item> items;
 
 BLEClient *client = nullptr;
-BLERemoteCharacteristic *commandChar = nullptr, *stateChar = nullptr, *frameChar = nullptr;
+BLERemoteCharacteristic *commandChar = nullptr, *stateChar = nullptr, *frameChar = nullptr, *settingsChar = nullptr;
+std::vector<Setting> lampSettings;
+volatile bool settingsPending = false;
 BLEAdvertisedDevice *found = nullptr;
 
 // User actions (send / setPin / forget) come from the UI task; they are
@@ -84,6 +86,7 @@ void parseState(const String &json) {
   lampState.keys = field(json, "c");
   lampState.actionKey = field(json, "ca");
   lampState.labels = field(json, "cl");
+  lampState.status = field(json, "s");
   const String n = field(json, "n");
   lampState.players = n.length() ? n.toInt() : 1;
   lampState.time = field(json, "t");
@@ -104,6 +107,41 @@ void parseCatalog(const String &text) {
     start = end + 1;
   }
 }
+
+std::vector<String> splitBy(const String &s, char sep) {
+  std::vector<String> out;
+  int start = 0;
+  while (start <= (int)s.length()) {
+    int end = s.indexOf(sep, start);
+    if (end < 0) end = s.length();
+    out.push_back(s.substring(start, end));
+    start = end + 1;
+  }
+  return out;
+}
+
+void parseSettings(const String &text) {
+  std::vector<Setting> list;
+  for (const String &line : splitBy(text, '\n')) {
+    const std::vector<String> f = splitBy(line, '\t');
+    if (f.size() < 8 || f[1].length() != 1) continue;
+    Setting st;
+    st.name = f[0];
+    st.kind = f[1][0];
+    st.value = f[2];
+    st.label = f[3];
+    if (f[4].length()) st.choices = splitBy(f[4], '|');
+    if (f[5].length()) st.names = splitBy(f[5], '|');
+    st.min = f[6].toInt();
+    st.max = f[7].toInt();
+    list.push_back(st);
+  }
+  Guard g;
+  lampSettings = list;
+}
+
+// The list doesn't fit a notification: it only says "read me again".
+void onSettings(BLERemoteCharacteristic *, uint8_t *, size_t, bool) { settingsPending = true; }
 
 void onState(BLERemoteCharacteristic *, uint8_t *data, size_t length, bool) {
   String s;
@@ -198,6 +236,11 @@ bool connect() {
   }
   parseState(json);
   parseCatalog(catalogChar->readValue());
+  settingsChar = service->getCharacteristic(LAMP_SETTINGS_UUID);  // missing on older lamps
+  if (settingsChar) {
+    parseSettings(settingsChar->readValue());
+    if (settingsChar->canNotify()) settingsChar->registerForNotify(onSettings);
+  }
   stateChar->registerForNotify(onState);
   frameChar->registerForNotify(onFrame);
   const String first = frameChar->readValue();
@@ -231,6 +274,10 @@ void loop() {
     if (m.type == Cmd::Send) sendImpl(m.text);
     else if (m.type == Cmd::SetPin) setPinImpl(m.pin);
     else forgetImpl();
+  }
+  if (settingsPending && settingsChar && current == Status::Ready) {
+    settingsPending = false;
+    parseSettings(settingsChar->readValue());
   }
   if (statePending) {
     portENTER_CRITICAL(&lock);
@@ -324,6 +371,19 @@ uint32_t frameSnapshot(uint8_t out[256]) {
   return pixelsVersion;
 }
 uint32_t frameVersion() { return pixelsVersion; }
+String Setting::shown() const {
+  if (kind == 'B') return value == "1" ? "si'" : "no";
+  for (size_t i = 0; i < choices.size(); i++) {
+    if (choices[i] == value) return i < names.size() ? names[i] : value;
+  }
+  return value;
+}
+
+std::vector<Setting> settings() {
+  Guard g;
+  return lampSettings;
+}
+
 std::vector<Item> catalog() {
   Guard g;
   return items;
