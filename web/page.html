@@ -89,6 +89,13 @@
     </div>
 
     <div class="panel" data-mode="clock" hidden>
+      <label for="clockStyle">Quadrante</label>
+      <select id="clockStyle">
+        <option value="weather">Ora e meteo</option>
+        <option value="binary">Binario</option>
+        <option value="words">A parole</option>
+        <option value="wordsen">A parole, in inglese</option>
+      </select>
       <p class="hint" id="clockInfo"></p>
       <div class="actions">
         <button class="btn" id="openPlace">Cambia città o fuso orario</button>
@@ -434,7 +441,10 @@
       <table class="diag" id="diag"></table>
       <h3>Eventi recenti</h3>
       <table class="diag" id="events"></table>
-      <div class="actions"><button class="btn quiet" id="diagReset">Azzera le statistiche</button></div>
+      <div class="actions">
+        <button class="btn" id="showDemo">Prova i font (Demo)</button>
+        <button class="btn quiet" id="diagReset">Azzera le statistiche</button>
+      </div>
       <details class="help"><summary>Come leggerla</summary>
         <p>Si aggiorna ogni 2 secondi mentre questa sezione è aperta. «Cambi di livello saltati» e «ritardo» dicono quanto è stabile la scala di grigi: se crescono mentre i LED tremano, il disturbo viene dal rinfresco. «Il più lungo» del ciclo principale sopra qualche centinaio di ms vuol dire che la lampada si è fermata per quel tempo.</p>
       </details>

@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 // Animated weather icons, 6x7 pixels per frame (bit 15 = leftmost column),
-// shared by "Orologio e meteo" and "Previsioni".
+// shared by "Orologio" and "Previsioni".
 struct AnimatedIcon {
   uint16_t frameMs;
   uint8_t frameCount;

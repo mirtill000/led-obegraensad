@@ -25,6 +25,8 @@ class Mode {
   virtual bool hasSpeed() const { return true; }
   // Hidden modes aren't offered on the page (e.g. the alarm's sunrise).
   virtual bool hidden() const { return false; }
+  // Tools (the font demo) are offered under Diagnostica, not with the modes.
+  virtual bool tool() const { return false; }
 
   // Game controls from the page: 'L', 'R', 'U', 'D' (arrows) or 'A' (the
   // main button: jump / drop). Returns false if nothing is listening.

@@ -82,7 +82,8 @@ static String stateJson() {
   auto modeJson = [](const Mode *m) {
     String j = "{\"id\":" + jsonString(m->id()) + ",\"name\":" + jsonString(m->name());
     j += ",\"action\":" + (m->actionName() ? jsonString(m->actionName()) : String("null"));
-    return j + ",\"hasSpeed\":" + jsonBool(m->hasSpeed()) + ",\"speed\":" + String(speedLevel(m->id())) + "}";
+    return j + ",\"hasSpeed\":" + jsonBool(m->hasSpeed()) + ",\"speed\":" + String(speedLevel(m->id())) +
+           ",\"tool\":" + jsonBool(m->tool()) + "}";
   };
   json += ",\"modes\":[";
   bool first = true;
@@ -101,6 +102,7 @@ static String stateJson() {
     json += "{\"id\":" + jsonString(ANIMATIONS[i]->id()) + ",\"name\":" + jsonString(ANIMATIONS[i]->name()) +
             ",\"group\":" + jsonString(ANIMATIONS[i]->group()) + ",\"game\":" + jsonBool(ANIMATIONS[i]->isGame());
     if (ANIMATIONS[i]->isGame()) json += ",\"style\":" + jsonString(styleId(ANIMATIONS[i]->style()));
+    if (ANIMATIONS[i]->isClockFace()) json += ",\"clock\":true";
     json += "}";
   }
   json += "]";

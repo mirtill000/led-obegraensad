@@ -1,5 +1,7 @@
 #include "modes/clock_mode.h"
 
+#include "animation.h"
+
 #include "display.h"
 #include "font_small.h"
 #include "settings.h"
@@ -144,9 +146,22 @@ static void drawSeconds(int sec) {
   }
 }
 
-void ClockMode::start() { lastDraw_ = 0; }
+void ClockMode::start() {
+  lastDraw_ = 0;
+  face_ = settings.clockStyle == "weather" ? nullptr : findAnimation(settings.clockStyle);
+  if (face_ && !face_->isClockFace()) face_ = nullptr;
+  if (face_) face_->start();
+  display.beginTransition();
+}
 
 void ClockMode::update(uint32_t now) {
+  if (face_) {
+    if (now - lastDraw_ < face_->frameMs()) return;
+    lastDraw_ = now;
+    face_->frame(now);
+    display.render();
+    return;
+  }
   if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
   struct tm t;

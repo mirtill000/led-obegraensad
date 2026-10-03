@@ -20,6 +20,7 @@ class DemoMode : public Mode {
   void start() override;
   void update(uint32_t now) override;
   const char *actionName() const override { return "Prossima frase"; }
+  bool tool() const override { return true; }
   void action() override { next(); }
 
  private:

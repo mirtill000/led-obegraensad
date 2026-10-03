@@ -127,7 +127,7 @@ static void dropFromLists(String &lists, const char *id) {
 static const char *checkMode(String &v) { return validModeId(v) ? nullptr : "Modalità sconosciuta"; }
 static const char *checkAnimation(String &v) {
   const Animation *a = findAnimation(v);
-  return v == "auto" || (a && !a->isGame()) ? nullptr : "Animazione sconosciuta";
+  return v == "auto" || (a && !a->isGame() && !a->isClockFace()) ? nullptr : "Animazione sconosciuta";
 }
 static const char *checkGame(String &v) {
   const Animation *a = findAnimation(v);
@@ -162,6 +162,7 @@ const SettingDef SETTING_DEFS[] = {
     {"brightness", "brightness", T::U8, F_(brightness), 1, 255, "255", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"vertical", "vertical", T::Bool, F_(vertical), 0, 1, "0", nullptr, SW, FX_ROTATION | FX_RESTART, nullptr, nullptr},
     {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|none", SW, FX_TRANSITION, nullptr, nullptr},
+    {"clockStyle", "clockStyle", T::Text, F_(clockStyle), 0, 0, "weather", "weather|binary|words|wordsen", SW, FX_RESTART, "clock", nullptr},
     {"autoBright", "autoBright", T::Bool, F_(autoBright), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"autoMin", "autoMin", T::U8, F_(autoMin), 1, 255, "25", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"lat", "lat", T::Float, F_(latitude), -90, 90, STR(DEFAULT_LATITUDE), nullptr, SW, FX_WEATHER | FX_MODES, nullptr, nullptr},
@@ -404,6 +405,15 @@ void loadSettings() {
     if (!settings.playlist.length()) settings.playlist = "clock:10";
     settings.scenes.replace("|;", "|clock:10;");
     if (settings.scenes.endsWith("|")) settings.scenes += "clock:10";
+  }
+  // 4: the clock faces left the Animazioni for the Orologio's styles.
+  if (version < 4) {
+    const Animation *face = findAnimation(settings.ambient);
+    if (face && face->isClockFace()) {
+      settings.clockStyle = settings.ambient;
+      settings.ambient = "auto";
+      if (settings.mode == "ambient") settings.mode = "clock";
+    }
   }
   // Super Mario used to be a mode of its own; it is now one of the games.
   if (settings.mode == "mario") {

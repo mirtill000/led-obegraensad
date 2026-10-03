@@ -36,6 +36,9 @@ class Animation {
   virtual void input(char) {}
   virtual const GameControls *controls() const { return nullptr; }
   virtual GameStyle style() const { return GameStyle::Selectable; }
+  // Clock faces (binary, in words...) are styles of the Orologio mode, not
+  // animations of their own: they don't appear among the Animazioni.
+  virtual bool isClockFace() const { return false; }
 };
 
 // "crisp", "shaded" or "selectable", for the page.

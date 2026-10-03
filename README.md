@@ -303,7 +303,11 @@ Current modes:
   page you can add your own (up to 16000 characters, saved in flash as
   `/quotes.txt`): they join the 100 in the rotation, and "Cancella le mie
   frasi" removes them. Button: next quote
-- **Orologio e meteo** - one screen, numbers in the text font: on top the
+- **Orologio** - one of four faces (*Quadrante* on the page, setting
+  `clockStyle`): binary (one column of bits per digit of HH:MM, a bar
+  filling with the seconds), in Italian words ("sono le tre e un quarto",
+  "è l'una meno cinque"...), in English words ("it's quarter past three"),
+  or - the default - clock and weather on one screen, numbers in the text font: on top the
   temperature with a
   one-pixel degree sign and an animated weather icon (falling rain or snow,
   flashing lightning, drifting clouds, ...), below the time (hours without a
@@ -365,10 +369,6 @@ Current modes:
     the label), a Game Boy with a Tetris piece falling on its screen,
     Matrix rain, the hacker emblem (a glider going through its four
     generations in a 3x3 grid) and the Wi-Fi sign connecting arc by arc
-  - *Orologi*: binary (one
-    column of bits per digit of HH:MM, a bar filling with the seconds), in
-    words ("sono le tre e un quarto", "è l'una meno cinque"...) and in
-    English ("it's quarter past three")
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
     into the Mandelbrot set; and, rendered per pixel with 2x2
     supersampling (`src/animations/demos3d.cpp`): *Cubo solido* (a ray per
@@ -480,7 +480,8 @@ Current modes:
   three days. The page shows name, age, mood and three bars, and can rename
   it or start a new egg (`POST /api/pet` with `name` or `reset=1`); the
   state is the NVS blob `pet`, so it is in the settings backup.
-- **Demo** - the hourly quotes shown three ways, to compare how a long
+- **Demo** (under Diagnostica, *Prova i font*: a tool, not among the
+  modes) - the hourly quotes shown three ways, to compare how a long
   text reads on 16x16 LEDs (a whole quote never fits one screen: they
   average 79 characters, a screen holds 12-16): *3 righe* - split into
   three lines of about the same length that scroll together, in the

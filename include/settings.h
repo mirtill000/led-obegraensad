@@ -75,13 +75,17 @@ struct Settings {
   // `brightness` with the sun high down to autoMin after dusk.
   bool autoBright;
   uint8_t autoMin;
+
+  // The Orologio's face: "weather" (clock and weather), "binary", "words"
+  // (Italian) or "wordsen" (English).
+  String clockStyle;
 };
 
 extern Settings settings;
 
 void loadSettings();
 // Version of the saved settings' layout: loadSettings() migrates older ones.
-static const uint8_t SETTINGS_VERSION = 3;
+static const uint8_t SETTINGS_VERSION = 4;
 // Writes the settings that changed since they were last loaded or saved
 // (each NVS write wears the flash: only the differences go).
 void saveSettings();

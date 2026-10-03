@@ -59,9 +59,10 @@ class CommandCallbacks : public BLECharacteristicCallbacks {
 String catalog() {
   String out;
   for (uint8_t i = 0; i < MODE_COUNT; i++) {
-    if (!MODES[i]->hidden()) out += String("M\t") + MODES[i]->id() + "\t" + MODES[i]->name() + "\n";
+    if (!MODES[i]->hidden() && !MODES[i]->tool()) out += String("M\t") + MODES[i]->id() + "\t" + MODES[i]->name() + "\n";
   }
   for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
+    if (ANIMATIONS[i]->isClockFace()) continue;  // styles of the Orologio
     out += String(ANIMATIONS[i]->isGame() ? "G\t" : "A\t") + ANIMATIONS[i]->id() + "\t" + ANIMATIONS[i]->name() + "\n";
   }
   return out;

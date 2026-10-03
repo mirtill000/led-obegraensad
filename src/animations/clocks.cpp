@@ -36,6 +36,7 @@ class BinaryClockAnimation : public Animation {
   const char *id() const override { return "binary"; }
   const char *name() const override { return "Orologio binario"; }
   const char *group() const override { return "Orologi"; }
+  bool isClockFace() const override { return true; }
   uint16_t frameMs() const override { return 100; }
   bool needsTime() const override { return true; }
 
@@ -70,6 +71,7 @@ class WordClockAnimation : public Animation {
   const char *id() const override { return "words"; }
   const char *name() const override { return "Orologio a parole"; }
   const char *group() const override { return "Orologi"; }
+  bool isClockFace() const override { return true; }
   uint16_t frameMs() const override { return 80; }
   bool needsTime() const override { return true; }
 
@@ -123,6 +125,7 @@ class EnglishWordClockAnimation : public Animation {
   const char *id() const override { return "wordsen"; }
   const char *name() const override { return "Orologio a parole (inglese)"; }
   const char *group() const override { return "Orologi"; }
+  bool isClockFace() const override { return true; }
   uint16_t frameMs() const override { return 80; }
   bool needsTime() const override { return true; }
 

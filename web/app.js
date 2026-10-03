@@ -64,7 +64,8 @@ const MODE_GROUPS = [
   ['Giochi e creatività', ['games', 'ambient', 'life', 'pet', 'formula', 'gallery']],
   ['Altro', []],
 ];
-function groupModes(modes) {
+function groupModes(allModes) {
+  const modes = allModes.filter((m) => !m.tool);  // tools live under Diagnostica
   const groups = MODE_GROUPS.map(([title, ids]) => [title, ids.map((id) => modes.find((m) => m.id === id)).filter(Boolean)]);
   const listed = new Set(MODE_GROUPS.flatMap(([, ids]) => ids));
   groups[groups.length - 1][1].push(...modes.filter((m) => !listed.has(m.id)));
@@ -142,6 +143,8 @@ function render() {
   $('textPos').value = s.settings.textPos;
   $('demoStyle').value = s.settings.demoStyle;
   if (selected === 'quotes' && !quotesLoaded) loadQuotes().catch(() => {});
+  $('clockStyle').value = s.settings.clockStyle;
+  $('clockInfo').hidden = s.settings.clockStyle !== 'weather';
   $('clockInfo').textContent = 'Meteo per ' + s.settings.city + ' (' + s.settings.lat.toFixed(2) + ', ' + s.settings.lon.toFixed(2) + '), fuso ' + s.settings.tzName + '.';
 
   // Animazioni (grouped) and Giochi: the same list, split by kind.
@@ -151,6 +154,7 @@ function render() {
     gsel.add(new Option('Automatica (cambia ogni 5 minuti, in demo)', 'auto'));
     let group = null;
     for (const a of s.animations) {
+      if (a.clock) continue;  // the Orologio's faces
       if (a.game) { gsel.add(new Option(a.name, a.id)); continue; }
       if (!group || group.label !== a.group) { group = document.createElement('optgroup'); group.label = a.group; sel.appendChild(group); }
       group.appendChild(new Option(a.name, a.id));
@@ -754,7 +758,7 @@ function addPlaylistRow(id, minutes, list = $('playlist')) {
   const row = document.createElement('div');
   row.className = 'row';
   const sel = document.createElement('select');
-  for (const m of state.modes) sel.add(new Option(m.name, m.id));
+  for (const m of state.modes.filter((x) => !x.tool)) sel.add(new Option(m.name, m.id));
   sel.value = id;
   const min = document.createElement('input');
   min.type = 'number'; min.min = 1; min.max = 240; min.value = minutes; min.className = 'narrow';
@@ -818,6 +822,8 @@ $('resetQuotes').onclick = () => post('/api/quotes', { quotes: '' })
 $('openPlace').onclick = () => { $('placeBox').open = true; $('placeBox').scrollIntoView({ behavior: 'smooth' }); };
 $('demoStyle').onchange = (e) => saveSettings({ demoStyle: e.target.value })
   .then(() => status('Stile cambiato')).catch(fail);
+$('clockStyle').onchange = (e) => saveSettings({ clockStyle: e.target.value }).then(() => status('Quadrante cambiato')).catch(fail);
+$('showDemo').onclick = () => post('/api/mode', { id: 'demo' }).then(() => { status('Demo dei font'); $('modeCard').scrollIntoView({ behavior: 'smooth' }); }).catch(fail);
 $('ambient').onchange = (e) => saveSettings({ ambient: e.target.value }).then(() => status('Animazione cambiata')).catch(fail);
 $('games').onchange = (e) => saveSettings({ games: e.target.value }).then(() => status('Gioco cambiato')).catch(fail);
 

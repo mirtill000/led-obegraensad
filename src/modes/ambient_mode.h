@@ -33,7 +33,7 @@ class AmbientMode : public Mode {
   void play(Animation *animation);
   Animation *pickAuto();
   // Whether `a` belongs to this instance (games or not).
-  bool mine(const Animation *a) const { return a && a->isGame() == games_; }
+  bool mine(const Animation *a) const { return a && !a->isClockFace() && a->isGame() == games_; }
   String &choice() const { return games_ ? settings.game : settings.ambient; }
   bool autoRotation() const;
 
