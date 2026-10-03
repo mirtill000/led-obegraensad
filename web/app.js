@@ -224,6 +224,7 @@ function renderGame() {
   $('gameStyleInfo').textContent = info && info.style ? 'Grafica: ' + STYLE_NAMES[info.style] + '.' : '';
   const pad = g.pad;
   $('pad').hidden = g.demo || !pad;
+  $('player').hidden = g.demo || !pad || !(pad.players > 1);
   $('padHint').textContent = g.demo || !pad ? '' : pad.hint;
   if (!pad) return;
   for (const b of $('pad').querySelectorAll('button')) {
@@ -237,7 +238,21 @@ function renderGame() {
 // Game keys go to port 81 on a kept-alive connection (no new connection
 // per key); if that fails, to /api/input.
 let fastKeys = true;
+// Two-player games: this page drives player 1 or 2 (remembered on this
+// phone); player 2's keys go in lower case.
+let player = 1;
+try { player = +localStorage.getItem('player') === 2 ? 2 : 1; } catch (e) {}
+for (const b of $('player').children) {
+  b.classList.toggle('on', +b.dataset.player === player);
+  b.onclick = () => {
+    player = +b.dataset.player;
+    try { localStorage.setItem('player', player); } catch (e) {}
+    for (const o of $('player').children) o.classList.toggle('on', o === b);
+  };
+}
 function sendKey(key) {
+  const pad = state && state.game && state.game.pad;
+  if (pad && pad.players > 1 && player === 2) key = key.toLowerCase();
   const slow = () => fetch('/api/input', { method: 'POST', body: new URLSearchParams({ key }), keepalive: true }).catch(() => {});
   if (!fastKeys) return slow();
   fetch('http://' + location.hostname + ':81/input?k=' + key, { mode: 'no-cors', cache: 'no-store' })

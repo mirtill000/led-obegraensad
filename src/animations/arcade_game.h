@@ -47,6 +47,7 @@ class ArcadeGame : public Animation {
  protected:
   virtual void tick(uint32_t now) = 0;
   void gameOver(int points) { score_.show(String("Punti ") + points); }
+  void gameOver(const String &text) { score_.show(text); }  // e.g. a match result
   bool demo_ = true;
 
  private:

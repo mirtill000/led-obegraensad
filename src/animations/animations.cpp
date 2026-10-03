@@ -8,6 +8,7 @@ extern Animation *const wavesAnimation;
 extern Animation *const marioAnimation;
 extern Animation *const tetrisAnimation;
 extern Animation *const snakeAnimation;
+extern Animation *const tronAnimation;
 extern Animation *const pongAnimation;
 extern Animation *const breakoutAnimation;
 extern Animation *const flappyAnimation;
@@ -48,6 +49,7 @@ Animation *const ANIMATIONS[] = {
     marioAnimation,
     tetrisAnimation,
     snakeAnimation,
+    tronAnimation,
     pongAnimation,
     breakoutAnimation,
     flappyAnimation,

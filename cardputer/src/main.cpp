@@ -40,6 +40,13 @@ const char *const ICONS[] = {"bell", "mail", "check", "alert", "heart", "phone",
 const char *const ICON_NAMES[] = {"campanella", "busta", "spunta", "attenzione", "cuore", "telefono", "casa", "stella", "nessuna"};
 const int ICON_COUNT = 9;
 int iconPos = 0;
+// In a two-player game the Cardputer can drive player 2 (P switches):
+// its keys then go in lower case.
+bool secondPlayer = true;
+char keyFor(char key) {
+  return secondPlayer && lamp::state().players > 1 ? (char)(key - 'A' + 'a') : key;
+}
+
 String flash;  // a short confirmation at the bottom
 uint32_t flashUntil = 0;
 
@@ -183,6 +190,7 @@ void drawRemote() {
     if (arrows.length()) line(caps + "  " + arrows);
   }
   if (game) line("D  demo si'/no");
+  if (s.players > 1) line(secondPlayer ? "P  sei il giocatore 2" : "P  sei il giocatore 1");
   line("X  " + plain(s.button));
   line("`  indietro");
   if (s.demoForced) {
@@ -287,13 +295,17 @@ void remoteKeys(const Keyboard_Class::KeysState &k, bool changed) {
   for (const auto &a : ARROWS) {
     if (!M5Cardputer.Keyboard.isKeyPressed(a.key)) continue;
     if (changed || now - lastRepeat >= 110) {
-      lamp::send(String("k ") + a.command);
+      lamp::send(String("k ") + keyFor(a.command));
       lastRepeat = now;
     }
   }
   if (!changed) return;
   for (char c : k.word) {
-    if (c == ' ') lamp::send("k A");
+    if (c == ' ') lamp::send(String("k ") + keyFor('A'));
+    if ((c == 'p' || c == 'P') && lamp::state().players > 1) {
+      secondPlayer = !secondPlayer;
+      say(secondPlayer ? "Sei il giocatore 2" : "Sei il giocatore 1");
+    }
     if (c == 'd' || c == 'D') {
       const lamp::State s = lamp::state();
       if (!s.game.length()) {
@@ -310,7 +322,7 @@ void remoteKeys(const Keyboard_Class::KeysState &k, bool changed) {
     if (c == 'x' || c == 'X') send("x");
     if (c == '`') screen = Screen::Menu;
   }
-  if (k.enter) lamp::send("k A");
+  if (k.enter) lamp::send(String("k ") + keyFor('A'));
   if (k.esc) screen = Screen::Menu;
 }
 

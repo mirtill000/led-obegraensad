@@ -12,6 +12,7 @@ struct GameControls {
   const char *labels[5];  // pad labels for L R U D A; nullptr = the plain arrow / "Salta"
   bool repeat;            // held arrows repeat (paddles, walking)
   const char *hint;       // one line under the pad
+  uint8_t players = 1;    // 2: a second player sends the keys in lower case
 };
 
 // Graphics of a game: always on/off LEDs, always shaded, or following the

@@ -15,7 +15,7 @@
 // Commands: a letter, a space, the argument. The same strings go over
 // Bluetooth (command characteristic), to POST /api/cmd (field "c") and are
 // used by the web page's own buttons.
-//   k <L|R|U|D|A>        game key
+//   k <L|R|U|D|A>        game key (lower case: player 2)
 //   m <mode id>          show a mode
 //   g <game id|auto>     play a game            a <anim id|auto>  an animation
 //   d <0|1> [game id]    demo off/on (the game on show if no id)
@@ -26,3 +26,6 @@
 //   w <x> <y> <0-255>    paint a pixel of the Game of Life's board (shows it)
 //   w c                  clear the board      w l   set it going
 #define REMOTE_KEYS "LRUDA"
+// The second player of a two-player game (Tron) sends the same keys in
+// lower case: "k l" is player 2 turning left.
+#define REMOTE_KEYS_P2 "lruda"

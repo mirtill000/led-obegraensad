@@ -42,6 +42,7 @@ struct State {
   String mode, modeName, button, game, gameName, time;
   String keys, actionKey;  // the game's keys (of LRUDA) and what A does
   String labels;           // "L|R|U|D|A" names, "" = the plain arrow
+  int players = 1;         // 2: a two-player game (Tron)
   String label(int i) const {  // 0-4, in LRUDA order
     int start = 0;
     for (int k = 0; k < i; k++) {

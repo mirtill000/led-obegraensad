@@ -394,7 +394,13 @@ Current modes:
   every rotation and column and picks the best by stack height, holes and
   surface (points: the lines cleared); **Snake** - in demo mode it takes the shortest way to the food
   only if it can still reach its tail afterwards (after a long hunger it
-  risks it anyway; points: the food eaten); **Pong** - you against
+  risks it anyway; points: the food eaten); **Tron** - two light cycles leaving a wall behind them, first
+  to 3 rounds; player 1 drives from the page, player 2 from a second phone
+  set to *Giocatore 2* or from the Cardputer (*P* switches player; the
+  keys of player 2 are the lower-case ones, `k l`); a cycle nobody drives
+  is driven by the lamp, which steers into the most room (flood fill),
+  keeps straight when it can and dodges head-on crashes - in demo mode
+  both are; **Pong** - you against
   the computer, first to 5; **Breakout** - 3 lives, faster at each level;
   **Flappy Bird**; **Space Invaders** - waves that get faster; **Labirinto 3D** - a first-person
   maze drawn by raycasting (one ray per column, walls shaded by

@@ -8,7 +8,8 @@
 //   state (read, notify)  {"m":mode,"mn":name,"x":button name,"g":game,
 //                          "gn":game name,"d":demo,"f":demo forced,"c":keys the
 //                          game uses (of LRUDA),"ca":what A does,"cl":the five
-//                          labels L|R|U|D|A,"b":brightness,
+//                          labels L|R|U|D|A,"n":players (2: player 2 sends
+//                          lower-case keys),"b":brightness,
 //                          "t":"HH:MM"} - sent when it changes
 //   frame (read, notify)  the panel as seen: 256 levels 0-15, two pixels per
 //                          byte (high nibble first), row by row - at most
@@ -81,7 +82,7 @@ String controlsFields(const GameControls *c) {
   String labels;
   for (int i = 0; i < 5; i++) labels += String(i ? "|" : "") + (c->labels[i] ? c->labels[i] : "");
   return ",\"c\":" + quoted(c->keys) + ",\"ca\":" + quoted(c->labels[4] ? c->labels[4] : "Salta") +
-         ",\"cl\":" + quoted(labels.c_str());
+         ",\"cl\":" + quoted(labels.c_str()) + ",\"n\":" + String(c->players);
 }
 
 String stateJson() {

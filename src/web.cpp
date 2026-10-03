@@ -11,6 +11,7 @@
 #include "ble.h"
 #include "build_info.h"
 #include "commands.h"
+#include "remote_protocol.h"
 #include "events.h"
 #include "display.h"
 #include "modes.h"
@@ -68,7 +69,8 @@ static String controlsJson(const GameControls *c) {
   if (!c) return "null";
   String j = "{\"keys\":" + jsonString(c->keys) + ",\"labels\":[";
   for (int i = 0; i < 5; i++) j += String(i ? "," : "") + (c->labels[i] ? jsonString(c->labels[i]) : String("null"));
-  return j + "],\"repeat\":" + jsonBool(c->repeat) + ",\"hint\":" + jsonString(c->hint) + "}";
+  return j + "],\"repeat\":" + jsonBool(c->repeat) + ",\"hint\":" + jsonString(c->hint) +
+         ",\"players\":" + String(c->players) + "}";
 }
 
 static String stateJson() {
@@ -989,7 +991,7 @@ static void answer(LiveClient &c, uint32_t now) {
     c.lastFrame = c.lastState = 0;  // send both right away
     return;
   }
-  if (path.startsWith("/input?k=") && path.length() == 10 && strchr("LRUDA", path[9])) {
+  if (path.startsWith("/input?k=") && path.length() == 10 && (strchr(REMOTE_KEYS, path[9]) || strchr(REMOTE_KEYS_P2, path[9]))) {
     runCommand(String("k ") + path[9]);
     queue(c, "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nCache-Control: no-store\r\n"
              "Connection: keep-alive\r\nContent-Length: 0\r\n\r\n");

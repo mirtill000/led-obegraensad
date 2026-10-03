@@ -84,6 +84,8 @@ void parseState(const String &json) {
   lampState.keys = field(json, "c");
   lampState.actionKey = field(json, "ca");
   lampState.labels = field(json, "cl");
+  const String n = field(json, "n");
+  lampState.players = n.length() ? n.toInt() : 1;
   lampState.time = field(json, "t");
   const String b = field(json, "b");
   if (b.length()) lampState.brightness = b.toInt();

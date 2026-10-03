@@ -21,7 +21,7 @@ const char *runCommand(const String &command) {
   const String arg = command.length() > 2 && command[1] == ' ' ? command.substring(2) : String();
   switch (op) {
     case 'k':
-      if (arg.length() != 1 || !strchr(REMOTE_KEYS, arg[0])) return "Tasto sconosciuto";
+      if (arg.length() != 1 || !(strchr(REMOTE_KEYS, arg[0]) || strchr(REMOTE_KEYS_P2, arg[0]))) return "Tasto sconosciuto";
       currentMode()->input(arg[0]);
       return nullptr;
     case 'm':
