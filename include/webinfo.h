@@ -12,6 +12,7 @@ struct WebInfo {
   String history[12];     // "Accadde oggi, 1846: ..."
   uint8_t historyCount = 0;
   String event;           // "Domani 9:30 Dentista"; empty if none/off
+  String birthday;        // "Buon compleanno, Anna!" when the calendar has one today
   String historyStatus;   // for the page: "12 eventi" / error
   String calendarStatus;
 };

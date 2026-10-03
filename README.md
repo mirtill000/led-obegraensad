@@ -369,6 +369,19 @@ Current modes:
     the label), a Game Boy with a Tetris piece falling on its screen,
     Matrix rain, the hacker emblem (a glider going through its four
     generations in a 3x3 grid) and the Wi-Fi sign connecting arc by arc
+  - *Ricorrenze* (`src/animations/seasonal.cpp`): snow settling into
+    drifts past a small pine, a Christmas tree with twinkling lights,
+    fireworks, floating hearts, a rocking Easter egg, a Halloween pumpkin
+    lit by a flickering candle, a birthday cake whose greeting scrolls by.
+    With **Ricorrenze** on (Impostazioni), on a special day the lamp shows
+    its animation for the first minute of every hour, then goes back to
+    what it was doing (not at night, not during a game): fireworks for New
+    Year (from 22:00 on 31 December), the tree on 24-26 December, snow the
+    rest of December, hearts on Valentine's day, the egg on Easter Sunday
+    and Monday (computed for each year), the pumpkin on Halloween, the
+    cake on a birthday of the calendar ("Dal web": an event today whose
+    title says "compleanno" or "birthday", matched by day and month so
+    Google's yearly birthdays count) - `src/occasions.cpp`
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
     into the Mandelbrot set; and, rendered per pixel with 2x2
     supersampling (`src/animations/demos3d.cpp`): *Cubo solido* (a ray per

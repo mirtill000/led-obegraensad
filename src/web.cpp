@@ -27,6 +27,7 @@
 #include "modes/quotes_mode.h"
 #include "modes/sunrise_mode.h"
 #include "moon.h"
+#include "occasions.h"
 #include "pager.h"
 #include "webinfo.h"
 #include "world.h"
@@ -96,6 +97,8 @@ static String stateJson() {
   json += "],\"activeMode\":" + modeJson(currentMode());
 
   json += ",\"brightnessNow\":" + String(sunBrightness());
+  const Occasion occasion = occasionNow();
+  json += ",\"occasion\":" + (occasion.animation ? jsonString(occasion.name) : String("null"));
   json += ",\"animations\":[";
   for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
     if (i) json += ',';

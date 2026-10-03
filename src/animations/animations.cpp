@@ -39,6 +39,13 @@ extern Animation *const voxelAnimation;
 extern Animation *const plasmaAnimation;
 extern Animation *const metaballsAnimation;
 extern Animation *const mandelbrotAnimation;
+extern Animation *const snowAnimation;
+extern Animation *const xmasTreeAnimation;
+extern Animation *const fireworksAnimation;
+extern Animation *const heartsAnimation;
+extern Animation *const easterEggAnimation;
+extern Animation *const pumpkinAnimation;
+extern Animation *const cakeAnimation;
 
 // Menu order; the page groups them by Animation::group().
 Animation *const ANIMATIONS[] = {
@@ -80,6 +87,13 @@ Animation *const ANIMATIONS[] = {
     plasmaAnimation,
     metaballsAnimation,
     mandelbrotAnimation,
+    snowAnimation,
+    xmasTreeAnimation,
+    fireworksAnimation,
+    heartsAnimation,
+    easterEggAnimation,
+    pumpkinAnimation,
+    cakeAnimation,
 };
 const uint8_t ANIMATION_COUNT = sizeof(ANIMATIONS) / sizeof(ANIMATIONS[0]);
 

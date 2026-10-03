@@ -79,6 +79,10 @@ struct Settings {
   // The Orologio's face: "weather" (clock and weather), "binary", "words"
   // (Italian) or "wordsen" (English).
   String clockStyle;
+
+  // Special days (occasions.h): their animation for the first minute of
+  // every hour.
+  bool occasions;
 };
 
 extern Settings settings;

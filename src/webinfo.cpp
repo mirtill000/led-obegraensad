@@ -5,6 +5,7 @@
 #include <WiFiClientSecure.h>
 
 #include "settings.h"
+#include "occasions.h"
 #include "timekeeping.h"
 
 static WebInfo latest;
@@ -238,6 +239,7 @@ class CalendarScanner : public Stream {
   time_t start = 0;
   bool allDay = false;
   String summary;
+  String birthday;  // title of a birthday today (any year: they repeat yearly)
 
  private:
   // Days since 1970-01-01 for a civil date (UTC).
@@ -284,6 +286,16 @@ class CalendarScanner : public Stream {
       time_t t;
       bool whole;
       if (!parseTime(evStart_, t, whole)) return;
+      // A birthday on today's day and month, whatever its year.
+      String lower = evSummary_;
+      lower.toLowerCase();
+      if ((lower.indexOf("compleann") >= 0 || lower.indexOf("birthday") >= 0) && evStart_.length() >= 8) {
+        struct tm today;
+        localtime_r(&now_, &today);
+        if (evStart_.substring(4, 6).toInt() == today.tm_mon + 1 && evStart_.substring(6, 8).toInt() == today.tm_mday) {
+          birthday = evSummary_;
+        }
+      }
       // All-day events count for the whole day they are on.
       const time_t ends = whole ? t + 86400 : t;
       if (ends <= now_) return;
@@ -378,6 +390,7 @@ void webInfoTick() {
   latest.word = word;
   if (!settings.infoCalendar || settings.icalUrl.length() == 0) {
     latest.event = "";
+    latest.birthday = "";
     latest.calendarStatus = settings.infoCalendar ? "manca il link del calendario" : "";
   }
   xSemaphoreGive(lock);
@@ -417,6 +430,7 @@ void webInfoTick() {
     const bool ok = get(url, scanner, code);
     scanner.finish();
     xSemaphoreTake(lock, portMAX_DELAY);
+    if (ok) latest.birthday = scanner.birthday.length() ? birthdayGreeting(scanner.birthday) : String();
     if (!ok) {
       latest.calendarStatus = String("non raggiungibile (") + code + ")";
     } else if (scanner.found) {

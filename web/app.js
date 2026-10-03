@@ -454,6 +454,8 @@ function renderExtras() {
   $('calendarStatus').textContent = s.settings.infoCalendar ? 'Stato: ' + (s.web.calendarStatus || 'in attesa') : '';
   $('webPreview').textContent = [s.web.wordText, s.web.event].filter(Boolean).join(' · ');
 
+  $('occasions').checked = s.settings.occasions;
+  $('occasionInfo').textContent = s.occasion ? 'Oggi: ' + s.occasion + '.' : 'Oggi nessuna ricorrenza.';
   $('autoBright').checked = s.settings.autoBright;
   $('autoMinBox').hidden = !s.settings.autoBright;
   if (!editing('autoMin')) $('autoMin').value = s.settings.autoMin;
@@ -935,6 +937,7 @@ $('gameStyle').onchange = (e) => saveSettings({ gameStyle: e.target.value })
 $('transition').onchange = (e) => saveSettings({ transition: e.target.value })
   .then(() => status('Passaggio: ' + e.target.selectedOptions[0].textContent.toLowerCase())).catch(fail);
 $('brightness').onchange = (e) => saveSettings({ brightness: e.target.value }).catch(fail);
+$('occasions').onchange = (e) => saveSettings({ occasions: b01(e.target.checked) }).catch(fail);
 $('autoBright').onchange = (e) => saveSettings({ autoBright: b01(e.target.checked) }).catch(fail);
 $('autoMin').onchange = (e) => saveSettings({ autoMin: e.target.value }).catch(fail);
 

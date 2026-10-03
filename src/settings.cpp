@@ -163,6 +163,7 @@ const SettingDef SETTING_DEFS[] = {
     {"vertical", "vertical", T::Bool, F_(vertical), 0, 1, "0", nullptr, SW, FX_ROTATION | FX_RESTART, nullptr, nullptr},
     {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|none", SW, FX_TRANSITION, nullptr, nullptr},
     {"clockStyle", "clockStyle", T::Text, F_(clockStyle), 0, 0, "weather", "weather|binary|words|wordsen", SW, FX_RESTART, "clock", nullptr},
+    {"occasions", "occasions", T::Bool, F_(occasions), 0, 1, "1", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"autoBright", "autoBright", T::Bool, F_(autoBright), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"autoMin", "autoMin", T::U8, F_(autoMin), 1, 255, "25", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"lat", "lat", T::Float, F_(latitude), -90, 90, STR(DEFAULT_LATITUDE), nullptr, SW, FX_WEATHER | FX_MODES, nullptr, nullptr},

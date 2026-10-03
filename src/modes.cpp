@@ -1,5 +1,6 @@
 #include "modes.h"
 #include "moon.h"
+#include "occasions.h"
 
 #include "display.h"
 #include "modes/ambient_mode.h"
@@ -198,6 +199,18 @@ static void evaluate(uint32_t now) {
   if (night && settings.nightMode == "stars") {
     wanted = indexOf("ambient");
     override = "stars";
+  }
+  // A special day (occasions.h): its animation for the first minute of
+  // every hour, then back to what was on.
+  if (!override && settings.occasions && !night && settings.mode != "games") {  // not in the middle of a game
+    struct tm t;
+    if (localTime(t) && t.tm_min == 0) {
+      const Occasion o = occasionNow();
+      if (o.animation) {
+        wanted = indexOf("ambient");
+        override = o.animation;
+      }
+    }
   }
   const bool overrideChanged = ambientMode.setOverride(override);
 
