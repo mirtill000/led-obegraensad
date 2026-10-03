@@ -62,20 +62,9 @@
       </div>
       <p class="hint">Lettere accentate con l'apostrofo: «perché» diventa «perche'».</p>
       <label for="textPos">Come mostrarlo</label>
-      <select id="textPos">
-        <option value="random">Scorre, a un'altezza variabile</option>
-        <option value="top">Scorre in alto</option>
-        <option value="middle">Scorre al centro</option>
-        <option value="bottom">Scorre in basso</option>
-        <option value="pages">A pagine ferme</option>
-      </select>
+      <select id="textPos"></select>
       <label for="textFontText">Font</label>
-      <select id="textFontText">
-        <option value="big">Grande (16 px)</option>
-        <option value="small">Media (8 px)</option>
-        <option value="mini">Piccola (5 px, maiuscole)</option>
-        <option value="tiny">Minima (4 px, maiuscole)</option>
-      </select>
+      <select id="textFontText"></select>
       <p class="hint">È lo stesso font di Display: vale per tutto il testo della lampada.</p>
     </div>
 
@@ -91,12 +80,7 @@
 
     <div class="panel" data-mode="clock" hidden>
       <label for="clockStyle">Quadrante</label>
-      <select id="clockStyle">
-        <option value="weather">Ora e meteo</option>
-        <option value="binary">Binario</option>
-        <option value="words">A parole</option>
-        <option value="wordsen">A parole, in inglese</option>
-      </select>
+      <select id="clockStyle"></select>
       <p class="hint" id="clockInfo"></p>
       <div class="actions">
         <button class="btn" id="openPlace">Cambia città o fuso orario</button>
@@ -121,13 +105,7 @@
         <p>Google Calendar: Impostazioni → il tuo calendario → «Indirizzo segreto in formato iCal». Gli eventi ricorrenti non sono supportati.</p>
       </details>
       <label for="webPos">Come mostrarlo</label>
-      <select id="webPos">
-        <option value="random">Scorre, a un'altezza variabile</option>
-        <option value="top">Scorre in alto</option>
-        <option value="middle">Scorre al centro</option>
-        <option value="bottom">Scorre in basso</option>
-        <option value="pages">A pagine ferme</option>
-      </select>
+      <select id="webPos"></select>
       <div class="actions">
         <button class="btn primary" id="saveWeb">Salva</button>
       </div>
@@ -272,12 +250,7 @@
 
     <div class="panel" data-mode="demo" hidden>
       <label for="demoStyle">Come mostrare le frasi</label>
-      <select id="demoStyle">
-        <option value="auto">A turno: uno stile per frase</option>
-        <option value="rows3">3 righe che scorrono insieme (font Minima)</option>
-        <option value="pages">A pagine: 3 righe ferme alla volta (font Minima)</option>
-        <option value="rows2">2 righe che scorrono insieme (font Piccola)</option>
-      </select>
+      <select id="demoStyle"></select>
       <p class="hint">Le frasi dell'ora, per confrontare come si legge un testo lungo su 16×16 LED.</p>
     </div>
   </section>
@@ -329,11 +302,7 @@
         <div><label for="nightEnd">Alle</label><input type="time" id="nightEnd"></div>
       </div>
       <label for="nightMode">Di notte</label>
-      <select id="nightMode">
-        <option value="off">Lampada spenta</option>
-        <option value="stars">Solo stelle</option>
-        <option value="dim">Luminosità ridotta</option>
-      </select>
+      <select id="nightMode"></select>
       <div id="nightDimBox">
         <label for="nightBrightness">Luminosità di notte</label>
         <input type="range" id="nightBrightness" min="1" max="255">
@@ -380,27 +349,15 @@
       </div>
       <p class="hint" id="brightInfo"></p>
       <label for="textFont">Font del testo</label>
-      <select id="textFont">
-        <option value="big">Grande (16 px)</option>
-        <option value="small">Media (8 px)</option>
-        <option value="mini">Piccola (5 px, maiuscole)</option>
-        <option value="tiny">Minima (4 px, maiuscole)</option>
-      </select>
+      <select id="textFont"></select>
       <details class="help"><summary>Dove si usa</summary>
         <p>Per tutto il testo, che scorra o sia a pagine: testo scorrevole, frasi dell'ora, dati dal web, notifiche, orologio a parole e punteggi dei giochi. A pagine: 2 righe con Media e Piccola, 3 con Minima; col Grande il testo scorre sempre. Con «Media» le lettere sono strette di un pixel, e in verticale il testo è più basso (6 px invece di 8).</p>
       </details>
       <label for="gameStyle">Grafica dei giochi</label>
-      <select id="gameStyle">
-        <option value="soft">Sfumata: più livelli di luce</option>
-        <option value="crisp">Nitida: LED solo accesi o spenti</option>
-      </select>
+      <select id="gameStyle"></select>
       <p class="hint">Vale per <span id="styleGames">i giochi che la seguono</span>. Se con la sfumata noti tremolii, prova la nitida.</p>
       <label for="transition">Passaggio tra modalità e animazioni</label>
-      <select id="transition">
-        <option value="fade">Dissolvenza</option>
-        <option value="wipe">Tendina da sinistra</option>
-        <option value="none">Stacco netto</option>
-      </select>
+      <select id="transition"></select>
     </details>
   </div>
 

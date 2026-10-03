@@ -1,8 +1,14 @@
-# PlatformIO pre-build script: keeps the names the user sees consistent.
-# Fails the build if a retired name comes back in anything shown on the
-# page or the panel (web/, the string literals in src/ and include/, the
-# README), or if two modes/animations get names that differ only by a
-# trailing "s" (like "Space Invader" and "Space Invaders").
+# PlatformIO pre-build script: keeps the texts the user sees consistent.
+# Fails the build if
+#  - a retired name comes back in anything shown on the page or the panel
+#    (web/, the string literals in src/ and include/, the README);
+#  - two modes/animations get names that differ only by a trailing "s"
+#    (like "Space Invader" and "Space Invaders");
+#  - a message of include/texts.h is written out again in src/ instead of
+#    using txt:: (the same situation must read the same everywhere, and a
+#    translation must only touch texts.h);
+#  - the page lists by itself the choices of a setting: their values and
+#    names come from the lamp (SETTING_DEFS, the state's "choices").
 import os
 import re
 import sys
@@ -51,6 +57,22 @@ for path, _ in code:
 for n in names:
     if n + "s" in names:
         problems.append(f"names too alike: '{n}' and '{n}s'")
+
+# Messages that belong to texts.h.
+texts = open(os.path.join(root, "include", "texts.h"), encoding="utf-8").read()
+messages = dict((v, k) for k, v in re.findall(r'constexpr const char \*(\w+) = "((?:[^"\\]|\\.)*)";', texts))
+for path in list(files("src", (".cpp", ".h"))):
+    for lit in literals(open(path, encoding="utf-8").read()):
+        if len(lit) > 6 and lit in messages:
+            problems.append(f"{os.path.relpath(path, root)}: \"{lit}\" - use txt::{messages[lit]} (include/texts.h)")
+
+# Setting choices are the lamp's: the page's lists for them stay empty.
+page = open(os.path.join(root, "web", "page.html"), encoding="utf-8").read()
+app = open(os.path.join(root, "web", "app.js"), encoding="utf-8").read()
+selects = re.search(r"CHOICE_SELECTS = \{([^}]*)\}", app)
+for sel in re.findall(r"(\w+):", selects.group(1) if selects else ""):
+    if re.search(r'<select id="%s"[^>]*>\s*<option' % sel, page):
+        problems.append(f"web/page.html: the list '{sel}' has its own options - they come from the lamp (SETTING_DEFS)")
 
 if problems:
     print("\n*** Inconsistent names shown to the user (scripts/check_texts.py):")

@@ -73,8 +73,21 @@ function groupModes(allModes) {
 }
 function modeName(id) { const m = state.modes.find((m) => m.id === id); return m ? m.name : id; }
 
+// Lists whose choices are settings: their values and names come from the
+// lamp (SETTING_DEFS), not from this page.
+const CHOICE_SELECTS = { textFont: 'textFont', textFontText: 'textFont', textPos: 'textPos', webPos: 'webPos',
+  transition: 'transition', gameStyle: 'gameStyle', clockStyle: 'clockStyle', nightMode: 'nightMode', demoStyle: 'demoStyle' };
+function fillChoices(choices) {
+  for (const [id, name] of Object.entries(CHOICE_SELECTS)) {
+    const sel = $(id);
+    if (sel.options.length || !choices[name]) continue;
+    for (const [value, label] of choices[name]) sel.add(new Option(label, value));
+  }
+}
+
 function render() {
   const s = state;
+  fillChoices(s.choices);
   const info = [s.time ? 'Ora ' + s.time : 'Ora non ancora sincronizzata'];
   if (s.weather) info.push(Math.round(s.weather.temp) + '° ' + weatherName(s.weather.code) + ' a ' + s.settings.city);
   if (s.night) info.push('notte');

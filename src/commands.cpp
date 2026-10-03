@@ -7,6 +7,7 @@
 #include "modes/notify_mode.h"
 #include "remote_protocol.h"
 #include "settings.h"
+#include "texts.h"
 #include "timekeeping.h"
 #include "weather.h"
 #include "webinfo.h"
@@ -49,22 +50,22 @@ void applySettingEffects(const SettingDef *const *changed, int count) {
 }
 
 const char *runCommand(const String &command) {
-  if (!command.length()) return "Comando vuoto";
+  if (!command.length()) return txt::EMPTY_COMMAND;
   const char op = command[0];
   const String arg = command.length() > 2 && command[1] == ' ' ? command.substring(2) : String();
   switch (op) {
     case 'k':
-      if (arg.length() != 1 || !(strchr(REMOTE_KEYS, arg[0]) || strchr(REMOTE_KEYS_P2, arg[0]))) return "Tasto sconosciuto";
+      if (arg.length() != 1 || !(strchr(REMOTE_KEYS, arg[0]) || strchr(REMOTE_KEYS_P2, arg[0]))) return txt::UNKNOWN_KEY;
       currentMode()->input(arg[0]);
       return nullptr;
     case 'm':
-      if (!setMode(arg)) return "Modalità sconosciuta";
+      if (!setMode(arg)) return txt::UNKNOWN_MODE;
       saveSettings();
       return nullptr;
     case 'g':
     case 'a': {
       const Animation *a = findAnimation(arg);
-      if (arg != "auto" && !(a && a->isGame() == (op == 'g'))) return op == 'g' ? "Gioco sconosciuto" : "Animazione sconosciuta";
+      if (arg != "auto" && !(a && a->isGame() == (op == 'g'))) return op == 'g' ? txt::UNKNOWN_GAME : txt::UNKNOWN_ANIMATION;
       (op == 'g' ? settings.game : settings.ambient) = arg;
       setMode(op == 'g' ? "games" : "ambient");
       restartMode();
@@ -76,7 +77,7 @@ const char *runCommand(const String &command) {
       splitArgs(arg, on, id);
       if (!id.length() && currentMode()->gameId()) id = currentMode()->gameId();
       const Animation *a = findAnimation(id);
-      if (!(a && a->isGame())) return "Gioco sconosciuto";
+      if (!(a && a->isGame())) return txt::UNKNOWN_GAME;
       setDemoMode(id.c_str(), on == "1");
       saveSettings();
       return nullptr;
@@ -94,7 +95,7 @@ const char *runCommand(const String &command) {
       refreshModes();
       return nullptr;
     case 't':
-      if (!arg.length()) return "Testo vuoto";
+      if (!arg.length()) return txt::EMPTY_TEXT;
       settings.text = arg.substring(0, 200);
       setMode("text");
       saveSettings();
@@ -102,7 +103,7 @@ const char *runCommand(const String &command) {
     case 'p': {
       const int bar = arg.indexOf('|');
       if (!NotifyMode::push(bar >= 0 ? arg.substring(bar + 1) : arg, bar >= 0 ? arg.substring(0, bar) : String())) {
-        return "Serve un testo o un'icona conosciuta";
+        return txt::NEED_TEXT_OR_ICON;
       }
       return nullptr;
     }
@@ -111,8 +112,8 @@ const char *runCommand(const String &command) {
       String name, value;
       splitArgs(arg, name, value);
       const SettingDef *d = findSetting(name);
-      if (!d || !(d->flags & SET_WEB)) return "Impostazione sconosciuta";
-      if (d->effects & FX_REBOOT) return "Si cambia solo dalla pagina";
+      if (!d || !(d->flags & SET_WEB)) return txt::UNKNOWN_SETTING;
+      if (d->effects & FX_REBOOT) return txt::SETTING_PAGE_ONLY;
       if (const char *reason = setSetting(*d, value)) return reason;
       saveSettings();
       applySettingEffects(&d, 1);
@@ -127,7 +128,7 @@ const char *runCommand(const String &command) {
       } else {
         int x, y, level;
         if (sscanf(arg.c_str(), "%d %d %d", &x, &y, &level) != 3 || x < 0 || x >= COLS || y < 0 || y >= ROWS) {
-          return "Pixel non valido";
+          return txt::BAD_PIXEL;
         }
         board::paint(x, y, constrain(level, 0, 255));
       }
@@ -141,11 +142,11 @@ const char *runCommand(const String &command) {
       String level, id;
       splitArgs(arg, level, id);
       if (!id.length()) id = currentMode()->id();
-      if (!validModeId(id)) return "Modalità sconosciuta";
+      if (!validModeId(id)) return txt::UNKNOWN_MODE;
       setSpeedLevel(id.c_str(), level.toInt());
       saveSettings();
       return nullptr;
     }
   }
-  return "Comando sconosciuto";
+  return txt::UNKNOWN_COMMAND;
 }

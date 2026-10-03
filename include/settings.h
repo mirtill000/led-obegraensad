@@ -156,6 +156,8 @@ String settingsJson();
 // name <tab> kind (B bool, C choice, N number) <tab> value <tab> label <tab>
 // choices <tab> choice names <tab> min <tab> max
 String remoteSettingsText();
+// The choices with their names, for the page: {"name":[["value","Name"],...]}.
+String choicesJson();
 
 // Playlist and time slots in their tidy form; the number of valid items
 // (0 = nothing usable).

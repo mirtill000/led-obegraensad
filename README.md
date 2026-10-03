@@ -125,6 +125,7 @@ src/
   webinfo.cpp        - word of the day, Wikipedia "on this day", iCal calendar
   world.cpp          - air quality and the Space Station's position
   netfetch.cpp       - the one HTTPS client, retry rule, status and flash cache for all of them
+  live.cpp           - the frame and short-state formats shared by the page's live channel and Bluetooth
   formula.cpp        - the Formule mode's expression compiler and evaluator
   moon.cpp           - moon phase from the date
   gallery.cpp        - drawings saved in flash (LittleFS)
@@ -682,6 +683,24 @@ normal period), one status shown in the page and in Diagnostica ("aggiornato
 the last good answer kept in flash (`/cache/` in LittleFS) for weather,
 Wikipedia and air quality, so after a restart the lamp shows them before
 the network is back ("dalla memoria").
+
+## Texts
+
+The words people read come from one place each, so the same thing reads the
+same on the panel, the page and the Cardputer, and a translation touches a
+known set of files:
+
+- messages - refusals, errors, the state of downloads - are in
+  `include/texts.h` (`txt::UNKNOWN_GAME`, `txt::FETCH_UPDATED`...);
+- names of modes, games and animations are each class's `name()`, read by
+  the page and the Cardputer from the lamp;
+- names of settings and of their choices ("Media (8 px)", "Solo stelle"...)
+  are in `SETTING_DEFS`: the page builds its lists from the state's
+  `choices`, the Cardputer from the settings characteristic.
+
+`scripts/check_texts.py` runs before every build and fails it if a retired
+name comes back, if a message of `texts.h` is written out again in `src/`,
+or if the page lists the choices of a setting by itself.
 
 ## Settings
 

@@ -1,5 +1,7 @@
 #include "netfetch.h"
 
+#include "texts.h"
+
 #include <HTTPClient.h>
 #include <LittleFS.h>
 #include <WiFiClientSecure.h>
@@ -71,10 +73,10 @@ bool Source::ok() const {
 }
 
 static String ago(uint32_t seconds) {
-  if (seconds < 60) return "adesso";
-  if (seconds < 3600) return String(seconds / 60) + " min fa";
-  if (seconds < 86400) return String(seconds / 3600) + " h fa";
-  return String(seconds / 86400) + " g fa";
+  if (seconds < 60) return txt::AGO_NOW;
+  if (seconds < 3600) return String(seconds / 60) + txt::AGO_MIN;
+  if (seconds < 86400) return String(seconds / 3600) + txt::AGO_HOURS;
+  return String(seconds / 86400) + txt::AGO_DAYS;
 }
 
 String Source::status() const {
@@ -83,16 +85,16 @@ String Source::status() const {
   const uint32_t now = millis();
   String s;
   if (failures_) {
-    s = lastCode_ > 0 ? "errore " + String(lastCode_) : String("non raggiungibile");
+    s = lastCode_ > 0 ? String(txt::FETCH_ERROR) + " " + lastCode_ : String(txt::FETCH_UNREACHABLE);
     const uint32_t wait = retryMs() - min(retryMs(), now - lastTry_);
-    s += " · riprovo tra " + (wait < 60000 ? String("poco") : String((wait + 59999) / 60000) + " min");
-    if (everOk_) s += " · ultimo dato di " + ago((now - lastOk_) / 1000);
+    s += String(" · ") + txt::FETCH_RETRY + " " + (wait < 60000 ? String(txt::FETCH_RETRY_SOON) : String((wait + 59999) / 60000) + " min");
+    if (everOk_) s += String(" · ") + txt::FETCH_LAST + " " + ago((now - lastOk_) / 1000);
   } else if (everOk_) {
-    s = "aggiornato " + ago((now - lastOk_) / 1000);
+    s = String(txt::FETCH_UPDATED) + " " + ago((now - lastOk_) / 1000);
   } else if (cached_) {
-    s = cachedAge_ >= 0 ? "dalla memoria (di " + ago(cachedAge_ + now / 1000) + ")" : String("dalla memoria");
+    s = cachedAge_ >= 0 ? String(txt::FETCH_CACHED) + " (di " + ago(cachedAge_ + now / 1000) + ")" : String(txt::FETCH_CACHED);
   } else {
-    return "in attesa";
+    return txt::FETCH_WAITING;
   }
   if (detail_.length()) s += " · " + detail_;
   return s;

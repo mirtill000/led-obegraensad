@@ -1,4 +1,5 @@
 #include "settings.h"
+#include "texts.h"
 
 #include <LittleFS.h>
 #include <Preferences.h>
@@ -124,14 +125,14 @@ static void dropFromLists(String &lists, const char *id) {
 #define STR(x) STR_(x)
 #define F_(member) (void *)&settings.member
 
-static const char *checkMode(String &v) { return validModeId(v) ? nullptr : "Modalità sconosciuta"; }
+static const char *checkMode(String &v) { return validModeId(v) ? nullptr : txt::UNKNOWN_MODE; }
 static const char *checkAnimation(String &v) {
   const Animation *a = findAnimation(v);
-  return v == "auto" || (a && !a->isGame() && !a->isClockFace()) ? nullptr : "Animazione sconosciuta";
+  return v == "auto" || (a && !a->isGame() && !a->isClockFace()) ? nullptr : txt::UNKNOWN_ANIMATION;
 }
 static const char *checkGame(String &v) {
   const Animation *a = findAnimation(v);
-  return v == "auto" || (a && a->isGame()) ? nullptr : "Gioco sconosciuto";
+  return v == "auto" || (a && a->isGame()) ? nullptr : txt::UNKNOWN_GAME;
 }
 static const char *checkPlaylist(String &v) {
   String clean;
@@ -157,12 +158,12 @@ const SettingDef SETTING_DEFS[] = {
     // name           NVS key        type     field                    min  max   default        choices
     {"mode", "mode", T::Text, F_(mode), 0, 20, "text", nullptr, SET_SHOW, 0, nullptr, checkMode},
     {"text", "text", T::Text, F_(text), 0, 200, MESSAGE, nullptr, SW, FX_RESTART, "text", nullptr},
-    {"textFont", "scrollFont", T::Text, F_(textFont), 0, 0, "small", "small|big|mini|tiny", SW, FX_FONT | FX_RESTART, nullptr, nullptr, "Font del testo", "Media|Grande|Piccola|Minima"},
-    {"textPos", "textPos", T::Text, F_(textPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "text", nullptr, "Posizione del testo", "Variabile|In alto|Al centro|In basso|A pagine"},
+    {"textFont", "scrollFont", T::Text, F_(textFont), 0, 0, "small", "big|small|mini|tiny", SW, FX_FONT | FX_RESTART, nullptr, nullptr, "Font del testo", "Grande (16 px)|Media (8 px)|Piccola (5 px)|Minima (4 px)"},
+    {"textPos", "textPos", T::Text, F_(textPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "text", nullptr, "Posizione del testo", "Altezza variabile|In alto|Al centro|In basso|A pagine ferme"},
     {"brightness", "brightness", T::U8, F_(brightness), 1, 255, "255", nullptr, SW, FX_MODES, nullptr, nullptr, "Luminosita'", nullptr},
     {"vertical", "vertical", T::Bool, F_(vertical), 0, 1, "0", nullptr, SW, FX_ROTATION | FX_RESTART, nullptr, nullptr, "Lampada verticale", nullptr},
-    {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|none", SW, FX_TRANSITION, nullptr, nullptr, "Passaggio", "Dissolvenza|Tendina|Stacco netto"},
-    {"clockStyle", "clockStyle", T::Text, F_(clockStyle), 0, 0, "weather", "weather|binary|words|wordsen", SW, FX_RESTART, "clock", nullptr, "Quadrante", "Ora e meteo|Binario|A parole|A parole (inglese)"},
+    {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|none", SW, FX_TRANSITION, nullptr, nullptr, "Passaggio", "Dissolvenza|Tendina da sinistra|Stacco netto"},
+    {"clockStyle", "clockStyle", T::Text, F_(clockStyle), 0, 0, "weather", "weather|binary|words|wordsen", SW, FX_RESTART, "clock", nullptr, "Quadrante", "Ora e meteo|Binario|A parole|A parole, in inglese"},
     {"occasions", "occasions", T::Bool, F_(occasions), 0, 1, "1", nullptr, SW, FX_MODES, nullptr, nullptr, "Ricorrenze", nullptr},
     {"autoBright", "autoBright", T::Bool, F_(autoBright), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr, "Segue il sole", nullptr},
     {"autoMin", "autoMin", T::U8, F_(autoMin), 1, 255, "25", nullptr, SW, FX_MODES, nullptr, nullptr, "Minima col sole giu'", nullptr},
@@ -177,9 +178,9 @@ const SettingDef SETTING_DEFS[] = {
     {"infoHistory", "infoHistory", T::Bool, F_(infoHistory), 0, 1, "1", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr, "Accadde oggi", nullptr},
     {"infoCalendar", "infoCal", T::Bool, F_(infoCalendar), 0, 1, "0", nullptr, SW, FX_WEB | FX_RESTART, "web", nullptr},
     {"icalUrl", "icalUrl", T::Text, F_(icalUrl), 0, 500, "", nullptr, SW, FX_WEB, nullptr, nullptr},
-    {"webPos", "webPos", T::Text, F_(webPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "web", nullptr},
+    {"webPos", "webPos", T::Text, F_(webPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "web", nullptr, nullptr, "Altezza variabile|In alto|Al centro|In basso|A pagine ferme"},
     {"galleryShow", "galleryShow", T::Text, F_(galleryShow), 0, 40, "all", nullptr, SET_SHOW, 0, nullptr, nullptr},
-    {"demoStyle", "demoStyle", T::Text, F_(demoStyle), 0, 0, "auto", "auto|rows3|pages|rows2", SW, FX_RESTART, "demo", nullptr, "Demo dei font", "A turno|3 righe|A pagine|2 righe"},
+    {"demoStyle", "demoStyle", T::Text, F_(demoStyle), 0, 0, "auto", "auto|rows3|pages|rows2", SW, FX_RESTART, "demo", nullptr, "Demo dei font", "A turno, uno stile per frase|3 righe che scorrono (Minima)|3 righe a pagine (Minima)|2 righe che scorrono (Piccola)"},
     {"gameStyle", "gameStyle", T::Text, F_(gameStyle), 0, 0, "soft", "soft|crisp", SW, 0, nullptr, nullptr, "Grafica giochi", "Sfumata|Nitida"},
     {"playlistOn", "plOn", T::Bool, F_(playlistOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr, "Playlist", nullptr},
     {"playlist", "playlist", T::Text, F_(playlist), 0, 400, "clock:10,quotes:3,ambient:5,games:5", nullptr, SW, FX_PLAYLIST, nullptr, checkPlaylist},
@@ -203,7 +204,7 @@ const SettingDef SETTING_DEFS[] = {
     {"nightSun", "nightSun", T::Bool, F_(nightSun), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"nightStart", "nightStart", T::U16, F_(nightStart), 0, 1439, "1380", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"nightEnd", "nightEnd", T::U16, F_(nightEnd), 0, 1439, "420", nullptr, SW, FX_MODES, nullptr, nullptr},
-    {"nightMode", "nightMode", T::Text, F_(nightMode), 0, 0, "stars", "off|stars|dim", SW, FX_MODES, nullptr, nullptr, "Di notte", "Spenta|Solo stelle|Luce ridotta"},
+    {"nightMode", "nightMode", T::Text, F_(nightMode), 0, 0, "stars", "off|stars|dim", SW, FX_MODES, nullptr, nullptr, "Di notte", "Lampada spenta|Solo stelle|Luminosità ridotta"},
     {"nightBrightness", "nightBright", T::U8, F_(nightBrightness), 1, 255, "20", nullptr, SW, FX_MODES, nullptr, nullptr},
 };
 const uint8_t SETTING_COUNT = sizeof(SETTING_DEFS) / sizeof(SETTING_DEFS[0]);
@@ -253,19 +254,19 @@ const char *setSetting(const SettingDef &d, const String &input, bool apply) {
     if (d.choices) {
       // One of "a|b|c".
       const String all = String('|') + d.choices + '|';
-      if (v.indexOf('|') >= 0 || all.indexOf(String('|') + v + '|') < 0) return "Valore non ammesso";
+      if (v.indexOf('|') >= 0 || all.indexOf(String('|') + v + '|') < 0) return txt::VALUE_NOT_ALLOWED;
     } else if (d.max && (int32_t)v.length() > d.max) {
-      return "Testo troppo lungo";
+      return txt::VALUE_TOO_LONG;
     } else if ((int32_t)v.length() < d.min) {
-      return "Valore mancante";
+      return txt::VALUE_MISSING;
     }
   } else if (d.type == T::Bool) {
-    if (v != "0" && v != "1" && v != "true" && v != "false") return "Valore non valido";
+    if (v != "0" && v != "1" && v != "true" && v != "false") return txt::VALUE_INVALID;
   } else {
     char *end;
     const double n = strtod(v.c_str(), &end);
-    if (end == v.c_str() || *end || !isfinite(n)) return "Numero non valido";
-    if (n < d.min || n > d.max) return "Valore fuori dai limiti";
+    if (end == v.c_str() || *end || !isfinite(n)) return txt::NUMBER_INVALID;
+    if (n < d.min || n > d.max) return txt::NUMBER_OUT_OF_RANGE;
   }
   if (d.clean) {
     if (const char *reason = d.clean(v)) return reason;
@@ -288,6 +289,28 @@ String settingsJson() {
     if (!(d.flags & SET_SHOW)) continue;
     if (j.length() > 1) j += ',';
     j += String('"') + d.name + "\":" + settingJson(d);
+  }
+  return j + "}";
+}
+
+// {"name":[["value","Name"],...],...}: the choices of every setting that has
+// them, in the order shown, with their names - the page builds its lists
+// from it, as the Cardputer does from remoteSettingsText().
+String choicesJson() {
+  String j = "{";
+  for (const SettingDef &d : SETTING_DEFS) {
+    if (!d.choices || !d.choiceLabels || !(d.flags & SET_SHOW)) continue;
+    if (j.length() > 1) j += ',';
+    j += String('"') + d.name + "\":[";
+    String values = d.choices, names = d.choiceLabels;
+    for (int i = 0; values.length(); i++) {
+      const int a = values.indexOf('|'), b = names.indexOf('|');
+      const String v = a < 0 ? values : values.substring(0, a), n = b < 0 ? names : names.substring(0, b);
+      j += String(i ? "," : "") + "[\"" + v + "\",\"" + n + "\"]";
+      values = a < 0 ? String() : values.substring(a + 1);
+      names = b < 0 ? String() : names.substring(b + 1);
+    }
+    j += "]";
   }
   return j + "}";
 }

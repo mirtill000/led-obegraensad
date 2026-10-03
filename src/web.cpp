@@ -34,6 +34,7 @@
 #include "webinfo.h"
 #include "world.h"
 #include "settings.h"
+#include "texts.h"
 #include "timekeeping.h"
 #include "weather.h"
 
@@ -79,7 +80,7 @@ static String controlsJson(const GameControls *c) {
 static String stateJson() {
   String json;
   json.reserve(8192);  // one allocation: the state is about 6 kB
-  json = "{\"settings\":" + settingsJson() + ",\"active\":" + jsonString(currentMode()->id());
+  json = "{\"settings\":" + settingsJson() + ",\"choices\":" + choicesJson() + ",\"active\":" + jsonString(currentMode()->id());
   json += ",\"night\":" + jsonBool(isNight()) + ",\"playlistPos\":" + String(playlistPosition());
 
   auto modeJson = [](const Mode *m) {
@@ -303,7 +304,7 @@ static void handleSettings() {
     for (int i = 0; i < server.args() && count < 48; i++) {
       const SettingDef *d = findSetting(server.argName(i));
       if (!d) continue;  // e.g. "plain": other fields of the request
-      if (!(d->flags & SET_WEB)) return badRequest("Impostazione non modificabile");
+      if (!(d->flags & SET_WEB)) return badRequest(txt::SETTING_READ_ONLY);
       if (const char *reason = setSetting(*d, server.arg(i), pass == 1)) {
         return badRequest((String(reason) + " (" + d->name + ")").c_str());
       }
@@ -391,7 +392,7 @@ static void handleFormula() {
 // The pet's name (name=) or a new egg (reset=1); care goes through /api/cmd.
 static void handlePet() {
   if (server.hasArg("name")) {
-    if (!server.arg("name").length()) return badRequest("Serve un nome");
+    if (!server.arg("name").length()) return badRequest(txt::NEED_NAME);
     PetMode::rename(server.arg("name"));
   }
   if (server.arg("reset") == "1") {
@@ -437,7 +438,7 @@ static void handleNotify() {
     server.send(200, "application/json", "{\"ok\":false,\"reason\":\"night\"}");
     return;
   }
-  if (!NotifyMode::push(text, icon)) return badRequest("Serve un testo o un'icona conosciuta (bell, mail, check, alert, heart, phone, home, star)");
+  if (!NotifyMode::push(text, icon)) return badRequest((String(txt::NEED_TEXT_OR_ICON) + " (bell, mail, check, alert, heart, phone, home, star)").c_str());
   server.send(200, "application/json", "{\"ok\":true,\"queued\":" + String(NotifyMode::pending()) + "}");
 }
 
@@ -474,7 +475,7 @@ static void handleAlarm() {
   const String cmd = server.arg("cmd");
   if (cmd == "stop") SunriseMode::dismiss();
   else if (cmd == "test") SunriseMode::test();
-  else return badRequest("Comando sconosciuto");
+  else return badRequest(txt::UNKNOWN_COMMAND);
   refreshModes();
   sendState();
 }
@@ -515,7 +516,7 @@ static void handleGalleryList() {
 
 static void handleGalleryItem() {
   Drawing d;
-  if (!galleryLoad(server.arg("id"), d)) return badRequest("Disegno non trovato");
+  if (!galleryLoad(server.arg("id"), d)) return badRequest(txt::DRAWING_NOT_FOUND);
   server.send(200, "application/json",
               "{\"id\":" + jsonString(d.id) + ",\"name\":" + jsonString(d.name) + ",\"frameMs\":" + String(d.frameMs) +
                   ",\"data\":\"" + base64(d.frames.data(), d.frames.size()) + "\"}");
@@ -532,10 +533,10 @@ static bool readFrames(std::vector<uint8_t> &frames, uint16_t &frameMs) {
 
 static void handleGallerySave() {
   Drawing d;
-  if (!readFrames(d.frames, d.frameMs)) return badRequest("Disegno non valido");
+  if (!readFrames(d.frames, d.frameMs)) return badRequest(txt::DRAWING_INVALID);
   d.id = server.arg("id");
   d.name = server.arg("name");
-  if (!gallerySave(d)) return badRequest("Impossibile salvare (galleria piena?)");
+  if (!gallerySave(d)) return badRequest(txt::GALLERY_FULL);
   server.send(200, "application/json", "{\"id\":" + jsonString(d.id) + "}");
 }
 
@@ -561,7 +562,7 @@ static void handleGalleryShow() {
 static void handleDraw() {
   std::vector<uint8_t> frames;
   uint16_t frameMs;
-  if (!readFrames(frames, frameMs)) return badRequest("Disegno non valido");
+  if (!readFrames(frames, frameMs)) return badRequest(txt::DRAWING_INVALID);
   if (strcmp(currentMode()->id(), "gallery") != 0) setMode("gallery");
   galleryMode().showDraft(frames.data(), frames.size() / 256, frameMs);
   server.send(204);
