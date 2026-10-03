@@ -10,19 +10,14 @@
 #include "settings.h"
 #include "sysinfo.h"
 #include "timekeeping.h"
+#include "ui.h"
 
 #include <vector>
 
 namespace {
 
-// Draws `rows` ('#' lit) with the top-left corner at (x, y).
-void sprite(int x, int y, const char *const *rows, int count, uint8_t level = 255) {
-  for (int r = 0; r < count; r++) {
-    for (int c = 0; rows[r][c]; c++) {
-      if (rows[r][c] == '#') display.setLevel(x + c, y + r, level);
-    }
-  }
-}
+// Pictures are drawn with the shared ui::icon().
+using ui::icon;
 
 class GeekAnimation : public Animation {
  public:
@@ -46,7 +41,7 @@ class InvaderIcon : public GeekAnimation {
     static const int DRIFT[4] = {2, 3, 2, 1};
     tick_++;
     display.clear();
-    sprite(DRIFT[tick_ % 4], 4, CRAB[tick_ % 2], 8);
+    icon(DRIFT[tick_ % 4], 4, CRAB[tick_ % 2], 8);
   }
 
  private:
@@ -72,8 +67,8 @@ class PacManIcon : public GeekAnimation {
     for (int dx = 1; dx < COLS; dx += 3) {
       if (dx > x + 2) display.setPixel(dx, 7, true);  // not eaten yet
     }
-    sprite(x, 5, PAC[(tick_ / 2) % 2], 5);
-    sprite(x - 8, 5, GHOST[(tick_ / 3) % 2], 5);
+    icon(x, 5, PAC[(tick_ / 2) % 2], 5);
+    icon(x - 8, 5, GHOST[(tick_ / 3) % 2], 5);
   }
 
  private:
@@ -276,8 +271,8 @@ class RocketIcon : public GeekAnimation {
     for (int r = 0; r < 10; r++) {
       for (int c = 0; c < 5; c++) display.setLevel(5 + c, 2 + bob + r, 0);
     }
-    sprite(5, 2 + bob, ROCKET, 8);
-    sprite(5, 10 + bob, FLAME[(tick_ / 2) % 2], 2);
+    icon(5, 2 + bob, ROCKET, 8);
+    icon(5, 10 + bob, FLAME[(tick_ / 2) % 2], 2);
   }
 
  private:
@@ -300,7 +295,7 @@ class CoffeeIcon : public GeekAnimation {
                                        "#########"};
     tick_++;
     display.clear();
-    sprite(3, 8, CUP, 7);
+    icon(3, 8, CUP, 7);
     // Three wisps: each a column swaying with a sine, fading as it rises.
     for (int w = 0; w < 3; w++) {
       for (int y = 1; y < 7; y++) {

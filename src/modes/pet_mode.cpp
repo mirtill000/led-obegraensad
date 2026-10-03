@@ -6,6 +6,7 @@
 
 #include "display.h"
 #include "timekeeping.h"
+#include "ui.h"
 
 // ---------------------------------------------------------------------------
 // The pet's life, simulated a minute at a time.
@@ -147,13 +148,6 @@ const char *ZED[] = {"####", "..#.", ".#..", "####"};
 
 const int GROUND = ROWS - 1;  // the floor row; the pet stands on the row above
 
-void blit(const char *const *rows, int w, int h, int x, int y, uint8_t level) {
-  for (int r = 0; r < h; r++) {
-    for (int c = 0; c < w; c++) {
-      if (rows[r][c] == '#') display.setLevel(x + c, y + r, level);
-    }
-  }
-}
 
 enum Anim : uint8_t { NONE, FEED, PLAY, CLEAN, CURE, LOVE, REFUSE };
 Anim anim = NONE;
@@ -208,7 +202,7 @@ void draw(uint32_t now) {
   const int sweep = anim == CLEAN ? (int)(t * (COLS + 2) / ANIM_MS[CLEAN]) - 1 : -1;
   for (int i = 0; i < poops; i++) {
     const int px = COLS - 3 - i * 4;
-    if (px > sweep) blit(POOP, 3, 3, px, GROUND - 3, 110);
+    if (px > sweep) ui::icon(px, GROUND - 3, POOP, 3, 110);
   }
   if (anim == CLEAN) {
     for (int y = 0; y < GROUND; y++) display.setLevel(sweep, y, 200);
@@ -241,7 +235,7 @@ void draw(uint32_t now) {
       const int restY = GROUND - 5;
       const int ay = t < 800 ? -5 + (int)((restY + 5) * t / 800) : restY;
       const int eaten = t < 800 ? 0 : (int)((t - 800) * 6 / 1400);
-      if (eaten < 5) blit(APPLE + eaten, 5, 5 - eaten, ax, ay + eaten, 230);
+      if (eaten < 5) ui::icon(ax, ay + eaten, APPLE + eaten, 5 - eaten, 230);
       break;
     }
     case PLAY: {
@@ -253,11 +247,11 @@ void draw(uint32_t now) {
       break;
     }
     case CURE:
-      if ((t / 300) % 2 == 0) blit(CROSS, 5, 5, x + s.w / 2 - 2, max(0, y - 6), 255);
+      if ((t / 300) % 2 == 0) ui::icon(x + s.w / 2 - 2, max(0, y - 6), CROSS, 5);
       break;
     case LOVE: {
       const int hy = y - 5 - (int)(t * 8 / ANIM_MS[LOVE]);
-      blit(HEART, 5, 4, x + s.w / 2 - 2, hy, 255);
+      ui::icon(x + s.w / 2 - 2, hy, HEART, 4);
       break;
     }
     default: break;
@@ -266,12 +260,12 @@ void draw(uint32_t now) {
   if (asleep) {
     // A "z" floating up from its head.
     const int phase = (now / 600) % 4;
-    blit(ZED, 4, 4, min(x + s.w, COLS - 4), max(0, y - 3 - phase), 90 + 40 * phase);
+    ui::icon(min(x + s.w, COLS - 4), max(0, y - 3 - phase), ZED, 4, 90 + 40 * phase);
   } else if (anim == NONE && (now / 1000) % 2) {
     // What it needs, blinking in the corner.
-    if (life.sick) blit(CROSS, 5, 5, 0, 0, 200);
-    else if (life.food < 25) blit(APPLE, 5, 5, 0, 0, 200);
-    else if (life.joy < 25) blit(NOTE, 5, 5, 0, 0, 200);
+    if (life.sick) ui::icon(0, 0, CROSS, 5, 200);
+    else if (life.food < 25) ui::icon(0, 0, APPLE, 5, 200);
+    else if (life.joy < 25) ui::icon(0, 0, NOTE, 5, 200);
   }
   display.render();
 }

@@ -9,6 +9,7 @@
 #include "gfx.h"
 #include "occasions.h"
 #include "scroller.h"
+#include "ui.h"
 #include "webinfo.h"
 
 namespace {
@@ -20,17 +21,6 @@ class Seasonal : public Animation {
   const char *group() const override { return "Ricorrenze"; }
 };
 
-// Draws `rows` ('#' at `level`, '+' bright, ':' dim) with the top-left at (x, y).
-void art(int x, int y, const char *const *rows, int count, uint8_t level) {
-  for (int r = 0; r < count; r++) {
-    for (int c = 0; rows[r][c]; c++) {
-      const char ch = rows[r][c];
-      if (ch == '#') display.setLevel(x + c, y + r, level);
-      else if (ch == '+') display.setLevel(x + c, y + r, 255);
-      else if (ch == ':') display.setLevel(x + c, y + r, level / 3);
-    }
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Snow falling past a small pine, settling into drifts that slowly melt.
@@ -46,7 +36,7 @@ class SnowAnimation : public Seasonal {
   void frame(uint32_t now) override {
     display.clear();
     static const char *const PINE[] = {"..#..", ".###.", "..#..", ".###.", "#####", "..#.."};
-    art(10, ROWS - 1 - 6, PINE, 6, 45);
+    ui::icon(10, ROWS - 1 - 6, PINE, 6, 45);
     for (Flake &f : flakes_) {
       f.y += f.speed;
       f.x += sinf(now / 700.0f + f.phase) * 0.06f;
@@ -204,7 +194,7 @@ class HeartsAnimation : public Seasonal {
       h.y -= h.speed;
       if (h.y < -5) reset(h, false);
       const int x = (int)lroundf(h.x + sinf(now / 600.0f + h.phase) * 1.2f);
-      art(x, (int)h.y, HEART, 5, h.level);
+      ui::icon(x, (int)h.y, HEART, 5, h.level);
     }
   }
 
@@ -238,7 +228,7 @@ class EasterEggAnimation : public Seasonal {
     };
     display.clear();
     const int rock = (int)lroundf(sinf(now / 450.0f) * 1.2f);
-    art(2 + rock, 2, EGG, 13, 70);
+    ui::icon(2 + rock, 2, EGG, 13, 70);
   }
 };
 
@@ -261,9 +251,9 @@ class PumpkinAnimation : public Seasonal {
         "..............",
     };
     display.clear();
-    art(1, 3, BODY, 11, 60);
+    ui::icon(1, 3, BODY, 11, 60);
     flicker_ = constrain(flicker_ + (int)(esp_random() % 61) - 30, 150, 255);
-    art(1, 3, FACE, 11, (uint8_t)flicker_);
+    ui::icon(1, 3, FACE, 11, (uint8_t)flicker_);
   }
 
  private:
@@ -301,7 +291,7 @@ class CakeAnimation : public Seasonal {
         "############", "#:#:##:#:##:", "############", "############", "#+#+#+#+#+#+", "############",
     };
     display.clear();
-    art(2, 10, CAKE, 6, 120);
+    ui::icon(2, 10, CAKE, 6, 120);
     for (int c = 0; c < 3; c++) {
       const int x = 4 + c * 4;
       for (int y = 6; y < 10; y++) display.setLevel(x, y, 200);

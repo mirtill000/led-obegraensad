@@ -506,14 +506,16 @@ Current modes:
   slider sets the scrolling and the page time
 - **Spento** - all LEDs off
 
-Fixed layouts use font A (proportional, 8 rows, lowercase, "Morbido"
-digits): the clock; only Previsioni, where 8-row
-text leaves no room for the minimum and maximum, uses the 5-row mini font
-(same rounded shapes). Scrolling text uses the font picked in Display. The information screens share one look (`include/ui.h`):
-a header band along the top, everything
-at full brightness, and the same sign while data is missing - three dots
-filling in, or a blinking WiFi symbol when the lamp is offline - always
-on row 10.
+Everything the lamp draws follows one set of rules (`include/ui.h`): three
+sizes of text - a *label* (the 4-row capitals, centred, scrolling round
+when too wide), a *value* (the 6-row digits of the text font, centred) and
+running text in the font picked in Display; one *card* for a reading
+(label, value, caption: Mondo's air quality); pictures as rows of
+characters drawn by one `ui::icon()` (pet, icons, special days); four
+brightness steps (full, text, dim, faint); and the same sign while data is
+missing - three dots filling in, or a blinking WiFi symbol when the lamp
+is offline, always on row 10. The clock and Previsioni keep their own
+tuned digits, narrower where two numbers share the panel.
 
 ### Games and demo mode
 

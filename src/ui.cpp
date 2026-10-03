@@ -38,6 +38,55 @@ void textHeaderLoop(const String &text, uint32_t now) {
   display.drawTextIn(TextFont::Compact, period - offset, 0, t.c_str(), 0, t.length());
 }
 
+void icon(int x, int y, const char *const *rows, int count, uint8_t level) {
+  for (int r = 0; r < count; r++) {
+    for (int c = 0; rows[r][c]; c++) {
+      const char ch = rows[r][c];
+      if (ch == '#') display.setLevel(x + c, y + r, level);
+      else if (ch == '+') display.setLevel(x + c, y + r, LEVEL_FULL);
+      else if (ch == ':') display.setLevel(x + c, y + r, level / 3);
+    }
+  }
+}
+
+void label(const String &text, int y, uint8_t level, uint32_t t) {
+  const String plain = Display::fontText(text);
+  String s;
+  for (unsigned k = 0; k < plain.length(); k++) s += (char)toupper((uint8_t)plain[k]);  // capitals only
+  const int w = Display::textWidthIn(TextFont::Tiny, s.c_str(), 0, s.length());
+  if (w <= COLS + 1) {
+    display.drawTextIn(TextFont::Tiny, (COLS + 1 - w) / 2, y, s.c_str(), 0, s.length());
+  } else {
+    const int period = w + 6;  // a gap before it comes round again
+    const int offset = (int)(t / 90) % period;
+    display.drawTextIn(TextFont::Tiny, -offset, y, s.c_str(), 0, s.length());
+    display.drawTextIn(TextFont::Tiny, period - offset, y, s.c_str(), 0, s.length());
+  }
+  // The font draws at full brightness: bring its rows down to `level`.
+  for (int r = y; r < y + Display::fontHeightOf(TextFont::Tiny); r++) {
+    for (int x = 0; x < COLS; x++) {
+      if (display.getLevel(x, r)) display.setLevel(x, r, level);
+    }
+  }
+}
+
+void value(const String &text, int y, uint8_t level) {
+  const int w = Display::textWidthIn(TextFont::Short, text.c_str(), 0, text.length());
+  display.drawTextIn(TextFont::Short, (COLS + 1 - w) / 2, y, text.c_str(), 0, text.length());
+  if (level == LEVEL_FULL) return;
+  for (int r = y; r < y + Display::fontHeightOf(TextFont::Short); r++) {
+    for (int x = 0; x < COLS; x++) {
+      if (display.getLevel(x, r)) display.setLevel(x, r, level);
+    }
+  }
+}
+
+void card(const String &title, const String &reading, const String &caption, uint32_t t) {
+  label(title, 0, LEVEL_DIM, t);
+  value(reading, 5);
+  label(caption, 12, LEVEL_DIM + 50, t);
+}
+
 void waiting(uint32_t now) {
   const int y = WAITING_ROW;
   if (WiFi.status() != WL_CONNECTED) {

@@ -2,15 +2,35 @@
 
 #include <Arduino.h>
 
-// The shared look of the lamp's information screens, so they all read the
-// same way:
-//  - text in the text font (font A, 8 rows), e.g. the scrolling header of
-//    Conto alla rovescia; only Previsioni, which has no room for it, keeps
-//    the 5-row mini font for its still "VE 26";
-//  - one "waiting for data" animation - three dots filling in -
-//    replaced by a blinking WiFi sign while the lamp is offline;
-//  - everything at full brightness.
+// The shared look of what the lamp draws, so every screen reads the same:
+//  - three sizes of text: a LABEL (the 4-row capitals, centred, scrolling
+//    round when too wide - "ARIA", "ISS"), a VALUE (the 6-row digits of the
+//    text font, centred - "27") and running text in the font chosen in
+//    Display (Scroller, Pager); the clock and Previsioni keep their own
+//    tuned digits;
+//  - one CARD layout for a reading: label on top, value in the middle,
+//    caption at the bottom (Mondo's air quality);
+//  - pictures as rows of characters (ICON): '#' at the given level, '+'
+//    always full, ':' a third of it;
+//  - four brightness steps (LEVEL_*): full for what matters, text for
+//    values, dim for labels and captions, faint for backgrounds;
+//  - one "waiting for data" sign - three dots filling in, or a blinking
+//    WiFi sign while the lamp is offline.
 namespace ui {
+
+static const uint8_t LEVEL_FULL = 255, LEVEL_TEXT = 220, LEVEL_DIM = 120, LEVEL_FAINT = 35;
+
+// A picture given as rows of characters, top-left at (x, y): '#' = `level`,
+// '+' = full, ':' = a third of `level`, anything else left as it is.
+void icon(int x, int y, const char *const *rows, int count, uint8_t level = LEVEL_FULL);
+
+// A label in the 4-row capitals at row y, centred; wider than the panel it
+// scrolls round, timed by `t` (ms). Rows y..y+3 should be free.
+void label(const String &text, int y, uint8_t level, uint32_t t);
+// A value (digits, sign, letters) in the text font's 6-row digits, centred.
+void value(const String &text, int y, uint8_t level = LEVEL_FULL);
+// A reading: label on rows 0-3, value on rows 5-10, caption on rows 12-15.
+void card(const String &title, const String &reading, const String &caption, uint32_t t);
 
 static const int HEADER_ROWS = 5;             // rows 0-4
 static const uint32_t HEADER_STEP_MS = 90;    // header scroll: 1 pixel per step

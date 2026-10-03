@@ -28,28 +28,6 @@ static int mapTop() { return settings.vertical ? 5 : 4; }
 static int mapX(float lon) { return constrain((int)floorf((lon + 180) / 22.5f), 0, 15); }
 static int mapY(float lat) { return mapTop() + constrain((int)floorf((90 - lat) / 22.5f), 0, 7); }
 
-// A word in the 4-pixel font (the rows below `y` must be empty), centred;
-// scrolling round when it is wider than the panel.
-static void word(const char *text, int y, uint8_t level, uint32_t t) {
-  const String plain = Display::fontText(text);
-  String s;
-  for (unsigned k = 0; k < plain.length(); k++) s += (char)toupper((uint8_t)plain[k]);  // capitals only
-  const int w = Display::textWidthIn(TextFont::Tiny, s.c_str(), 0, s.length());
-  if (w <= COLS + 1) {
-    display.drawTextIn(TextFont::Tiny, (COLS + 1 - w) / 2, y, s.c_str(), 0, s.length());
-  } else {
-    const int period = w + 6;  // a gap before it comes round again
-    const int offset = (int)(t / 90) % period;
-    display.drawTextIn(TextFont::Tiny, -offset, y, s.c_str(), 0, s.length());
-    display.drawTextIn(TextFont::Tiny, period - offset, y, s.c_str(), 0, s.length());
-  }
-  // The font draws at full brightness: bring its rows down to `level`.
-  for (int r = y; r < y + Display::fontHeightOf(TextFont::Tiny); r++) {
-    for (int x = 0; x < COLS; x++) {
-      if (display.getLevel(x, r)) display.setLevel(x, r, level);
-    }
-  }
-}
 
 static bool available(const WorldInfo &w, int card) { return card == 0 ? w.airOk : w.issOk; }
 
@@ -84,20 +62,12 @@ void WorldMode::update(uint32_t now) {
   if (!available(w, card_) || now - cardStart_ >= (card_ == AIR ? AIR_MS : ISS_MS)) next(now, true);
   const uint32_t t = now - cardStart_;
   if (card_ == AIR) {
-    // "Aria" above, the European index in the middle, its band below
-    // (scrolling when the name is long).
-    // The value in the text fonts' own 3x6 digits (as "Media" draws
-    // them), centred in rows 5-10 between two blank rows: the three lines
-    // read as one family. The words are dimmer so the number leads.
-    word("Aria", 0, 110, t);
-    const String value(w.aqi);
-    const int width = Display::textWidthIn(TextFont::Short, value.c_str(), 0, value.length());
-    display.drawTextIn(TextFont::Short, (COLS + 1 - width) / 2, 5, value.c_str(), 0, value.length());
-    word(aqiBand(w.aqi), 12, 170, t);
+    // The shared card: "Aria", the European index, its band.
+    ui::card("Aria", String(w.aqi), aqiBand(w.aqi), t);
   } else {
     for (int y = 0; y < 8; y++) {
       for (int x = 0; x < COLS; x++) {
-        if (MAP[y][x] == '#') display.setLevel(x, mapTop() + y, 35);
+        if (MAP[y][x] == '#') display.setLevel(x, mapTop() + y, ui::LEVEL_FAINT);
       }
     }
     for (int i = w.trailCount - 1; i >= 0; i--) {
@@ -105,7 +75,7 @@ void WorldMode::update(uint32_t now) {
     }
     display.setLevel(mapX(settings.longitude), mapY(settings.latitude), 140);
     if ((now / 300) % 2) display.setLevel(mapX(w.issLon), mapY(w.issLat), 255);
-    if (settings.vertical) word("ISS", 0, 150, t);
+    if (settings.vertical) ui::label("ISS", 0, ui::LEVEL_DIM, t);
   }
   display.render();
 }
