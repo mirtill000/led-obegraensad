@@ -374,7 +374,12 @@ Current modes:
   going as generation zero; *Salva* stores it among the Disegni. The
   drawing survives restarts (NVS blob `canvas`, in the settings backup)
 - **Animazioni** - one animation, or "automatic" (a different one every 5
-  minutes); button: next animation. The animations (the games have their
+  minutes); button: next animation. Every animation runs on its own clock,
+  which the speed slider runs from x0.25 to x4, while frames keep coming
+  at the animation's own rate: slow is a smooth slow motion, not fewer
+  frames, and a busy lamp doesn't change the pace (the ones that move in
+  steps - particles, fire, blinking icons - take as many steps as the
+  clock has gone through). The animations (the games have their
   own mode, below), in `src/animations/`:
   - *Atmosfere*: digital rain, fire, stars, waves
   - *Icone geek*: *Alieno* (a walking Space Invader), Pac-Man chased by a ghost, a
@@ -591,7 +596,10 @@ To add a mode, implement the `Mode` class from `include/modes.h` in
 `src/modes/` and add it to `MODES` in `src/modes.cpp`; to add an animation,
 implement `Animation` from `include/animation.h` in `src/animations/` and
 list it in `src/animations/animations.cpp`. Both show up on the page
-automatically.
+automatically. An animation draws from the `now` it is given and nothing
+else (no frame counters); if it moves in steps, it says `fixedStep()`.
+Shaded scenes go through `ui::tone()`, so their dark shades survive the
+panel (its dimmest step is already a fifth of full light).
 
 ### Scrolling text
 

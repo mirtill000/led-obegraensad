@@ -46,4 +46,8 @@ class AmbientMode : public Mode {
   uint8_t autoIndex_ = 0;
   uint32_t since_ = 0;
   uint32_t lastFrame_ = 0;
+  // The animation's clock (ms, run by the speed setting) and, for
+  // fixedStep() ones, how far its steps have got.
+  uint32_t clock_ = 0, stepClock_ = 0;
+  float clockCarry_ = 0;
 };

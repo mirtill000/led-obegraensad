@@ -3,8 +3,18 @@
 #include <Arduino.h>
 
 // One animation of the "Animazioni" mode. frame() draws a whole frame into
-// the display buffer (the mode clears nothing and calls render() after);
-// it is called every frameMs(), scaled by the mode's speed setting.
+// the display buffer (the mode clears nothing and calls render() after).
+//
+// Time, the same for all (E6): `now` is the animation's own clock in ms,
+// which the speed setting runs faster or slower; frames come every
+// frameMs() of real time whatever the speed. So an animation should depend
+// on `now` only, never on how many frames it has drawn:
+//  - continuous ones (plasma, flights, the cube) compute everything from it;
+//  - ones that move in steps (particles, cellular fire, blinking icons)
+//    say fixedStep(): frame() is then called once per frameMs() of that
+//    clock - several times in a row when it is behind, or when the speed
+//    is high - so they keep the same pace however the lamp is doing.
+// Games are steps too: they are called every frameMs() scaled by the speed.
 // How a game is played, told to the web page (its pad) and to the Cardputer
 // (state "c"/"ca") so neither keeps its own list.
 struct GameControls {
@@ -26,6 +36,7 @@ class Animation {
   virtual const char *group() const = 0;  // heading in the page's menu
   virtual uint16_t frameMs() const = 0;
   virtual bool needsTime() const { return false; }  // skipped in "auto" until the clock syncs
+  virtual bool fixedStep() const { return false; }  // moves one step per frame (see above)
   virtual void start() {}
   virtual void frame(uint32_t now) = 0;
 

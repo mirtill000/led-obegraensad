@@ -19,6 +19,7 @@ float rnd() { return (esp_random() % 10000) / 10000.0f; }
 class Seasonal : public Animation {
  public:
   const char *group() const override { return "Ricorrenze"; }
+  bool fixedStep() const override { return true; }  // particles and flickers
 };
 
 

@@ -68,12 +68,15 @@ void setSpeedLevel(const char *modeId, uint8_t level) {
   }
 }
 
+// Each level step is a factor of sqrt(2): level 1 = x4 slower, 9 = x4 faster.
+static const float SPEED_FACTORS[10] = {0, 4.0f, 2.83f, 2.0f, 1.41f, 1.0f, 0.71f, 0.5f, 0.35f, 0.25f};
+
 uint32_t scaledInterval(const char *modeId, uint32_t baseMs) {
-  // Each level step is a factor of sqrt(2): level 1 = x4 slower, 9 = x4 faster.
-  static const float FACTORS[10] = {0, 4.0f, 2.83f, 2.0f, 1.41f, 1.0f, 0.71f, 0.5f, 0.35f, 0.25f};
-  const uint32_t ms = lroundf(baseMs * FACTORS[speedLevel(modeId)]);
+  const uint32_t ms = lroundf(baseMs * SPEED_FACTORS[speedLevel(modeId)]);
   return ms > 0 ? ms : 1;
 }
+
+float speedScale(const char *modeId) { return 1 / SPEED_FACTORS[speedLevel(modeId)]; }
 
 bool demoMode(const char *gameId) {
   // Is gameId one of the comma-separated ids in demoOff? (Called on every

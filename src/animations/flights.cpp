@@ -65,7 +65,10 @@ class Flight : public Animation {
     v.t = now / 1000.0f;
     path(v);
     const float target = altitude(v);
-    camH_ = camH_ < 0 ? target : camH_ + (target - camH_) * ease();
+    // Eases by ease() every 30 ms of the clock, however often frames come.
+    const float dt = camH_ < 0 ? 0 : constrain((now - lastNow_) / 30.0f, 0.0f, 10.0f);
+    lastNow_ = now;
+    camH_ = camH_ < 0 ? target : camH_ + (target - camH_) * (1 - powf(1 - ease(), dt));
     camH_ = max(camH_, height(v.x, v.y, v.t) + clearance());  // never skim the ground
     v.h = camH_;
     v.horizon = horizonRow(v.t);
@@ -126,7 +129,7 @@ class Flight : public Animation {
     return ahead + 5.5f;
   }
   virtual float clearance() const { return 3.0f; }  // the least height above the ground below
-  virtual float ease() const { return 0.02f; }      // per frame, towards altitude()
+  virtual float ease() const { return 0.02f; }      // per 30 ms, towards altitude()
   virtual float horizonRow(float) const { return 3.0f; }
   virtual int raysPerColumn() const { return 1; }
 
@@ -208,6 +211,7 @@ class Flight : public Animation {
   }
 
   float camH_ = -1;
+  uint32_t lastNow_ = 0;
 };
 
 // ---------------------------------------------------------------------------
@@ -261,7 +265,9 @@ class SeaFlight : public Flight {
     // Turn slowly towards the light (a full circle in the dark, gently).
     const float target = lit_ ? lightAz_ : now / 1000.0f * 0.01f;
     if (aim_ == INF) aim_ = target;
-    aim_ += wrapAngle(target - aim_) * 0.01f;
+    const float dt = constrain((now - lastNow_) / 30.0f, 0.0f, 10.0f);  // 1% every 30 ms of the clock
+    lastNow_ = now;
+    aim_ += wrapAngle(target - aim_) * (1 - powf(0.99f, dt));
     Flight::frame(now);
   }
 
@@ -346,6 +352,7 @@ class SeaFlight : public Flight {
   }
 
   float aim_ = INF;
+  uint32_t lastNow_ = 0;
   bool lit_ = false, isSun_ = false;
   float lightAz_ = 0, lightEl_ = 0, lightPower_ = 0;
 };

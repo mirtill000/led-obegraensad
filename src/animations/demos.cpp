@@ -102,15 +102,16 @@ class MandelbrotAnimation : public Animation {
   const char *name() const override { return "Frattale di Mandelbrot"; }
   const char *group() const override { return "3D e demo"; }
   uint16_t frameMs() const override { return 60; }
-  void start() override { scale_ = 3.0f; }
-  void frame(uint32_t) override {
+  void frame(uint32_t now) override {
     static const float CX = -0.743643887f, CY = 0.131825904f;
-    scale_ *= 0.97f;
-    if (scale_ < 3e-4f) scale_ = 3.0f;  // float precision runs out: start over
-    const int maxIter = 40 + (int)(-logf(scale_ / 3) * 6);
+    // From 3 down to 3e-4 (where float precision runs out), then over: a
+    // factor 0.97 every 60 ms, worked out from the clock so it glides.
+    const float steps = fmodf(now / 60.0f, 302.0f);
+    const float scale = 3.0f * powf(0.97f, steps);
+    const int maxIter = 40 + (int)(-logf(scale / 3) * 6);
     for (int y = 0; y < ROWS; y++) {
       for (int x = 0; x < COLS; x++) {
-        const float cr = CX + (x - 7.5f) / COLS * scale_, ci = CY + (y - 7.5f) / ROWS * scale_;
+        const float cr = CX + (x - 7.5f) / COLS * scale, ci = CY + (y - 7.5f) / ROWS * scale;
         float zr = 0, zi = 0;
         int i = 0;
         while (i < maxIter && zr * zr + zi * zi < 4) {
@@ -124,9 +125,6 @@ class MandelbrotAnimation : public Animation {
       }
     }
   }
-
- private:
-  float scale_ = 3.0f;
 };
 
 static CubeAnimation cube;

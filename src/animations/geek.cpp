@@ -22,6 +22,7 @@ using ui::icon;
 class GeekAnimation : public Animation {
  public:
   const char *group() const override { return "Icone geek"; }
+  bool fixedStep() const override { return true; }  // they count their frames
 };
 
 // ---------------------------------------------------------------------------

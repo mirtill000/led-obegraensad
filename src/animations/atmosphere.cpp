@@ -14,6 +14,7 @@ class RainAnimation : public Animation {
   const char *name() const override { return "Pioggia digitale"; }
   const char *group() const override { return "Atmosfere"; }
   uint16_t frameMs() const override { return 60; }
+  bool fixedStep() const override { return true; }
   void start() override {
     for (Drop &d : drops_) respawn(d, 20);
   }
@@ -49,6 +50,7 @@ class FireAnimation : public Animation {
   const char *name() const override { return "Fuoco"; }
   const char *group() const override { return "Atmosfere"; }
   uint16_t frameMs() const override { return 70; }
+  bool fixedStep() const override { return true; }
   void start() override { memset(heat_, 0, sizeof(heat_)); }
   void frame(uint32_t) override {
     for (int x = 0; x < COLS; x++) heat_[ROWS - 1][x] = 150 + esp_random() % 106;
@@ -78,6 +80,7 @@ class StarsAnimation : public Animation {
   const char *name() const override { return "Stelle"; }
   const char *group() const override { return "Atmosfere"; }
   uint16_t frameMs() const override { return 100; }
+  bool fixedStep() const override { return true; }
   void start() override {
     memset(life_, 0, sizeof(life_));
     memset(span_, 0, sizeof(span_));

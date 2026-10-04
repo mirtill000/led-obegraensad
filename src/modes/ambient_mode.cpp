@@ -26,6 +26,7 @@ void AmbientMode::play(Animation *animation) {
   animation_ = animation;
   since_ = millis();
   lastFrame_ = 0;
+  stepClock_ = clock_;
   display.beginTransition();
   display.clear();
   animation_->start();
@@ -88,9 +89,36 @@ void AmbientMode::update(uint32_t now) {
     autoIndex_++;
     play(pickAuto());
   }
-  if (now - lastFrame_ < interval(animation_->frameMs())) return;
+  if (animation_->isGame()) {
+    // Games move in steps, as often as the speed says.
+    if (now - lastFrame_ < interval(animation_->frameMs())) return;
+    lastFrame_ = now;
+    animation_->setDemo(demoForced() || demoMode(animation_->id()));
+    animation_->frame(now);
+    display.render();
+    return;
+  }
+  // Animations: a frame every frameMs() of real time, drawn at the
+  // animation's clock, which the speed setting runs faster or slower.
+  const uint16_t step = animation_->frameMs();
+  if (lastFrame_ && now - lastFrame_ < step) return;
+  const uint32_t dt = lastFrame_ ? min<uint32_t>(now - lastFrame_, 250) : 0;  // after a pause, no jump
   lastFrame_ = now;
-  if (animation_->isGame()) animation_->setDemo(demoForced() || demoMode(animation_->id()));
-  animation_->frame(now);
+  const float advance = dt * speedScale(id()) + clockCarry_;
+  clock_ += (uint32_t)advance;
+  clockCarry_ = advance - (uint32_t)advance;
+  if (!animation_->fixedStep()) {
+    animation_->frame(clock_);
+  } else {
+    // One step per frameMs() of the clock (up to 4 at once, then let go).
+    uint8_t steps = 0;
+    if (clock_ - stepClock_ > 4u * step) stepClock_ = clock_ - step;
+    while (clock_ - stepClock_ >= step) {
+      stepClock_ += step;
+      animation_->frame(stepClock_);
+      steps++;
+    }
+    if (!steps) return;
+  }
   display.render();
 }

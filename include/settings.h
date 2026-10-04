@@ -194,6 +194,8 @@ void setDemoMode(const char *gameId, bool demo);
 // Per-mode speed, 1 (slowest) to 9 (fastest); 5 is each mode's default.
 static const uint8_t SPEED_DEFAULT = 5;
 uint8_t speedLevel(const char *modeId);
+// How much faster than normal a mode's speed level runs (0.25 - 4).
+float speedScale(const char *modeId);
 void setSpeedLevel(const char *modeId, uint8_t level);
 // Scales a mode's base interval by its speed level: x4 slower at 1, x4
 // faster at 9.
