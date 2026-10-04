@@ -15,6 +15,7 @@
 
 #include "animations/arcade_game.h"
 #include "display.h"
+#include "sprite_atlas.h"
 
 namespace {
 
@@ -45,8 +46,6 @@ const int MAX_IMPS = 8, MAX_BALLS = 6;
 const float RADIUS = 0.22f;  // how close anything gets to a wall
 
 // The imp, 5x6: horns, eyes, arms out, legs.
-const char *const IMP[6] = {"#...#", ".###.", "#.#.#", "#####", ".###.", ".#.#."};
-const char *const IMP_DEAD[2] = {"#.##.", "#####"};
 
 struct Imp {
   bool alive;
@@ -339,8 +338,8 @@ class DoomGame : public ArcadeGame {
 
   // Billboard `rows` (w x h pattern) standing on the floor at (sx, sy),
   // `size` blocks tall, behind walls closer than it.
-  void sprite(float sx, float sy, const char *const *rows, int pw, int ph, float size, float lift, uint8_t level,
-              const float *depth) {
+  void sprite(float sx, float sy, const Sprite &art, float size, float lift, uint8_t level, const float *depth) {
+    const int pw = art.w, ph = art.h;
     const float dirX = cosf(angle_), dirY = sinf(angle_);
     const float planeX = -dirY * 0.66f, planeY = dirX * 0.66f;
     const float rx = sx - x_, ry = sy - y_;
@@ -356,7 +355,8 @@ class DoomGame : public ArcadeGame {
       const int u = min(pw - 1, (int)((x + 0.5f - left) / w * pw));
       for (int y = max(0, (int)floorf(top)); y < VIEW_ROWS && y < floorY; y++) {
         const int v = min(ph - 1, (int)((y + 0.5f - top) / h * ph));
-        if (v >= 0 && u >= 0 && rows[v][u] == '#') display.setLevel(x, y, level);
+        const int l = v >= 0 && u >= 0 ? sprites::shade(art, 0, u, v, level) : -1;
+        if (l >= 0) display.setLevel(x, y, l);
       }
     }
   }
@@ -433,28 +433,22 @@ class DoomGame : public ArcadeGame {
     }
     for (int i = 0; i < n; i++) {
       if (items[i].kind == 1) {
-        static const char *const BALL[2] = {"##", "##"};
         const Ball &b = balls_[items[i].index];
-        sprite(b.x, b.y, BALL, 2, 2, 0.18f, 0.3f, (tick_ / 2) % 2 ? 255 : 200, depth);
+        sprite(b.x, b.y, spr::DOOM_FIREBALL, 0.18f, 0.3f, (tick_ / 2) % 2 ? 255 : 200, depth);
         continue;
       }
       const Imp &m = imps_[items[i].index];
       if (m.alive) {
-        sprite(m.x, m.y, IMP, 5, 6, 0.8f, 0, m.hurt % 2 ? 90 : 255, depth);
+        sprite(m.x, m.y, spr::DOOM_IMP, 0.8f, 0, m.hurt % 2 ? 90 : 255, depth);
       } else if (m.dying > 0) {
-        sprite(m.x, m.y, IMP, 5, 6, 0.8f * m.dying / 10, 0, (m.dying / 2) % 2 ? 255 : 120, depth);
+        sprite(m.x, m.y, spr::DOOM_IMP, 0.8f * m.dying / 10, 0, (m.dying / 2) % 2 ? 255 : 120, depth);
       } else {
-        sprite(m.x, m.y, IMP_DEAD, 5, 2, 0.15f, 0, 60, depth);  // what's left of it
+        sprite(m.x, m.y, spr::DOOM_IMP_DEAD, 0.15f, 0, 60, depth);  // what's left of it
       }
     }
 
     // The gun, and its flash when it fires.
-    static const char *const GUN[3] = {".##.", ".##.", "####"};
-    for (int r = 0; r < 3; r++) {
-      for (int c = 0; c < 4; c++) {
-        if (GUN[r][c] == '#') display.setLevel(6 + c, VIEW_ROWS - 3 + r, 200);
-      }
-    }
+    sprites::draw(spr::DOOM_GUN, 6, VIEW_ROWS - 3, 0, 200);
     if (flash_ > 0) {
       display.setLevel(7, VIEW_ROWS - 4, 255);
       display.setLevel(8, VIEW_ROWS - 4, 255);

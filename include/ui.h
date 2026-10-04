@@ -10,8 +10,7 @@
 //    tuned digits;
 //  - one CARD layout for a reading: label on top, value in the middle,
 //    caption at the bottom (Mondo's air quality);
-//  - pictures as rows of characters (ICON): '#' at the given level, '+'
-//    always full, ':' a third of it;
+//  - pictures: sprites of the atlas (sprite.h, one format for all);
 //  - four brightness steps (LEVEL_*): full for what matters, text for
 //    values, dim for labels and captions, faint for backgrounds;
 //  - one "waiting for data" sign - three dots filling in, or a blinking
@@ -26,10 +25,6 @@ static const uint8_t LEVEL_FULL = 255, LEVEL_TEXT = 220, LEVEL_DIM = 120, LEVEL_
 // would look the same. Below 0.05 is off; the rest is spread evenly over
 // the panel's 31 steps of light, so dark shades stay apart.
 uint8_t tone(float v);
-
-// A picture given as rows of characters, top-left at (x, y): '#' = `level`,
-// '+' = full, ':' = a third of `level`, anything else left as it is.
-void icon(int x, int y, const char *const *rows, int count, uint8_t level = LEVEL_FULL);
 
 // A label in the 4-row capitals at row y, centred; wider than the panel it
 // scrolls round, timed by `t` (ms). Rows y..y+3 should be free.

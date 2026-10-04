@@ -1,6 +1,7 @@
 #include "animations/mario.h"
 
 #include "display.h"
+#include "sprite_atlas.h"
 #include "settings.h"
 
 static const uint32_t FRAME_MS = 75;
@@ -15,45 +16,25 @@ static const float JUMP_SPEED = -2.3f;  // ~9 px high, ~15 px long
 static const float MAX_FALL = 3.0f;
 static const float GOOMBA_SPEED = 0.25f;
 
-// Sprites: bit 15 = leftmost column.
-// Mario, 5x7, facing right, as brightness levels: cap and brim brightest,
-// face mid, hair/eye/moustache faint, overalls bright, shoes dim.
-static const char *const MARIO_RUN[2][MARIO_H] = {
-    {".CCC.", "CCCCC", "MSSMS", "SSMMM", ".OOO.", "OO.OO", "B...B"},
-    {".CCC.", "CCCCC", "MSSMS", "SSMMM", ".OOO.", ".OOO.", ".BB.."},
-};
-static const char *const MARIO_JUMP[MARIO_H] = {"SCCC.", "CCCCC", "MSSMS", "SSMMM", "OOOOS", "OO.OO", "B..B."};
-
-static uint8_t spriteLevel(char c) {
-  switch (c) {
+// Sprites from the atlas (mario.*). Mario, 5x7, facing right (frames: run,
+// run, jump), as marks for its parts. "Sfumata": each part at its level -
+// cap and brim brightest, face mid, hair/eye/moustache faint, overalls
+// bright, shoes dim. "Nitida" (see softGames()): a lit silhouette with the
+// hair, eye and moustache left dark.
+static int marioPart(char part, uint8_t, void *) {
+  if (!softGames()) return part == 'M' ? -1 : 255;
+  switch (part) {
     case 'C': return 255;  // cap
     case 'O': return 200;  // overalls
     case 'S': return 120;  // skin
     case 'B': return 90;   // shoes
     case 'M': return 35;   // hair, eye, moustache
-    default: return 0;
+    default: return -1;
   }
 }
+static const int MARIO_JUMP = 2;  // its frame
 
-// "Sfumata": each part at its level. "Nitida" (see softGames()): a lit
-// silhouette with the hair, eye and moustache left dark.
-static void drawMario(int x, int y, const char *const *rows) {
-  for (int r = 0; r < MARIO_H; r++) {
-    for (int c = 0; c < MARIO_W; c++) {
-      const uint8_t l = spriteLevel(rows[r][c]);
-      if (!softGames()) {
-        if (rows[r][c] != '.' && rows[r][c] != 'M') display.setPixel(x + c, y + r, true);
-      } else if (l) {
-        display.setLevel(x + c, y + r, l);
-      }
-    }
-  }
-}
-
-static const uint16_t GOOMBA[2][2] = {
-    {0xE000, 0x8000},
-    {0xE000, 0x2000},
-};
+static void drawMario(int x, int y, int frame) { sprites::draw(spr::MARIO, x, y, frame, 255, marioPart); }
 
 static int32_t randomInt(int32_t lo, int32_t hi) { return lo + (int32_t)(esp_random() % (uint32_t)(hi - lo + 1)); }
 
@@ -305,15 +286,10 @@ void MarioGame::tick(uint32_t now) {
 void MarioGame::draw(uint32_t now) {
   display.clear();
   // Faint clouds in the background, drifting at half speed.
-  static const uint16_t CLOUD[2] = {0x6000, 0xF000};
   for (int i = 0; i < 2 && softGames(); i++) {
     const int period = 24;
     const int x = ((i * 13 - s_.cam / 2) % period + period) % period - 4;
-    for (int row = 0; row < 2; row++) {
-      for (int col = 0; col < 4; col++) {
-        if (CLOUD[row] & (0x8000 >> col)) display.setLevel(x + col, 2 + i * 3 + row, 35);
-      }
-    }
+    sprites::draw(spr::MARIO_CLOUD, x, 2 + i * 3, 0, 35);
   }
   for (int sx = 0; sx < COLS; sx++) {
     const int32_t wx = s_.cam + sx;
@@ -334,13 +310,13 @@ void MarioGame::draw(uint32_t now) {
     display.setLevel(sx, c.y + 1, !soft || !phase ? 255 : 120);
   }
   for (const Goomba &g : s_.goombas) {
-    if (g.alive) display.drawBitmap((int)lroundf(g.x) - s_.cam, GROUND - 2, GOOMBA[(frame_ / 3) % 2], 3, 2);
+    if (g.alive) sprites::draw(spr::MARIO_GOOMBA, (int)lroundf(g.x) - s_.cam, GROUND - 2, (frame_ / 3) % 2);
   }
 
   if (phase_ == DYING) {
     drawMario(MARIO_X, (int)lroundf(deathY_), MARIO_JUMP);
   } else {
-    drawMario(MARIO_X, (int)lroundf(s_.y), s_.onGround ? MARIO_RUN[(frame_ / 2) % 2] : MARIO_JUMP);
+    drawMario(MARIO_X, (int)lroundf(s_.y), s_.onGround ? (int)((frame_ / 2) % 2) : MARIO_JUMP);
   }
   display.render();
 }

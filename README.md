@@ -109,11 +109,15 @@ include/
   font_short.h       - font_small folded to 6 rows, lowercase (Media, when vertical)
   font_tiny.h        - 4px-tall capitals ("Minima" and Demo: three lines)
   display.h, modes.h, settings.h, web.h
-  ui.h               - shared look of the panel (label, value, card, icon, brightness steps, waiting dots)
+  ui.h               - shared look of the panel (label, value, card, brightness steps, tone, waiting dots)
+  sprite.h           - the one picture format (rows of characters, shades, frames, marks)
+  sprite_atlas.h     - every sprite of the atlas, by name (spr::PET_FROG, spr::WEATHER_RAIN...)
   texts.h            - the firmware's messages (errors, download states), in one place
 src/
   display.cpp        - shift-register driver, font renderer, brightness, transitions
   ui.cpp             - the shared panel components, "waiting" and "no WiFi" signs
+  sprite_atlas.cpp   - the atlas: every picture the lamp draws (icons, pet, weather, game characters)
+  sprites.cpp        - drawing sprites; retouches from the page (LittleFS /sprites/)
   modes.cpp          - list of modes + switching between them
   modes/             - one file per mode (board.cpp: the Game of Life's drawing board)
   animations/        - the animations and games ("Animazioni", "Giochi")
@@ -600,6 +604,26 @@ automatically. An animation draws from the `now` it is given and nothing
 else (no frame counters); if it moves in steps, it says `fixedStep()`.
 Shaded scenes go through `ui::tone()`, so their dark shades survive the
 panel (its dimmest step is already a fifth of full light).
+
+### Pictures: one format, one atlas
+
+Every picture the lamp draws - notification icons, the pet, weather icons,
+the geek icons, the seasonal pictures, Mario, the dino, Sonic, Doom's imp,
+the world map - is a sprite in one format (`include/sprite.h`) and lives
+in one atlas (`src/sprite_atlas.cpp`, 56 sprites). A sprite is rows of
+characters, frames one after the other: `.` transparent, `0`-`9` shades
+(`0` an opaque black), `#` the level it is drawn at, `:` a third of it, `+`
+always full, letters are marks whose meaning is up to the code (the frog's
+eyes and mouth, Mario's cap, overalls and shoes). `sprites::draw()` draws a
+frame, `sprites::frameAt()` picks it by time, `sprites::shade()` reads a
+pixel (for collisions).
+
+On the page, *Sistema > Immagini della lampada* lists the atlas, shows
+each sprite large, lets you repaint it pixel by pixel (transparent, black,
+four greys, always-full), try it on the lamp and save it: the lamp uses
+the retouched version at once (`GET /api/sprites`, `POST /api/sprite`
+with `name` and `rows`, or `reset=1` for the original; kept in LittleFS
+under `/sprites/`, not in the settings backup).
 
 ### Scrolling text
 

@@ -5,8 +5,8 @@
 #include <time.h>
 
 #include "display.h"
+#include "sprite_atlas.h"
 #include "timekeeping.h"
-#include "ui.h"
 
 // ---------------------------------------------------------------------------
 // The pet's life, simulated a minute at a time.
@@ -120,30 +120,11 @@ bool asleepNow() {
 // ---------------------------------------------------------------------------
 // Drawing. The pet is a soft, fuzzy plush (after the felt dolls): its
 // outline is a little dimmer and a faint fur shimmers just outside it.
-// Sprites: '#' body, ':' dim, 'w' bright (the frog's eye bumps), 'e' eye
-// (dark; body when closed), 'm' mouth (dark), '.' nothing. The two rows
-// from mouthRow are swapped for the sad face.
+// Its sprites are in the atlas (pet.egg, pet.frog...); the frog's marks:
+// 'w' bright (its eye bumps), 'e' eye (dark; body when closed), 'm' mouth
+// (dark; lit while chewing). Its rows 5-6 swap for the sad face.
 
-struct Sprite {
-  uint8_t w, h;
-  const char *rows[8];
-  int8_t mouthRow;  // first of the two mouth rows, -1 none
-};
-
-// Uovo: a felt egg.
-const Sprite EGG_SPRITE = {6, 8, {"..##..", ".####.", ".#:##.", "######", "##:###", "######", ".####.", "..##.."}, -1};
-// Then a frog, its big eyes on two bumps above the body.
-const Sprite FROG_SPRITE = {9, 8,
-                            {".www.www.", ".wew.wew.", ".www#www.", "#########", "#########", "##m###m##",
-                             "###mmm###", ".#######."},
-                            5};
-
-const char *APPLE[] = {"..#..", ".###.", "#####", "#####", ".###."};
-const char *NOTE[] = {"..##.", "..#.#", "..#..", "###..", "##..."};
-const char *CROSS[] = {"..#..", "..#..", "#####", "..#..", "..#.."};
-const char *HEART[] = {".#.#.", "#####", ".###.", "..#.."};
-const char *POOP[] = {".#.", "##.", "###"};
-const char *ZED[] = {"####", "..#.", ".#..", "####"};
+const int FROG_MOUTH_ROW = 5;
 
 const int GROUND = ROWS - 1;  // the floor row; the pet stands on the row above
 
@@ -158,17 +139,14 @@ float petX = 4;
 int targetX = 4;
 uint32_t lastStep = 0, lastDraw = 0;
 
-const Sprite &sprite() {
-  return stage() == EGG ? EGG_SPRITE : FROG_SPRITE;
-}
+const Sprite &sprite() { return stage() == EGG ? spr::PET_EGG : spr::PET_FROG; }
 
 // The sprite's character at (c, r), with the sad mouth swapped in.
 char cell(const Sprite &s, int c, int r, bool happy) {
-  if (c < 0 || r < 0 || c >= s.w || r >= s.h) return '.';
-  if (s.mouthRow >= 0 && !happy && (r == s.mouthRow || r == s.mouthRow + 1)) {
-    r = r == s.mouthRow ? s.mouthRow + 1 : s.mouthRow;
+  if (&s == &spr::PET_FROG && !happy && (r == FROG_MOUTH_ROW || r == FROG_MOUTH_ROW + 1)) {
+    r = r == FROG_MOUTH_ROW ? FROG_MOUTH_ROW + 1 : FROG_MOUTH_ROW;
   }
-  return s.rows[r][c];
+  return sprites::at(s, 0, c, r);
 }
 
 void drawPet(const Sprite &s, int x, int y, uint8_t level, bool eyesOpen, bool happy, bool chewing, uint32_t now) {
@@ -190,12 +168,10 @@ void drawPet(const Sprite &s, int x, int y, uint8_t level, bool eyesOpen, bool h
       }
       uint8_t l = 0;
       switch (ch) {
-        case '#': l = level; break;
-        case ':': l = level / 3; break;
         case 'w': l = (uint8_t)min(255, level * 5 / 4); break;
         case 'e': l = eyesOpen ? 0 : level; break;
         case 'm': l = chewing ? level : 0; break;  // chewing: the mouth opens and closes
-        default: break;
+        default: l = (uint8_t)max(0, sprites::charLevel(ch, level)); break;
       }
       if (edge && (ch == '#' || ch == 'w')) l = l * 7 / 10;  // a soft felt outline
       display.setLevel(px, py, l);
@@ -217,7 +193,7 @@ void draw(uint32_t now) {
   const int sweep = anim == CLEAN ? (int)(t * (COLS + 2) / ANIM_MS[CLEAN]) - 1 : -1;
   for (int i = 0; i < poops; i++) {
     const int px = COLS - 3 - i * 4;
-    if (px > sweep) ui::icon(px, GROUND - 3, POOP, 3, 110);
+    if (px > sweep) sprites::draw(spr::PET_POOP, px, GROUND - 3, 0, 110);
   }
   if (anim == CLEAN) {
     for (int y = 0; y < GROUND; y++) display.setLevel(sweep, y, 200);
@@ -250,7 +226,7 @@ void draw(uint32_t now) {
       const int restY = GROUND - 5;
       const int ay = t < 800 ? -5 + (int)((restY + 5) * t / 800) : restY;
       const int eaten = t < 800 ? 0 : (int)((t - 800) * 6 / 1400);
-      if (eaten < 5) ui::icon(ax, ay + eaten, APPLE + eaten, 5 - eaten, 230);
+      if (eaten < 5) sprites::drawFrom(spr::PET_APPLE, ax, ay, eaten, 0, 230);
       break;
     }
     case PLAY: {
@@ -262,11 +238,11 @@ void draw(uint32_t now) {
       break;
     }
     case CURE:
-      if ((t / 300) % 2 == 0) ui::icon(x + s.w / 2 - 2, max(0, y - 6), CROSS, 5);
+      if ((t / 300) % 2 == 0) sprites::draw(spr::PET_CROSS, x + s.w / 2 - 2, max(0, y - 6));
       break;
     case LOVE: {
       const int hy = y - 5 - (int)(t * 8 / ANIM_MS[LOVE]);
-      ui::icon(x + s.w / 2 - 2, hy, HEART, 4);
+      sprites::draw(spr::PET_HEART, x + s.w / 2 - 2, hy);
       break;
     }
     default: break;
@@ -275,12 +251,12 @@ void draw(uint32_t now) {
   if (asleep) {
     // A "z" floating up from its head.
     const int phase = (now / 600) % 4;
-    ui::icon(min(x + s.w, COLS - 4), max(0, y - 3 - phase), ZED, 4, 90 + 40 * phase);
+    sprites::draw(spr::PET_ZED, min(x + s.w, COLS - 4), max(0, y - 3 - phase), 0, 90 + 40 * phase);
   } else if (anim == NONE && (now / 1000) % 2) {
     // What it needs, blinking in the corner.
-    if (life.sick) ui::icon(0, 0, CROSS, 5, 200);
-    else if (life.food < 25) ui::icon(0, 0, APPLE, 5, 200);
-    else if (life.joy < 25) ui::icon(0, 0, NOTE, 5, 200);
+    if (life.sick) sprites::draw(spr::PET_CROSS, 0, 0, 0, 200);
+    else if (life.food < 25) sprites::draw(spr::PET_APPLE, 0, 0, 0, 200);
+    else if (life.joy < 25) sprites::draw(spr::PET_NOTE, 0, 0, 0, 200);
   }
   display.render();
 }

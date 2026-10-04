@@ -5,6 +5,7 @@
 
 #include "animation.h"
 #include "display.h"
+#include "sprite_atlas.h"
 #include "gfx.h"
 #include "font_micro.h"
 #include "settings.h"
@@ -16,8 +17,7 @@
 
 namespace {
 
-// Pictures are drawn with the shared ui::icon().
-using ui::icon;
+// Pictures come from the sprite atlas (sprite_atlas.h).
 
 class GeekAnimation : public Animation {
  public:
@@ -33,16 +33,10 @@ class InvaderIcon : public GeekAnimation {
   const char *name() const override { return "Alieno"; }
   uint16_t frameMs() const override { return 500; }
   void frame(uint32_t) override {
-    static const char *const CRAB[2][8] = {
-        {"..#.....#..", "...#...#...", "..#######..", ".##.###.##.", "###########", "#.#######.#", "#.#.....#.#",
-         "...##.##..."},
-        {"..#.....#..", "#..#...#..#", "#.#######.#", "###.###.###", "###########", ".#########.", "..#.....#..",
-         ".#.......#."},
-    };
     static const int DRIFT[4] = {2, 3, 2, 1};
     tick_++;
     display.clear();
-    icon(DRIFT[tick_ % 4], 4, CRAB[tick_ % 2], 8);
+    sprites::draw(spr::GEEK_INVADER, DRIFT[tick_ % 4], 4, tick_ % 2);
   }
 
  private:
@@ -57,10 +51,6 @@ class PacManIcon : public GeekAnimation {
   const char *name() const override { return "Pac-Man"; }
   uint16_t frameMs() const override { return 110; }
   void frame(uint32_t) override {
-    static const char *const PAC[2][5] = {{".###.", "####.", "###..", "####.", ".###."},
-                                          {".###.", "#####", "#####", "#####", ".###."}};
-    static const char *const GHOST[2][5] = {{".###.", "#####", "#.#.#", "#####", "#.#.#"},
-                                            {".###.", "#####", "#.#.#", "#####", ".#.#."}};
     tick_++;
     const int span = COLS + 20;
     const int x = (int)(tick_ % span) - 6;
@@ -68,8 +58,8 @@ class PacManIcon : public GeekAnimation {
     for (int dx = 1; dx < COLS; dx += 3) {
       if (dx > x + 2) display.setPixel(dx, 7, true);  // not eaten yet
     }
-    icon(x, 5, PAC[(tick_ / 2) % 2], 5);
-    icon(x - 8, 5, GHOST[(tick_ / 3) % 2], 5);
+    sprites::draw(spr::GEEK_PACMAN, x, 5, (tick_ / 2) % 2);
+    sprites::draw(spr::GEEK_GHOST, x - 8, 5, (tick_ / 3) % 2);
   }
 
  private:
@@ -255,8 +245,6 @@ class RocketIcon : public GeekAnimation {
     }
   }
   void frame(uint32_t) override {
-    static const char *const ROCKET[8] = {"..#..", ".###.", ".###.", ".#.#.", ".###.", ".###.", "#####", "#.#.#"};
-    static const char *const FLAME[2][2] = {{".#.#.", "..#.."}, {"..#..", ".#.#."}};
     tick_++;
     display.clear();
     for (Star &s : stars_) {
@@ -272,8 +260,8 @@ class RocketIcon : public GeekAnimation {
     for (int r = 0; r < 10; r++) {
       for (int c = 0; c < 5; c++) display.setLevel(5 + c, 2 + bob + r, 0);
     }
-    icon(5, 2 + bob, ROCKET, 8);
-    icon(5, 10 + bob, FLAME[(tick_ / 2) % 2], 2);
+    sprites::draw(spr::GEEK_ROCKET, 5, 2 + bob);
+    sprites::draw(spr::GEEK_FLAME, 5, 10 + bob, (tick_ / 2) % 2);
   }
 
  private:
@@ -292,11 +280,9 @@ class CoffeeIcon : public GeekAnimation {
   const char *name() const override { return "Caffè"; }
   uint16_t frameMs() const override { return 90; }
   void frame(uint32_t) override {
-    static const char *const CUP[7] = {"########.", "#######.#", "#######.#", "########.", ".######..", "..####...",
-                                       "#########"};
     tick_++;
     display.clear();
-    icon(3, 8, CUP, 7);
+    sprites::draw(spr::GEEK_CUP, 3, 8);
     // Three wisps: each a column swaying with a sine, fading as it rises.
     for (int w = 0; w < 3; w++) {
       for (int y = 1; y < 7; y++) {
@@ -452,8 +438,6 @@ class GliderIcon : public GeekAnimation {
   const char *name() const override { return "Emblema hacker"; }
   uint16_t frameMs() const override { return 600; }
   void frame(uint32_t) override {
-    static const char *const PHASES[4][3] = {
-        {".#.", "..#", "###"}, {"#.#", ".##", ".#."}, {"..#", "#.#", ".##"}, {"#..", ".##", "##."}};
     tick_++;
     display.clear();
     for (int i = 0; i < COLS; i++) {
@@ -462,10 +446,9 @@ class GliderIcon : public GeekAnimation {
         display.setLevel(i, line, 40);
       }
     }
-    const char *const *cells = PHASES[tick_ % 4];
     for (int r = 0; r < 3; r++) {
       for (int c = 0; c < 3; c++) {
-        if (cells[r][c] != '#') continue;
+        if (sprites::shade(spr::GEEK_GLIDER, tick_ % 4, c, r) <= 0) continue;  // a cell of the glider, 4x4
         for (int y = 0; y < 4; y++) {
           for (int x = 0; x < 4; x++) display.setLevel(1 + c * 5 + x, 1 + r * 5 + y, 230);
         }

@@ -131,9 +131,9 @@ void ForecastMode::update(uint32_t now) {
 
   // The day's weather (daytime icon); the current one if the API didn't
   // send a daily code.
-  const AnimatedIcon &icon = w.dayCode[day_] >= 0 ? iconFor(w.dayCode[day_], true)
-                                                  : iconFor(w.code, day_ == 0 ? w.isDay : true);
-  display.drawBitmap(0, 7, icon.frames[(now / icon.frameMs) % icon.frameCount], 6, 7);
+  const Sprite &icon = w.dayCode[day_] >= 0 ? iconFor(w.dayCode[day_], true)
+                                            : iconFor(w.code, day_ == 0 ? w.isDay : true);
+  sprites::draw(icon, 0, 7, sprites::frameAt(icon, now));
 
   drawTemperature(6, w.dayMin[day_], 255);
   drawTemperature(11, w.dayMax[day_], 255);

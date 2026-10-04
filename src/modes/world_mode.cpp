@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "display.h"
+#include "sprite_atlas.h"
 #include "settings.h"
 #include "ui.h"
 #include "world.h"
@@ -11,17 +12,6 @@
 static const uint32_t AIR_MS = 8000, ISS_MS = 10000;
 static const uint16_t FADE_MS = 900;
 
-// The world, 16 x 8 (22.5 degrees a cell), from 180 W and from the pole.
-static const char *const MAP[8] = {
-    "....#.#.....#...",  // 79 N
-    ".####...#######.",  // 56 N
-    "..###..#######..",  // 34 N
-    "....#..###.##...",  // 11 N
-    "....##..##...##.",  // 11 S
-    "....##..#....##.",  // 34 S
-    ".....#..........",  // 56 S
-    "################",  // Antarctica
-};
 // Centred; with the lamp vertical a row lower, under "ISS".
 static int mapTop() { return settings.vertical ? 5 : 4; }
 
@@ -76,11 +66,7 @@ void WorldMode::update(uint32_t now) {
     // The shared card: "Aria", the European index, its band.
     ui::card("Aria", String(w.aqi), aqiBand(w.aqi), t);
   } else {
-    for (int y = 0; y < 8; y++) {
-      for (int x = 0; x < COLS; x++) {
-        if (MAP[y][x] == '#') display.setLevel(x, mapTop() + y, ui::LEVEL_FAINT);
-      }
-    }
+    sprites::draw(spr::WORLD_MAP, 0, mapTop(), 0, ui::LEVEL_FAINT);
     for (int i = w.trailCount - 1; i >= 0; i--) {
       display.setLevel(mapX(w.trailLon[i]), mapY(w.trailLat[i]), 60 + 60 * (w.trailCount - i) / w.trailCount);
     }

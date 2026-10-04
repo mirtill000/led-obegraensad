@@ -36,6 +36,8 @@ constexpr const char *NUMBER_OUT_OF_RANGE = "Valore fuori dai limiti";
 constexpr const char *DRAWING_NOT_FOUND = "Disegno non trovato";
 constexpr const char *DRAWING_INVALID = "Disegno non valido";
 constexpr const char *GALLERY_FULL = "Impossibile salvare (galleria piena?)";
+constexpr const char *SPRITE_NOT_FOUND = "Sprite non trovato";
+constexpr const char *SPRITE_BAD_SIZE = "Lo sprite non ha la misura giusta";
 
 // The state of what the lamp downloads (netfetch.cpp).
 constexpr const char *FETCH_WAITING = "in attesa";

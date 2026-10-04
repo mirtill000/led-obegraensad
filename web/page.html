@@ -417,9 +417,29 @@
       </details>
     </details>
 
+    <details id="spriteBox">
+      <summary>Immagini della lampada</summary>
+      <p class="hint">Tutte le figure che la lampada disegna (icone delle notifiche, animaletto, meteo, personaggi dei giochi, icone geek…) sono in un unico atlante: scegline una, ritoccala pixel per pixel e salvala. La lampada usa subito la tua versione; «Originale» la rimette com'era.</p>
+      <label for="spriteName">Immagine</label>
+      <select id="spriteName"></select>
+      <canvas id="spriteCanvas" width="320" height="320"></canvas>
+      <div class="swatches" id="spriteBrush"></div>
+      <div class="frames" id="spriteFrames">
+        <button class="btn small icon" id="spritePrev" aria-label="Fotogramma precedente">◀</button>
+        <span id="spriteFrameInfo"></span>
+        <button class="btn small icon" id="spriteNext" aria-label="Fotogramma successivo">▶</button>
+      </div>
+      <p class="hint" id="spriteMarks" hidden>Le lettere sono punti con un ruolo (occhi, bocca, parti di Mario…): la lampada decide come accenderli. Si possono ridipingere, ma perdono il ruolo.</p>
+      <div class="actions">
+        <button class="btn" id="spriteTry">Prova sulla lampada</button>
+        <button class="btn primary" id="spriteSave">Salva</button>
+        <button class="btn quiet" id="spriteReset">Originale</button>
+      </div>
+    </details>
+
     <details id="backupBox">
       <summary>Backup delle impostazioni</summary>
-      <p class="hint">Tutte le impostazioni (modalità, playlist e fasce orarie, testi, frasi aggiunte, notte, sveglia, luogo, Bluetooth…) in un file. I disegni della galleria non sono inclusi.</p>
+      <p class="hint">Tutte le impostazioni (modalità, playlist e fasce orarie, testi, frasi aggiunte, notte, sveglia, luogo, Bluetooth…) in un file. I disegni della galleria e le immagini ritoccate non sono inclusi.</p>
       <div class="actions"><a class="btn" id="backupGet" href="/api/backup" download="obegransad-backup.json">Scarica il backup</a></div>
       <label for="backupFile">Ripristina da un file</label>
       <input type="file" id="backupFile" accept=".json,application/json">

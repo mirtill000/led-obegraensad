@@ -1068,6 +1068,140 @@ function loadDiag() {
       : '<tr><td>Nessun evento</td></tr>';
   }).catch(() => {});
 }
+
+// --- Immagini della lampada: the sprite atlas (GET /api/sprites), retouched
+// pixel by pixel and saved back (POST /api/sprite). Characters as in
+// sprite.h: '.' transparent, '0'-'9' shades, '#' full, ':' a third, '+'
+// always full, letters = marks with a role.
+const sp = { list: [], cur: null, rows: [], frame: 0, brush: '9' };
+const SP_BRUSHES = ['.', '0', '2', '4', '6', '9', '+'];
+const SP_GROUPS = { notify: 'Notifiche', pet: 'Animaletto', geek: 'Icone geek', season: 'Ricorrenze', gallery: 'Disegni',
+                    runner: 'Dino', sonic: 'Sonic', doom: 'Doom', mario: 'Super Mario', weather: 'Meteo', world: 'Mondo' };
+function spLevel(ch) {
+  if (ch >= '0' && ch <= '9') return Math.round(255 * (ch - '0') / 9);
+  if (ch === '#' || ch === '+' || /[a-zA-Z]/.test(ch)) return 255;
+  if (ch === ':') return 85;
+  return -1;  // transparent
+}
+async function loadSprites() {
+  if (!$('spriteBox').open || sp.list.length) return;
+  try {
+    const res = await fetch('/api/sprites');
+    sp.list = await res.json();
+  } catch (e) { return fail(e); }
+  const sel = $('spriteName');
+  sel.innerHTML = '';
+  let group = null, og = null;
+  for (const s of sp.list) {
+    const g = s.name.split('.')[0];
+    if (g !== group) { group = g; og = document.createElement('optgroup'); og.label = SP_GROUPS[g] || g; sel.appendChild(og); }
+    const o = document.createElement('option');
+    o.value = s.name; o.textContent = s.name.split('.')[1] + (s.retouched ? ' (ritoccata)' : '');
+    og.appendChild(o);
+  }
+  pickSprite(sel.value);
+}
+function pickSprite(name) {
+  sp.cur = sp.list.find((s) => s.name === name);
+  if (!sp.cur) return;
+  sp.rows = sp.cur.rows.map((r) => r.split(''));
+  sp.frame = 0;
+  $('spriteFrames').hidden = sp.cur.frames < 2;
+  $('spriteMarks').hidden = !sp.cur.rows.some((r) => /[a-zA-Z]/.test(r));
+  drawSprite();
+}
+function spriteCell() { return Math.floor(320 / Math.max(sp.cur.w, sp.cur.h)); }
+function drawSprite() {
+  const c = $('spriteCanvas'), g = c.getContext('2d'), s = sp.cur, k = spriteCell();
+  g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+  const ox = Math.floor((320 - s.w * k) / 2), oy = Math.floor((320 - s.h * k) / 2);
+  for (let r = 0; r < s.h; r++) {
+    for (let col = 0; col < s.w; col++) {
+      const ch = sp.rows[sp.frame * s.h + r][col], l = spLevel(ch);
+      if (l < 0) {  // transparent: a dim checkerboard, unlike black ('0')
+        const h = (k - 2) / 2;
+        for (let q = 0; q < 4; q++) {
+          g.fillStyle = (q === 0 || q === 3) ? '#2a2a2a' : '#1a1a1a';
+          g.fillRect(ox + col * k + 1 + (q % 2) * h, oy + r * k + 1 + Math.floor(q / 2) * h, h, h);
+        }
+      } else {
+        g.fillStyle = gray(l);
+        g.fillRect(ox + col * k + 1, oy + r * k + 1, k - 2, k - 2);
+      }
+      if (/[a-zA-Z]/.test(ch)) {
+        g.fillStyle = '#e33'; g.font = Math.floor(k * 0.6) + 'px sans-serif';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(ch, ox + col * k + k / 2, oy + r * k + k / 2);
+      }
+    }
+  }
+  $('spriteFrameInfo').textContent = 'Fotogramma ' + (sp.frame + 1) + ' di ' + s.frames;
+}
+function paintSprite(ev) {
+  if (!sp.cur) return;
+  const c = $('spriteCanvas'), rect = c.getBoundingClientRect(), k = spriteCell(), s = sp.cur;
+  const px = (ev.clientX - rect.left) * 320 / rect.width, py = (ev.clientY - rect.top) * 320 / rect.height;
+  const col = Math.floor((px - (320 - s.w * k) / 2) / k), r = Math.floor((py - (320 - s.h * k) / 2) / k);
+  if (col < 0 || r < 0 || col >= s.w || r >= s.h) return;
+  sp.rows[sp.frame * s.h + r][col] = sp.brush;
+  drawSprite();
+}
+// The sprite centred on the panel, as a draft of the Disegni (/api/draw).
+function spriteFrames() {
+  const s = sp.cur, out = new Uint8Array(256 * s.frames);
+  const x0 = Math.floor((16 - s.w) / 2), y0 = Math.floor((16 - s.h) / 2);
+  for (let f = 0; f < s.frames; f++) {
+    for (let r = 0; r < s.h; r++) {
+      for (let col = 0; col < s.w; col++) {
+        const x = x0 + col, y = y0 + r, l = spLevel(sp.rows[f * s.h + r][col]);
+        if (x >= 0 && y >= 0 && x < 16 && y < 16 && l > 0) out[f * 256 + y * 16 + x] = l;
+      }
+    }
+  }
+  return out;
+}
+for (const ch of SP_BRUSHES) {
+  const b = document.createElement('button');
+  const l = spLevel(ch);
+  b.style.background = l < 0 ? 'repeating-linear-gradient(45deg,#222 0 4px,#333 4px 8px)' : gray(l);
+  b.title = ch === '.' ? 'Trasparente' : ch === '0' ? 'Nero (copre)' : ch === '+' ? 'Sempre al massimo' : 'Luminosità ' + Math.round(l / 2.55) + '%';
+  b.addEventListener('click', () => {
+    sp.brush = ch;
+    for (const o of $('spriteBrush').children) o.classList.toggle('on', o === b);
+  });
+  if (ch === sp.brush) b.classList.add('on');
+  $('spriteBrush').appendChild(b);
+}
+$('spriteBox').addEventListener('toggle', loadSprites);
+$('spriteName').addEventListener('change', (e) => pickSprite(e.target.value));
+$('spriteCanvas').addEventListener('pointerdown', (e) => { e.target.setPointerCapture(e.pointerId); paintSprite(e); });
+$('spriteCanvas').addEventListener('pointermove', (e) => { if (e.buttons) paintSprite(e); });
+$('spritePrev').addEventListener('click', () => { sp.frame = (sp.frame + sp.cur.frames - 1) % sp.cur.frames; drawSprite(); });
+$('spriteNext').addEventListener('click', () => { sp.frame = (sp.frame + 1) % sp.cur.frames; drawSprite(); });
+$('spriteTry').addEventListener('click', () => {
+  if (!sp.cur) return;
+  fetch('/api/draw', { method: 'POST', body: new URLSearchParams({ data: b64(spriteFrames()), frameMs: sp.cur.ms || 400 }) })
+    .then(() => status('Sulla lampada (nei Disegni)')).catch(fail);
+});
+async function spriteSend(data, done) {
+  try {
+    const res = await fetch('/api/sprite', { method: 'POST', body: new URLSearchParams(data) });
+    if (!res.ok) throw new Error(await res.text());
+    sp.list = [];  // reload, with the new rows and "(ritoccata)"
+    const name = sp.cur.name;
+    await loadSprites();
+    $('spriteName').value = name;
+    pickSprite(name);
+    status(done);
+  } catch (e) { fail(e); }
+}
+$('spriteSave').addEventListener('click', () => {
+  if (sp.cur) spriteSend({ name: sp.cur.name, rows: sp.rows.map((r) => r.join('')).join('\n') }, 'Immagine salvata');
+});
+$('spriteReset').addEventListener('click', () => {
+  if (sp.cur) spriteSend({ name: sp.cur.name, reset: 1 }, 'Rimessa l\'originale');
+});
+
 $('diagBox').addEventListener('toggle', loadDiag);
 setInterval(loadDiag, 2000);
 $('diagReset').onclick = () => fetch('/api/diag/reset', { method: 'POST' }).then(loadDiag).catch(fail);

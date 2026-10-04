@@ -46,17 +46,6 @@ void textHeaderLoop(const String &text, uint32_t now) {
   display.drawTextIn(TextFont::Compact, period - offset, 0, t.c_str(), 0, t.length());
 }
 
-void icon(int x, int y, const char *const *rows, int count, uint8_t level) {
-  for (int r = 0; r < count; r++) {
-    for (int c = 0; rows[r][c]; c++) {
-      const char ch = rows[r][c];
-      if (ch == '#') display.setLevel(x + c, y + r, level);
-      else if (ch == '+') display.setLevel(x + c, y + r, LEVEL_FULL);
-      else if (ch == ':') display.setLevel(x + c, y + r, level / 3);
-    }
-  }
-}
-
 void label(const String &text, int y, uint8_t level, uint32_t t) {
   const String plain = Display::fontText(text);
   String s;

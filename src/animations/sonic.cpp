@@ -13,6 +13,7 @@
 
 #include "animations/arcade_game.h"
 #include "display.h"
+#include "sprite_atlas.h"
 #include "settings.h"
 
 namespace {
@@ -404,34 +405,17 @@ class SonicGame : public ArcadeGame {
     for (const Bug &b : s_.bugs) {
       if (!b.alive) continue;
       const int bx = (int)floorf(b.x) - cam, by = col(s_, (int32_t)floorf(b.x) + 1).h - 1;
-      static const char *const BUG[2] = {"###", "#.#"};
-      for (int r = 0; r < 2; r++) {
-        for (int k = 0; k < 3; k++) {
-          if (BUG[r][k] == '#') display.setLevel(bx + k, by - 1 + r, 255);
-        }
-      }
+      sprites::draw(spr::SONIC_BUG, bx, by - 1);
     }
     // Sonic: running (legs going) or curled in a spinning ball; blinking
     // while invincible; flying off the screen when he loses a life.
-    static const char *const RUN_FRAMES[2][4] = {{"##.", ".##", ".#.", "#.#"}, {"##.", ".##", ".#.", ".#."}};
-    static const char *const BALL[2][3] = {{".#.", "###", ".#."}, {"#.#", ".#.", "#.#"}};
     const bool show = dying_ || s_.invincible == 0 || (tick_ / 2) % 2;
     if (show) {
       const int top = dying_ ? (int)lroundf(dieY_) : (int)lroundf(s_.y) - 3;
       if (s_.spinning && !dying_) {
-        const char *const *b = BALL[(tick_ / 2) % 2];
-        for (int r = 0; r < 3; r++) {
-          for (int k = 0; k < 3; k++) {
-            if (b[r][k] == '#') display.setLevel(SONIC_SX + k, top + 1 + r, 255);
-          }
-        }
+        sprites::draw(spr::SONIC_BALL, SONIC_SX, top + 1, (tick_ / 2) % 2);
       } else {
-        const char *const *f = RUN_FRAMES[s_.vx > 0.05f ? (tick_ / 3) % 2 : 0];
-        for (int r = 0; r < 4; r++) {
-          for (int k = 0; k < 3; k++) {
-            if (f[r][k] == '#') display.setLevel(SONIC_SX + k, top + r, 255);
-          }
-        }
+        sprites::draw(spr::SONIC_RUN, SONIC_SX, top, s_.vx > 0.05f ? (tick_ / 3) % 2 : 0);
       }
     }
     // Rings collected along the top row (up to 16), lives in the corner.

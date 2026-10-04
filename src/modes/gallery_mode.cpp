@@ -1,6 +1,7 @@
 #include "modes/gallery_mode.h"
 
 #include "display.h"
+#include "sprite_atlas.h"
 #include "settings.h"
 
 static const uint32_t EACH_MS = 20000;        // per drawing, showing them all
@@ -65,12 +66,7 @@ void GalleryMode::update(uint32_t now) {
   display.clear();
   if (frames == 0) {
     // Nothing to show yet: a small pencil, inviting to draw on the page.
-    static const char *PENCIL[] = {"......##", ".....#.#", "....#.#.", "...#.#..", "..#.#...", ".##.....", ".#......", "#......."};
-    for (int y = 0; y < 8; y++) {
-      for (int x = 0; x < 8; x++) {
-        if (PENCIL[y][x] == '#') display.setLevel(4 + x, 4 + y, 120);
-      }
-    }
+    sprites::draw(spr::GALLERY_PENCIL, 4, 4, 0, 120);
   } else {
     const uint8_t *px = current_.frames.data() + frame_ * 256;
     for (int i = 0; i < 256; i++) display.setLevel(i % COLS, i / COLS, px[i]);

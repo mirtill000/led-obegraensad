@@ -186,9 +186,8 @@ void ClockMode::update(uint32_t now) {
     drawNumber(8, 8, t.tm_min);
     // Rain within 2 hours: the icon alternates with an umbrella every 2 s.
     const bool umbrella = rainSoon(weather) && (now / 2000) % 2;
-    const AnimatedIcon &icon = umbrella ? ICON_UMBRELLA : iconFor(weather.code, weather.isDay);
-    const uint8_t frame = (now / icon.frameMs) % icon.frameCount;
-    display.drawBitmap(9, 1, icon.frames[frame], 6, 7);
+    const Sprite &icon = umbrella ? spr::WEATHER_UMBRELLA : iconFor(weather.code, weather.isDay);
+    sprites::draw(icon, 9, 1, sprites::frameAt(icon, now));
     drawTemperature(1, weather.temperature);  // after the icon: it clears a pixel of it
   } else {
     // No weather yet: just the time, in the same digits, centred.

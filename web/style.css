@@ -114,6 +114,7 @@
   .board { display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; width: 100%; max-width: 320px; aspect-ratio: 1; margin: 0 auto;
            background: var(--line); border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; touch-action: none; user-select: none; }
   .board div { background: #000; }
+  #spriteCanvas { width: 100%; max-width: 320px; aspect-ratio: 1; display: block; margin: 12px auto 0; border-radius: var(--r-sm); touch-action: none; background: #000; }
   .swatches { display: flex; gap: 6px; margin: 12px 0 6px; }
   .swatches button { flex: 1; height: 34px; border-radius: var(--r-sm); border: 1px solid var(--line); }
   .swatches button.on { outline: 2px solid var(--accent); outline-offset: 1px; }

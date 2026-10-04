@@ -6,6 +6,7 @@
 
 #include "animation.h"
 #include "display.h"
+#include "sprite_atlas.h"
 #include "gfx.h"
 #include "occasions.h"
 #include "scroller.h"
@@ -36,8 +37,7 @@ class SnowAnimation : public Seasonal {
   }
   void frame(uint32_t now) override {
     display.clear();
-    static const char *const PINE[] = {"..#..", ".###.", "..#..", ".###.", "#####", "..#.."};
-    ui::icon(10, ROWS - 1 - 6, PINE, 6, 45);
+    sprites::draw(spr::SEASON_PINE, 10, ROWS - 1 - 6, 0, 45);
     for (Flake &f : flakes_) {
       f.y += f.speed;
       f.x += sinf(now / 700.0f + f.phase) * 0.06f;
@@ -189,13 +189,12 @@ class HeartsAnimation : public Seasonal {
     for (Heart &h : hearts_) reset(h, true);
   }
   void frame(uint32_t now) override {
-    static const char *const HEART[] = {".#.#.", "#####", "#####", ".###.", "..#.."};
     display.clear();
     for (Heart &h : hearts_) {
       h.y -= h.speed;
       if (h.y < -5) reset(h, false);
       const int x = (int)lroundf(h.x + sinf(now / 600.0f + h.phase) * 1.2f);
-      ui::icon(x, (int)h.y, HEART, 5, h.level);
+      sprites::draw(spr::SEASON_HEART, x, (int)h.y, 0, h.level);
     }
   }
 
@@ -222,14 +221,9 @@ class EasterEggAnimation : public Seasonal {
   const char *name() const override { return "Uovo di Pasqua"; }
   uint16_t frameMs() const override { return 120; }
   void frame(uint32_t now) override {
-    static const char *const EGG[] = {
-        "....####....", "...######...", "..########..", "..#+##+##+..", ".##########.", ".#+#+#+#+#+.",
-        ".+#+#+#+#+#.", ".##########.", ".##+##+##+#.", "..########..", "..########..", "...######...",
-        "....####....",
-    };
     display.clear();
     const int rock = (int)lroundf(sinf(now / 450.0f) * 1.2f);
-    ui::icon(2 + rock, 2, EGG, 13, 70);
+    sprites::draw(spr::SEASON_EGG, 2 + rock, 2, 0, 70);
   }
 };
 
@@ -241,20 +235,10 @@ class PumpkinAnimation : public Seasonal {
   const char *name() const override { return "Zucca di Halloween"; }
   uint16_t frameMs() const override { return 70; }
   void frame(uint32_t) override {
-    static const char *const BODY[] = {
-        "......##......", "......#.......", "..##########..", ".############.", "##############",
-        "##############", "##############", "##############", "##############", ".############.",
-        "..##########..",
-    };
-    static const char *const FACE[] = {
-        "..............", "..............", "..............", "..............", "...#......#...",
-        "..###....###..", "..............", "...#.#..#.#...", "....#.##.#....", "..............",
-        "..............",
-    };
     display.clear();
-    ui::icon(1, 3, BODY, 11, 60);
+    sprites::draw(spr::SEASON_PUMPKIN, 1, 3, 0, 60);
     flicker_ = constrain(flicker_ + (int)(esp_random() % 61) - 30, 150, 255);
-    ui::icon(1, 3, FACE, 11, (uint8_t)flicker_);
+    sprites::draw(spr::SEASON_PUMPKIN_FACE, 1, 3, 0, (uint8_t)flicker_);
   }
 
  private:
@@ -288,11 +272,8 @@ class CakeAnimation : public Seasonal {
       scrolling_ = true;
       return;
     }
-    static const char *const CAKE[] = {
-        "############", "#:#:##:#:##:", "############", "############", "#+#+#+#+#+#+", "############",
-    };
     display.clear();
-    ui::icon(2, 10, CAKE, 6, 120);
+    sprites::draw(spr::SEASON_CAKE, 2, 10, 0, 120);
     for (int c = 0; c < 3; c++) {
       const int x = 4 + c * 4;
       for (int y = 6; y < 10; y++) display.setLevel(x, y, 200);

@@ -3,37 +3,21 @@
 #include <math.h>
 
 #include "display.h"
+#include "sprite_atlas.h"
 
 namespace {
 
 struct Icon {
   const char *id;
-  uint8_t rows;
-  const char *const *art;  // '#' lit, top row first
+  const Sprite *sprite;  // in the atlas ("notify.<id>")
   enum Motion : uint8_t { PULSE, SWING, SHAKE, BEAT } motion;
 };
 
-const char *const BELL[] = {"....#....", "...###...", "..#####..", "..#####..", "..#####..",
-                            ".#######.", ".#######.", "#########", ".........", "...###..."};
-const char *const MAIL[] = {"############", "##........##", "#.#......#.#", "#..#....#..#",
-                            "#...#..#...#", "#....##....#", "#..........#", "############"};
-const char *const CHECK[] = {"..........#", ".........##", "........##.", "#......##..",
-                             "##....##...", ".##..##....", "..####.....", "...##......"};
-const char *const ALERT[] = {".....#.....", "....###....", "....#.#....", "...##.##...", "...##.##...",
-                             "..###.###..", "..#######..", ".####.####.", "###########"};
-const char *const HEART[] = {".##...##.", "####.####", "#########", "#########",
-                             ".#######.", "..#####..", "...###...", "....#...."};
-const char *const PHONE[] = {"#######", "#.....#", "#.....#", "#.....#", "#.....#", "#.....#",
-                             "#.....#", "#.....#", "#######", "#..#..#", "#######"};
-const char *const HOME[] = {".....#.....", "....#.#....", "...#...#...", "..#.....#..", ".#.......#.",
-                            "###########", ".#.......#.", ".#..###..#.", ".#..#.#..#.", ".####.####."};
-const char *const STAR[] = {".....#.....", ".....#.....", "....###....", "###########", ".#########.",
-                            "..#######..", "..#######..", ".####.####.", ".###...###.", ".#.......#."};
-
 const Icon ICONS[] = {
-    {"bell", 10, BELL, Icon::SWING},   {"mail", 8, MAIL, Icon::PULSE},    {"check", 8, CHECK, Icon::PULSE},
-    {"alert", 9, ALERT, Icon::SHAKE},  {"heart", 8, HEART, Icon::BEAT},   {"phone", 11, PHONE, Icon::SHAKE},
-    {"home", 10, HOME, Icon::PULSE},   {"star", 10, STAR, Icon::PULSE},
+    {"bell", &spr::NOTIFY_BELL, Icon::SWING},   {"mail", &spr::NOTIFY_MAIL, Icon::PULSE},
+    {"check", &spr::NOTIFY_CHECK, Icon::PULSE}, {"alert", &spr::NOTIFY_ALERT, Icon::SHAKE},
+    {"heart", &spr::NOTIFY_HEART, Icon::BEAT},  {"phone", &spr::NOTIFY_PHONE, Icon::SHAKE},
+    {"home", &spr::NOTIFY_HOME, Icon::PULSE},   {"star", &spr::NOTIFY_STAR, Icon::PULSE},
 };
 
 const Icon *findIcon(const String &id) {
@@ -97,14 +81,14 @@ void NotifyMode::begin(uint32_t now) {
 // beats, the others glow.
 void NotifyMode::drawIcon(uint32_t t) {
   const Icon &icon = *queue[0].icon;
-  const int w = strlen(icon.art[0]);
-  int x = (COLS - w) / 2, y = (ROWS - icon.rows) / 2;
+  const Sprite &art = *icon.sprite;
+  int x = (COLS - art.w) / 2, y = (ROWS - art.h) / 2;
   uint8_t level = 255;
   if (t < DROP_MS) {
     // Ease in from above, overshooting a pixel before settling.
     const float p = t / (float)DROP_MS;
     const float e = 1 - powf(1 - p, 3);
-    y = (int)lroundf(-icon.rows + (y + icon.rows) * e + sinf(p * (float)M_PI) * 1.5f);
+    y = (int)lroundf(-art.h + (y + art.h) * e + sinf(p * (float)M_PI) * 1.5f);
   } else {
     const uint32_t m = t - DROP_MS;
     switch (icon.motion) {
@@ -127,11 +111,7 @@ void NotifyMode::drawIcon(uint32_t t) {
     }
   }
   display.clear();
-  for (int r = 0; r < icon.rows; r++) {
-    for (int c = 0; c < w; c++) {
-      if (icon.art[r][c] == '#') display.setLevel(x + c, y + r, level);
-    }
-  }
+  sprites::draw(art, x, y, 0, level);
   display.render();
 }
 

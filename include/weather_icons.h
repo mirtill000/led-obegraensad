@@ -1,17 +1,10 @@
 #pragma once
 
-#include <Arduino.h>
+#include "sprite_atlas.h"
 
-// Animated weather icons, 6x7 pixels per frame (bit 15 = leftmost column),
-// shared by "Orologio" and "Previsioni".
-struct AnimatedIcon {
-  uint16_t frameMs;
-  uint8_t frameCount;
-  const uint16_t (*frames)[7];
-};
+// Animated weather icons, 6x7 sprites of the atlas (weather.*), shared by
+// "Orologio" and "Previsioni": draw them at sprites::frameAt(icon, now).
 
-// Shown in turn with the weather icon when rain is on its way.
-extern const AnimatedIcon ICON_UMBRELLA;
-
-// WMO weather code -> icon (https://open-meteo.com/en/docs).
-const AnimatedIcon &iconFor(int code, bool isDay);
+// WMO weather code -> icon (https://open-meteo.com/en/docs). The umbrella
+// (spr::WEATHER_UMBRELLA) is shown in turn with it when rain is on its way.
+const Sprite &iconFor(int code, bool isDay);

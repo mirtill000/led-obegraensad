@@ -7,6 +7,7 @@
 
 #include "animations/arcade_game.h"
 #include "display.h"
+#include "sprite_atlas.h"
 #include "settings.h"
 
 namespace {
@@ -17,27 +18,10 @@ const float GRAVITY = 0.12f;
 const float JUMP_SPEED = -1.35f;  // about 7 rows high
 const uint32_t DUCK_MS = 350;     // one press ducks this long (hold = repeat)
 
-// Sprites, top row first ('#' lit). The dino stands on the row above the
-// ground; its feet alternate while running.
-// The little arm is the lone pixel reaching forward under the head.
-const char *const DINO_RUN[2][7] = {
-    {"...###", "...#.#", "...###", "#.###.", "####.#", ".###..", ".#..#."},
-    {"...###", "...#.#", "...###", "#.###.", "####.#", ".###..", "..##.."},
-};
-const char *const DINO_DUCK[2][4] = {
-    {"....##", "######", ".#####", ".#..#."},
-    {"....##", "######", ".#####", "..##.."},
-};
-const char *const CACTUS[3][5] = {
-    {".#.", "##.", ".##", ".#.", ".#."},       // 3 wide, 5 tall
-    {"#", "#", "#", "#"},                      // 1 wide, 4 tall
-    {"#.#", "###", ".#.", ".#.", ".#."},      // 3 wide, 5 tall
-};
-const int CACTUS_ROWS[3] = {5, 4, 5};
-const char *const BIRD[2][3] = {
-    {"#....", ".###.", "...##"},
-    {".....", ".####", "#..#."},
-};
+// Sprites from the atlas (runner.*): the dino stands on the row above the
+// ground, its feet alternating while running; the little arm is the lone
+// pixel reaching forward under the head.
+const Sprite *const CACTUS[3] = {&spr::RUNNER_CACTUS1, &spr::RUNNER_CACTUS2, &spr::RUNNER_CACTUS3};
 
 struct Obstacle {
   float x;
@@ -142,45 +126,32 @@ class RunnerGame : public ArcadeGame {
   }
 
   // The dino's sprite rows and top-left corner for a state.
-  void dinoSprite(const State &s, bool duck, const char *const **rows, int &count, int &top) const {
-    const int run = (int)(s.distance / 2) % 2;
-    if (duck) {
-      *rows = DINO_DUCK[run];
-      count = 4;
-    } else {
-      *rows = DINO_RUN[run];
-      count = 7;
-    }
-    top = GROUND - count - (int)lroundf(s.y);
+  void dinoSprite(const State &s, bool duck, const Sprite **sprite, int &frame, int &top) const {
+    frame = (int)(s.distance / 2) % 2;
+    *sprite = duck ? &spr::RUNNER_DUCK : &spr::RUNNER_DINO;
+    top = GROUND - (*sprite)->h - (int)lroundf(s.y);
   }
 
-  static void obstacleSprite(const Obstacle &o, uint32_t tick, const char *const **rows, int &count) {
-    if (o.kind == 3) {
-      *rows = BIRD[(tick / 6) % 2];
-      count = 3;
-    } else {
-      *rows = CACTUS[o.kind];
-      count = CACTUS_ROWS[o.kind];
-    }
+  static void obstacleSprite(const Obstacle &o, uint32_t tick, const Sprite **sprite, int &frame) {
+    *sprite = o.kind == 3 ? &spr::RUNNER_BIRD : CACTUS[o.kind];
+    frame = o.kind == 3 ? (tick / 6) % 2 : 0;
   }
 
   // Pixel-perfect: any lit pixel of the dino on a lit pixel of an obstacle.
   bool collides(const State &s, bool duck) const {
-    const char *const *dino;
-    int dRows, dTop;
-    dinoSprite(s, duck, &dino, dRows, dTop);
+    const Sprite *dino;
+    int dFrame, dTop;
+    dinoSprite(s, duck, &dino, dFrame, dTop);
     for (const Obstacle &o : s.obstacles) {
       if (!o.used) continue;
-      const char *const *rows;
-      int count;
-      obstacleSprite(o, tick_, &rows, count);
+      const Sprite *ob;
+      int oFrame;
+      obstacleSprite(o, tick_, &ob, oFrame);
       const int ox = (int)lroundf(o.x);
-      for (int r = 0; r < count; r++) {
-        for (int c = 0; rows[r][c]; c++) {
-          if (rows[r][c] != '#') continue;
-          const int x = ox + c - DINO_X, y = o.y + r - dTop;
-          if (y < 0 || y >= dRows || x < 0 || x >= (int)strlen(dino[y])) continue;
-          if (dino[y][x] == '#') return true;
+      for (int r = 0; r < ob->h; r++) {
+        for (int c = 0; c < ob->w; c++) {
+          if (sprites::shade(*ob, oFrame, c, r) <= 0) continue;
+          if (sprites::shade(*dino, dFrame, ox + c - DINO_X, o.y + r - dTop) > 0) return true;
         }
       }
     }
@@ -205,7 +176,7 @@ class RunnerGame : public ArcadeGame {
         o.y = HEIGHTS[esp_random() % 3];
       } else {
         o.kind = esp_random() % 3;
-        o.y = GROUND - CACTUS_ROWS[o.kind];
+        o.y = GROUND - CACTUS[o.kind]->h;
       }
       nextGap_ = 11 + esp_random() % 10 + (int)(speed_ * 8);
       return;
@@ -254,24 +225,15 @@ class RunnerGame : public ArcadeGame {
     for (int x = 0; x < COLS; x++) display.setLevel(x, GROUND, (x + shift) % 9 != 0 ? ground : 0);
     for (const Obstacle &o : obstacles_) {
       if (!o.used) continue;
-      const char *const *rows;
-      int count;
-      obstacleSprite(o, tick_, &rows, count);
-      const int ox = (int)lroundf(o.x);
-      for (int r = 0; r < count; r++) {
-        for (int c = 0; rows[r][c]; c++) {
-          if (rows[r][c] == '#') display.setPixel(ox + c, o.y + r, true);
-        }
-      }
+      const Sprite *ob;
+      int frame;
+      obstacleSprite(o, tick_, &ob, frame);
+      sprites::draw(*ob, (int)lroundf(o.x), o.y, frame);
     }
-    const char *const *dino;
-    int count, top;
-    dinoSprite(state(), ducking(), &dino, count, top);
-    for (int r = 0; r < count; r++) {
-      for (int c = 0; dino[r][c]; c++) {
-        if (dino[r][c] == '#') display.setPixel(DINO_X + c, top + r, true);
-      }
-    }
+    const Sprite *dino;
+    int frame, top;
+    dinoSprite(state(), ducking(), &dino, frame, top);
+    sprites::draw(*dino, DINO_X, top, frame);
   }
 
   Obstacle obstacles_[MAX_OBSTACLES];

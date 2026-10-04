@@ -33,6 +33,7 @@
 #include "pager.h"
 #include "webinfo.h"
 #include "world.h"
+#include "sprite.h"
 #include "settings.h"
 #include "texts.h"
 #include "timekeeping.h"
@@ -390,6 +391,22 @@ static void handleFormula() {
 }
 
 // The pet's name (name=) or a new egg (reset=1); care goes through /api/cmd.
+// The sprite atlas (sprite.h): GET lists every sprite with its rows; POST
+// name + rows (h * frames lines, '\n' between them) retouches one, name +
+// reset=1 puts the built-in one back.
+static void handleSprites() { server.send(200, "application/json", sprites::atlasJson()); }
+
+static void handleSprite() {
+  const Sprite *s = sprites::find(server.arg("name"));
+  if (!s) return badRequest(txt::SPRITE_NOT_FOUND);
+  if (server.arg("reset") == "1") {
+    sprites::restore(*s);
+  } else if (!sprites::retouch(*s, server.arg("rows"))) {
+    return badRequest(txt::SPRITE_BAD_SIZE);
+  }
+  server.send(204);
+}
+
 static void handlePet() {
   if (server.hasArg("name")) {
     if (!server.arg("name").length()) return badRequest(txt::NEED_NAME);
@@ -691,6 +708,8 @@ void webBegin() {
   server.on("/api/settings", HTTP_POST, handleSettings);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/pet", HTTP_POST, handlePet);
+  server.on("/api/sprites", HTTP_GET, handleSprites);
+  server.on("/api/sprite", HTTP_POST, handleSprite);
   server.on("/api/formula", HTTP_POST, handleFormula);
   server.on("/api/canvas", HTTP_GET, handleCanvas);
   server.on("/api/paint", HTTP_POST, handlePaint);
