@@ -395,14 +395,11 @@ Current modes:
     title says "compleanno" or "birthday", matched by day and month so
     Google's yearly birthdays count) - `src/occasions.cpp`
   - *3D e demo*: rotating wireframe cube, plasma, metaballs, endless zoom
-    into the Mandelbrot set; and, rendered per pixel with 2x2
-    supersampling (`src/animations/demos3d.cpp`): *Cubo solido* (a ray per
-    sub-pixel against the spinning cube, faces shaded by the light),
-    *Tunnel* (a twisting tiled pipe you fly down) and *Sfera al sole* (a
-    turning globe lit from where the sun really is in your sky, from the
-    lamp's latitude and longitude, as if you faced north: sunrise lights
-    its right side, noon the front, sunset the left; at night just its
-    outline among a few stars - `sunPosition()` in `moon.cpp`)
+    into the Mandelbrot set; and, rendered per pixel
+    (`src/animations/demos3d.cpp`): *Cubo solido* (16 rays per pixel
+    against the spinning cube, faces shaded by the light, 50 frames a
+    second, the spin gently speeding up and slowing down) and *Tunnel* (a
+    twisting tiled pipe you fly down)
   - *3D e demo*, the flights (`src/animations/flights.cpp`): voxel
     landscapes, Comanche style - one ray per column walked front to back
     over a heightmap, with sub-pixel ridges, fog in the distance and a

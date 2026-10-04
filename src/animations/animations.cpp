@@ -34,7 +34,6 @@ extern Animation *const englishWordClockAnimation;
 extern Animation *const cubeAnimation;
 extern Animation *const solidCubeAnimation;
 extern Animation *const tunnelAnimation;
-extern Animation *const sunSphereAnimation;
 extern Animation *const voxelAnimation;
 extern Animation *const seaAnimation;
 extern Animation *const canyonAnimation;
@@ -86,7 +85,6 @@ Animation *const ANIMATIONS[] = {
     cubeAnimation,
     solidCubeAnimation,
     tunnelAnimation,
-    sunSphereAnimation,
     voxelAnimation,
     seaAnimation,
     canyonAnimation,
