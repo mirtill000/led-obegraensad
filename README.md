@@ -404,7 +404,8 @@ Current modes:
     its right side, noon the front, sunset the left; at night just its
     outline among a few stars - `sunPosition()` in `moon.cpp`) and *Volo
     sulle colline* (a voxel landscape, Comanche style: hills brighter
-    with height, fog in the distance)
+    with height, fog in the distance; a slow glide with sub-pixel
+    ridges and a camera that eases over the hills ahead)
 - **Giochi** - one game, or "automatic" (a different one every 5
   minutes, always as a demo); button: next game. Every game derives from
   `ArcadeGame` (`src/animations/arcade_game.h`), which gives them the

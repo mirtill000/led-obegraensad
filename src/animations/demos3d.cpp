@@ -201,39 +201,54 @@ class VoxelAnimation : public Animation {
   const char *id() const override { return "voxel"; }
   const char *name() const override { return "Volo sulle colline"; }
   const char *group() const override { return "3D e demo"; }
-  uint16_t frameMs() const override { return 50; }
+  uint16_t frameMs() const override { return 30; }
+  void start() override { camH_ = -1; }
   void frame(uint32_t now) override {
+    // A slow, gliding flight: a gentle speed, wide lazy turns, and a
+    // camera height that eases towards the hills ahead instead of
+    // following every bump below.
     const float t = now / 1000.0f;
-    const float heading = 0.4f * sinf(t * 0.15f);
-    const float camX = t * 2.2f * sinf(heading) + 40 * sinf(t * 0.05f), camY = t * 6.0f;
-    const float camH = height(camX, camY) + 6.0f;  // fly above the ground below
+    const float heading = 0.35f * sinf(t * 0.06f);
+    const float camX = 30 * sinf(t * 0.021f) + 8 * sinf(t * 0.047f), camY = t * 2.4f;
+    float ahead = 0;
+    for (float d = 0; d <= 20; d += 2.5f) {
+      ahead = max(ahead, height(camX + sinf(heading) * d, camY + cosf(heading) * d));
+    }
+    const float target = ahead + 5.5f;
+    camH_ = camH_ < 0 ? target : camH_ + (target - camH_) * 0.02f;
+    camH_ = max(camH_, height(camX, camY) + 3.0f);  // never skim the grass
     const float horizon = 3.0f;
     display.clear();
-    // A pale sky gradient.
-    for (int y = 0; y < ROWS; y++) {
-      const uint8_t sky = (uint8_t)max(0, 30 - y * 5);
-      for (int x = 0; x < COLS; x++) display.setLevel(x, y, sky);
-    }
     for (int x = 0; x < COLS; x++) {
+      // Sky: a pale gradient.
+      float column[ROWS];
+      for (int y = 0; y < ROWS; y++) column[y] = max(0.0f, 0.12f - y * 0.02f);
       const float angle = heading + (x - 7.5f) * 0.06f;
       const float sa = sinf(angle), ca = cosf(angle);
-      int top = ROWS;  // lowest row not yet painted
+      float top = ROWS;  // lowest painted edge so far, with its fraction
       float lastH = height(camX, camY);
-      for (float dist = 1.5f; dist < 60 && top > 0; dist += 0.4f + dist * 0.03f) {
-        const float wx = camX + sa * dist, wy = camY + ca * dist;
-        const float h = height(wx, wy);
-        int screen = (int)((camH - h) / dist * 14.0f + horizon);
-        screen = max(screen, 0);
-        if (screen >= top) continue;
-        const float fog = 1 - dist / 70;
+      for (float dist = 1.2f; dist < 70 && top > 0; dist += 0.25f + dist * 0.02f) {
+        const float h = height(camX + sa * dist, camY + ca * dist);
+        const float screen = max(0.0f, (camH_ - h) / dist * 14.0f + horizon);
+        if (screen >= top) {
+          lastH = h;
+          continue;
+        }
+        const float fog = 1 - dist / 80;
         // Higher is brighter, and slopes rising towards you catch the light.
         const float rise = constrain((h - lastH) * 0.5f, -0.3f, 0.4f);
         lastH = h;
-        const float light = 0.2f + 0.8f * sqrtf(h / 16.0f) + rise;
-        const uint8_t level = toLevel(light * fog);
-        for (int y = screen; y < top; y++) display.setLevel(x, y, level);
+        const float light = constrain((0.2f + 0.8f * sqrtf(h / 16.0f) + rise) * fog, 0.0f, 1.0f);
+        // Fill from the new edge down to the old one; the pixel the edge
+        // falls in gets its share, so ridges glide instead of jumping by rows.
+        const int from = (int)screen, to = min(ROWS, (int)ceilf(top));
+        for (int y = from; y < to; y++) {
+          const float cover = min((float)y + 1, top) - max((float)y, screen);  // 0..1 of this row
+          column[y] = column[y] * (1 - cover) + light * cover;
+        }
         top = screen;
       }
+      for (int y = 0; y < ROWS; y++) display.setLevel(x, y, toLevel(column[y]));
     }
   }
 
@@ -246,6 +261,8 @@ class VoxelAnimation : public Animation {
     const float h = (a + b + c + 2.35f) / 4.7f;  // 0..1
     return h * h * 16;
   }
+
+  float camH_ = -1;
 };
 
 static TunnelAnimation tunnel;
