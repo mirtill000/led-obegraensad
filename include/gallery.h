@@ -26,3 +26,5 @@ bool galleryLoad(const String &id, Drawing &out);
 // Saves d.frames (new if d.id is empty: an id is assigned); returns success.
 bool gallerySave(Drawing &d);
 bool galleryDelete(const String &id);
+// Whether a drawing with this id is saved (cheap: no reading).
+bool galleryHas(const String &id);

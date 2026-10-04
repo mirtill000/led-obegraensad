@@ -14,8 +14,8 @@
 //   frame (read, notify)  the panel as seen: 256 levels 0-15, two pixels per
 //                          byte (high nibble first), row by row - at most
 //                          every 150 ms, when it changes
-//   catalog (read)        lines "M|G|A <tab> id <tab> name": modes, games,
-//                          animations
+//   catalog (read)        the scene catalog, lines "M|A|G|D <tab> id <tab>
+//                          name" (catalogText(), live.h)
 //   settings (read, notify) the settings a remote may change, one per line
 //                          (remoteSettingsText(), settings.h) - sent when
 //                          any of them changes
@@ -113,8 +113,15 @@ void bleForgetRemotes() {
   saveSettings();
 }
 
+static volatile bool catalogStale = false;
+void bleCatalogChanged() { catalogStale = true; }
+
 void bleLoop() {
   if (!running) return;
+  if (catalogStale) {  // here, in loop(): the catalog lists the gallery
+    catalogStale = false;
+    catalogChar->setValue(catalogText());
+  }
   Command cmd;
   while (xQueueReceive(commands, &cmd, 0) == pdTRUE) runCommand(cmd.text);
   if (!bleConnected()) return;

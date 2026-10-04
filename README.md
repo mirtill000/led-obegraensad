@@ -112,11 +112,13 @@ include/
   ui.h               - shared look of the panel (label, value, card, brightness steps, tone, waiting dots)
   sprite.h           - the one picture format (rows of characters, shades, frames, marks)
   sprite_atlas.h     - every sprite of the atlas, by name (spr::PET_FROG, spr::WEATHER_RAIN...)
+  catalog.h          - the scene catalog: one id for everything the lamp can show
   texts.h            - the firmware's messages (errors, download states), in one place
 src/
   display.cpp        - shift-register driver, font renderer, brightness, transitions
   ui.cpp             - the shared panel components, "waiting" and "no WiFi" signs
   sprite_atlas.cpp   - the atlas: every picture the lamp draws (icons, pet, weather, game characters)
+  catalog.cpp        - the scene catalog (modes, animations, games, drawings)
   sprites.cpp        - drawing sprites; retouches from the page (LittleFS /sprites/)
   modes.cpp          - list of modes + switching between them
   modes/             - one file per mode (board.cpp: the Game of Life's drawing board)
@@ -224,18 +226,25 @@ works too) and a **speed** slider (1-9, per mode). Below that only the
 settings of the mode being shown appear (the text, the quotes list, the
 animation menu, ...). General settings are in collapsible sections:
 
-- **Playlist** - modes shown in turn, each for the minutes you choose
-  (by default clock 10 min, quote 3 min, animations 5 min, games 5 min). With **Cambia per
+- **Playlist** - scenes of the catalog (see *One catalog of scenes*
+  below) shown in turn, each for the minutes you choose: a mode, a single
+  animation (*Volo sul mare* 10 min), a game (as a demo) or one of your
+  drawings; what the playlist picks doesn't change the animation, game or
+  drawing chosen in their own modes (by default clock 10 min, quote 3 min,
+  animations 5 min, games 5 min). With **Cambia per
   fascia oraria** up to four time slots ("scene") each have their own
   start time, brightness and list - e.g. mornings clock and forecast,
   evenings quotes and animations, late at night just a dim clock; a slot
   lasts until the next one (the last carries on past midnight) and
   starts its list from the top. The night schedule and the alarm still
-  win. Picking a mode by hand stops the playlist.
+  win. Picking something by hand stops the playlist.
 - **Sveglia con l'alba** - on the chosen days, from 5-60 minutes before the
   alarm a sun rises on the panel while the brightness slowly goes up; it
   stays bright for a while after. It wins over everything else; the mode
   button (or the page) stops it, and "Prova" shows a one-minute sunrise.
+  *Dopo la sveglia* picks the scene shown when it is over (e.g. the clock
+  with the weather, or *Finestra sul cielo*), as if chosen on the page;
+  by default what was on comes back (setting `alarmScene`).
 - **Giorno e notte** - between two times (e.g. 23:00-07:00), or from sunset
   to sunrise, the lamp is off, shows only stars, or keeps going at a lower
   brightness. The night wins over the playlist and over the mode picked by
@@ -267,7 +276,9 @@ animation menu, ...). General settings are in collapsible sections:
   send the lamp a notification: `http://<lamp>/api/notify?text=Lavatrice%20finita&icon=check`
   (GET, form POST, or POST JSON `{"text":"...","icon":"..."}`; text up to
   200 characters, accents welcome; icons `bell`, `mail`, `check`, `alert`,
-  `heart`, `phone`, `home`, `star`, or none). An icon drops in and moves
+  `heart`, `phone`, `home`, `star`, or none - or an animation of the
+  catalog, `icon=a/fireworks` (also `scene=`), played for 6 seconds before
+  the text, e.g. fireworks for a goal). An icon drops in and moves
   (the bell swings, the phone shakes, the heart beats, the others glow),
   then the text shows as still pages, then the lamp goes back to what it
   was doing and carries on from where it was (a game or the sand timer
@@ -625,6 +636,29 @@ else (no frame counters); if it moves in steps, it says `fixedStep()`.
 Shaded scenes go through `ui::tone()`, so their dark shades survive the
 panel (its dimmest step is already a fifth of full light).
 
+### One catalog of scenes
+
+Everything the lamp can show is a *scene* with one id (`include/catalog.h`,
+`src/catalog.cpp`): a mode by its id (`clock`, `pet`, `world`...), an
+animation as `a/<id>` (`a/sea`, `a/aquarium`), a game as `g/<id>`
+(`g/doom`), a drawing of the gallery as `d/<id>`. The same id is used
+everywhere:
+
+- the playlist and its time slots (`settings.playlist`, `scene:minutes,...`;
+  an animation, game or drawing picked there is shown through the mode's
+  `setPick()`, without touching what was chosen in that mode);
+- the alarm (`alarmScene`: what comes on when the sunrise is over);
+- notifications (`icon=a/fireworks`: an animation before the text);
+- the API: `GET /api/catalog` lists every scene `{id, name, group, kind}`,
+  `POST /api/show` with `scene=a/sea` shows one, and `/api/state` says
+  which is on (`"scene"`);
+- Bluetooth and the Cardputer: the command `v <scene>` and the catalog
+  characteristic (its *Giochi*, *Modalita'*, *Animazioni* and *Disegni*
+  menus all send `v`);
+- the page: every list where you pick something to show (playlist, time
+  slots, after the alarm, the notification's animation) is the catalog,
+  grouped as Modalità, the animation groups, Giochi, Disegni.
+
 ### Pictures: one format, one atlas
 
 Every picture the lamp draws - notification icons, the pet, weather icons,
@@ -739,10 +773,10 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 
 | Characteristic | | |
 |---|---|---|
-| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9), `w 3 4 255` (paint a cell of the Game of Life's board), `w c` (clear it), `w l` (set it going) |
+| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `v a/sea` (any scene of the catalog: `clock`, `a/sea`, `g/doom`, `d/<id>`), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9), `w 3 4 255` (paint a cell of the Game of Life's board), `w c` (clear it), `w l` (set it going) |
 | state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","cl":"↶|↷|||Spara","n":1,"b":200,"t":"15:42"}`, sent when it changes (`n`: players, `s`: the mode's status line, for modes that have one) |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
-| catalog `…0004` | read | lines `M`/`G`/`A`, tab, id, tab, name: modes, games, animations |
+| catalog `…0004` | read | the scene catalog: lines `M`/`A`/`G`/`D`, tab, id (without `a/`, `g/`, `d/`), tab, name: modes, animations, games, drawings; updated when a drawing is saved or deleted |
 | settings `…0005` | read, notify | the settings a remote may change, one per line: name, kind (`B` on/off, `C` choice, `N` number), value, label, choices, choice names, min, max (tabs); the notification only says "read again" |
 
 ## Data from the web

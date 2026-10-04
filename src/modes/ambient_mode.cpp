@@ -44,8 +44,18 @@ bool AmbientMode::autoRotation() const {
 }
 
 void AmbientMode::start() {
-  Animation *chosen = override_ ? findAnimation(override_) : autoRotation() ? nullptr : findAnimation(choice());
+  Animation *picked = pick_.length() && mine(findAnimation(pick_)) ? findAnimation(pick_) : nullptr;
+  Animation *chosen = override_  ? findAnimation(override_)
+                      : picked   ? picked
+                      : autoRotation() ? nullptr
+                                       : findAnimation(choice());
   play(chosen ? chosen : pickAuto());
+}
+
+bool AmbientMode::setPick(const String &id) {
+  if (id == pick_) return false;
+  pick_ = id;
+  return true;
 }
 
 bool AmbientMode::setOverride(const char *animationId) {
@@ -56,7 +66,7 @@ bool AmbientMode::setOverride(const char *animationId) {
 }
 
 void AmbientMode::action() {
-  if (override_) return;  // the night schedule decides
+  if (override_ || pick_.length()) return;  // the night schedule or the playlist decides
   if (autoRotation()) {
     autoIndex_++;
     play(pickAuto());
@@ -75,7 +85,7 @@ void AmbientMode::action() {
   play(next);
 }
 
-bool AmbientMode::demoForced() const { return override_ || autoRotation(); }
+bool AmbientMode::demoForced() const { return override_ || pick_.length() || autoRotation(); }
 
 bool AmbientMode::input(char key) {
   if (animation_ && !animation_->isGame() && animation_->pokeName() && (key == 'A' || key == 'a')) {
@@ -89,7 +99,7 @@ bool AmbientMode::input(char key) {
 
 void AmbientMode::update(uint32_t now) {
   if (!animation_) start();
-  if (!override_ && autoRotation() && now - since_ >= AUTO_SWITCH_MS) {
+  if (!override_ && !pick_.length() && autoRotation() && now - since_ >= AUTO_SWITCH_MS) {
     autoIndex_++;
     play(pickAuto());
   }

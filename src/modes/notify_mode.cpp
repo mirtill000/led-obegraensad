@@ -27,11 +27,12 @@ const Icon *findIcon(const String &id) {
   return nullptr;
 }
 
-const uint32_t DROP_MS = 450, ICON_MS = 2200, ICON_ONLY_MS = 3500;
+const uint32_t DROP_MS = 450, ICON_MS = 2200, ICON_ONLY_MS = 3500, SCENE_MS = 6000;
 
 struct Note {
   String text;
   const Icon *icon;
+  Animation *scene;  // an animation of the catalog ("a/fireworks") instead of an icon
 };
 Note queue[NotifyMode::QUEUE];
 int queued = 0;
@@ -39,16 +40,21 @@ int queued = 0;
 }  // namespace
 
 bool NotifyMode::push(const String &text, const String &icon) {
-  const Icon *i = icon.length() ? findIcon(icon) : nullptr;
-  if (icon.length() && !i) return false;
+  Animation *scene = nullptr;
+  if (icon.startsWith("a/")) {
+    scene = findAnimation(icon.substring(2));
+    if (!scene || scene->isGame() || scene->isClockFace()) return false;
+  }
+  const Icon *i = icon.length() && !scene ? findIcon(icon) : nullptr;
+  if (icon.length() && !i && !scene) return false;
   String t = text;
   t.trim();
-  if (!t.length() && !i) return false;
+  if (!t.length() && !i && !scene) return false;
   if (queued == QUEUE) {  // full: drop the oldest still waiting (not the one on show)
     for (int k = 1; k < QUEUE - 1; k++) queue[k] = queue[k + 1];
     queued--;
   }
-  queue[queued++] = {t.substring(0, 200), i};
+  queue[queued++] = {t.substring(0, 200), i, scene};
   return true;
 }
 
@@ -67,7 +73,12 @@ void NotifyMode::begin(uint32_t now) {
     phase_ = DONE;
     return;
   }
-  if (queue[0].icon) {
+  if (queue[0].scene) {
+    phase_ = SCENE;
+    lastFrame_ = 0;
+    queue[0].scene->start();
+    display.clear();
+  } else if (queue[0].icon) {
     phase_ = ICON;
     drawIcon(0);
   } else {
@@ -117,7 +128,24 @@ void NotifyMode::drawIcon(uint32_t t) {
 
 void NotifyMode::update(uint32_t now) {
   if (phase_ == DONE) return;  // modes.cpp is switching back
-  if (phase_ == ICON) {
+  if (phase_ == SCENE) {
+    // The animation on its own clock (from 0), a few seconds, then the text.
+    Animation *a = queue[0].scene;
+    const bool sceneOnly = queue[0].text.length() == 0;
+    if (now - since_ < SCENE_MS) {
+      if (lastFrame_ && now - lastFrame_ < a->frameMs()) return;
+      lastFrame_ = now;
+      a->frame(now - since_);
+      display.render();
+      return;
+    }
+    if (!sceneOnly) {
+      phase_ = TEXT;
+      display.beginPageTransition();
+      pager_.start(queue[0].text);
+      return;
+    }
+  } else if (phase_ == ICON) {
     const bool iconOnly = queue[0].text.length() == 0;
     if (now - since_ < (iconOnly ? ICON_ONLY_MS : ICON_MS)) return drawIcon(now - since_);
     if (!iconOnly) {

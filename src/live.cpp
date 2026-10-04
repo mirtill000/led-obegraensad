@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "animation.h"
+#include "catalog.h"
 #include "display.h"
 #include "modes.h"
 #include "modes/ambient_mode.h"
@@ -28,13 +29,11 @@ void packedFrameHex(char out[LIVE_FRAME_BYTES * 2 + 1]) {
 }
 
 String catalogText() {
+  // The scene catalog (catalog.h), one line each: kind, the id without its
+  // "a/", "g/", "d/" (a remote rebuilds the scene id from the kind), name.
   String out;
-  for (uint8_t i = 0; i < MODE_COUNT; i++) {
-    if (!MODES[i]->hidden() && !MODES[i]->tool()) out += String("M\t") + MODES[i]->id() + "\t" + MODES[i]->name() + "\n";
-  }
-  for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
-    if (ANIMATIONS[i]->isClockFace()) continue;  // styles of the Orologio
-    out += String(ANIMATIONS[i]->isGame() ? "G\t" : "A\t") + ANIMATIONS[i]->id() + "\t" + ANIMATIONS[i]->name() + "\n";
+  for (const Scene &s : catalog()) {
+    out += String(s.kind) + "\t" + (s.kind == 'M' ? s.id : s.id.substring(2)) + "\t" + s.name + "\n";
   }
   return out;
 }

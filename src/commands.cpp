@@ -58,6 +58,10 @@ const char *runCommand(const String &command) {
       if (arg.length() != 1 || !(strchr(REMOTE_KEYS, arg[0]) || strchr(REMOTE_KEYS_P2, arg[0]))) return txt::UNKNOWN_KEY;
       currentMode()->input(arg[0]);
       return nullptr;
+    case 'v':
+      if (!showScene(arg)) return txt::UNKNOWN_SCENE;
+      saveSettings();
+      return nullptr;
     case 'm':
       if (!setMode(arg)) return txt::UNKNOWN_MODE;
       saveSettings();

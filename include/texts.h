@@ -20,6 +20,7 @@ constexpr const char *UNKNOWN_KEY = "Tasto sconosciuto";
 constexpr const char *UNKNOWN_MODE = "Modalità sconosciuta";
 constexpr const char *UNKNOWN_GAME = "Gioco sconosciuto";
 constexpr const char *UNKNOWN_ANIMATION = "Animazione sconosciuta";
+constexpr const char *UNKNOWN_SCENE = "Non c'è niente con questo nome";
 constexpr const char *UNKNOWN_SETTING = "Impostazione sconosciuta";
 constexpr const char *SETTING_PAGE_ONLY = "Si cambia solo dalla pagina";
 constexpr const char *SETTING_READ_ONLY = "Impostazione non modificabile";

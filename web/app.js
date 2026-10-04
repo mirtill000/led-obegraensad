@@ -187,7 +187,7 @@ function render() {
   if (!dirty.playlist) {
     $('playlistOn').checked = s.settings.playlistOn;
     $('scenesOn').checked = s.settings.scenesOn;
-    renderPlaylist(s.settings.playlist.split(',').filter(Boolean).map((i) => i.split(':')));
+    renderPlaylist(s.settings.playlist.split(',').filter(Boolean).map(splitItem));
     $('scenes').innerHTML = '';
     for (const scene of s.settings.scenes.split(';').filter(Boolean)) {
       const [hhmm, bright, items] = scene.split('|');
@@ -394,6 +394,7 @@ $('canvasSave').onclick = async () => {
     const res = await fetch('/api/gallery/save', { method: 'POST', body: new URLSearchParams({ name: name.trim() || 'Vita', frameMs: 200, data: b64(px) }) });
     if (!res.ok) throw new Error(await res.text());
     status('Salvato nei disegni');
+    loadCatalog();
   } catch (e) { fail(e); }
 };
 
@@ -505,6 +506,7 @@ function renderExtras() {
   if (!dirty.alarm) {
     $('alarmOn').checked = s.settings.alarmOn; $('alarmTime').value = hhmm(s.settings.alarmTime);
     $('alarmRamp').value = s.settings.alarmRamp; $('alarmHold').value = s.settings.alarmHold;
+    fillScenes($('alarmScene'), s.settings.alarmScene);
     for (const c of days.querySelectorAll('input')) c.checked = !!(s.settings.alarmDays & (1 << c.dataset.day));
   }
 
@@ -555,12 +557,12 @@ $('notifyNight').onchange = () => saveSettings({ notifyNight: $('notifyNight').c
 $('hgMin').onchange = () => saveSettings({ hgMin: $('hgMin').value }).catch(fail);
 $('hgStart').onclick = () => post('/api/hourglass', {}).catch(fail);
 
-for (const id of ['alarmOn', 'alarmTime', 'alarmRamp', 'alarmHold']) $(id).addEventListener('input', () => { dirty.alarm = true; });
+for (const id of ['alarmOn', 'alarmTime', 'alarmRamp', 'alarmHold', 'alarmScene']) $(id).addEventListener('input', () => { dirty.alarm = true; });
 $('saveAlarm').onclick = () => {
   let days = 0;
   for (const c of $('alarmDays').querySelectorAll('input')) if (c.checked) days |= 1 << c.dataset.day;
   saveSettings({ alarmOn: b01($('alarmOn').checked), alarmTime: minutesOf($('alarmTime').value || '07:00'), alarmDays: days,
-    alarmRamp: $('alarmRamp').value, alarmHold: $('alarmHold').value })
+    alarmRamp: $('alarmRamp').value, alarmHold: $('alarmHold').value, alarmScene: $('alarmScene').value })
     .then(() => { dirty.alarm = false; render(); status('Sveglia salvata'); }).catch(fail);
 };
 $('testAlarm').onclick = () => post('/api/alarm', { cmd: 'test' }).then(() => status('Alba di prova: 1 minuto')).catch(fail);
@@ -670,6 +672,7 @@ async function openDrawing(id, live) {
 async function loadGallery() {
   galleryLoaded = true;
   try { galleryItems = await (await fetch('/api/gallery')).json(); } catch (e) { return; }
+  if (scenes && scenes.filter((x) => x.kind === 'D').length !== galleryItems.length) loadCatalog();  // drawings changed
   const box = $('gallery');
   box.innerHTML = galleryItems.length ? '' : '<p class="hint">Ancora nessun disegno salvato.</p>';
   for (const d of galleryItems) {
@@ -768,7 +771,38 @@ $('importFile').onchange = async (e) => {
 };
 drawCanvas();
 
-// Playlist editor rows: [mode] [minutes] [x]
+// The catalog (GET /api/catalog): every scene - modes, animations, games,
+// drawings - with the one id the playlist, the alarm and the notifications
+// use ("clock", "a/sea", "g/doom", "d/<id>"). Fetched once, and again when
+// the drawings change.
+let scenes = null;
+function loadCatalog() {
+  return fetch('/api/catalog').then((r) => r.json()).then((list) => {
+    scenes = list;
+    for (const sel of document.querySelectorAll('select.scenepick')) fillScenes(sel, sel.value || sel.dataset.want);
+    const ns = $('notifyScenes');
+    ns.innerHTML = '';
+    for (const sc of list.filter((x) => x.kind === 'A')) ns.appendChild(new Option(sc.name, sc.id));
+    if (!dirty.playlist && state) { renderPlaylist(state.settings.playlist.split(',').filter(Boolean).map(splitItem)); }
+  }).catch(() => {});
+}
+// "a/sea:10" -> ["a/sea", "10"] (the minutes after the last colon).
+function splitItem(item) { const k = item.lastIndexOf(':'); return [item.slice(0, k), item.slice(k + 1)]; }
+// A <select> of scenes, grouped (Modalità, the animation groups, Giochi, Disegni).
+function fillScenes(sel, value) {
+  sel.innerHTML = '';
+  if (sel.dataset.none) sel.add(new Option(sel.dataset.none, ''));
+  const groups = new Map();
+  for (const sc of scenes || state.modes.filter((m) => !m.tool).map((m) => ({ id: m.id, name: m.name, group: 'Modalità' }))) {
+    if (!groups.has(sc.group)) { const g = document.createElement('optgroup'); g.label = sc.group; groups.set(sc.group, g); sel.appendChild(g); }
+    groups.get(sc.group).appendChild(new Option(sc.name, sc.id));
+  }
+  if (value && ![...sel.options].some((o) => o.value === value)) sel.add(new Option(value, value));  // not (yet) in the list
+  sel.value = value || '';
+  sel.dataset.want = value || '';
+}
+
+// Playlist editor rows: [scene] [minutes] [x]
 function renderPlaylist(items) {
   const list = $('playlist');
   list.innerHTML = '';
@@ -778,8 +812,8 @@ function addPlaylistRow(id, minutes, list = $('playlist')) {
   const row = document.createElement('div');
   row.className = 'row';
   const sel = document.createElement('select');
-  for (const m of state.modes.filter((x) => !x.tool)) sel.add(new Option(m.name, m.id));
-  sel.value = id;
+  sel.className = 'scenepick';
+  fillScenes(sel, id);
   const min = document.createElement('input');
   min.type = 'number'; min.min = 1; min.max = 240; min.value = minutes; min.className = 'narrow';
   min.title = 'minuti';
@@ -861,7 +895,7 @@ function addScene(time, bright, items) {
   box.className = 'scene';
   box.innerHTML = '<div class="row"><input type="time" class="st" aria-label="Inizio"><button class="btn small icon quiet x" aria-label="Rimuovi fascia">✕</button></div>' +
     '<div class="row"><label>Luce</label><input type="range" class="sb" min="0" max="255"><span class="sv narrow hint"></span></div>' +
-    '<div class="stack items"></div><div class="actions"><button class="btn quiet add">+ Aggiungi modalità</button></div>';
+    '<div class="stack items"></div><div class="actions"><button class="btn quiet add">+ Aggiungi</button></div>';
   const list = box.querySelector('.items'), sb = box.querySelector('.sb'), sv = box.querySelector('.sv');
   box.querySelector('.st').value = time;
   sb.value = bright;
@@ -872,7 +906,7 @@ function addScene(time, bright, items) {
   box.querySelector('.x').onclick = () => { box.remove(); dirty.playlist = true; showScenes(); };
   box.querySelector('.add').onclick = () => { addPlaylistRow(state.modes[0].id, 5, list); dirty.playlist = true; };
   for (const item of (items || '').split(',').filter(Boolean)) {
-    const [id, min] = item.split(':');
+    const [id, min] = splitItem(item);
     addPlaylistRow(id, min, list);
   }
   $('scenes').appendChild(box);
@@ -1213,7 +1247,7 @@ setInterval(loadDiag, 2000);
 $('diagReset').onclick = () => fetch('/api/diag/reset', { method: 'POST' }).then(loadDiag).catch(fail);
 
 function refresh() { return fetch('/api/state').then((r) => r.json()).then((s) => { state = s; render(); }); }
-refresh().catch(() => status('Lampada non raggiungibile'));
+refresh().then(loadCatalog).catch(() => status('Lampada non raggiungibile'));
 setInterval(() => { if (!live) refresh().catch(() => {}); }, 15000);
 
 // Live updates: the lamp pushes the preview and the state (Server-Sent

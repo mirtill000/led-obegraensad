@@ -261,7 +261,8 @@
   <div class="card list">
     <details id="playlistBox">
       <summary>Playlist</summary>
-      <label class="check"><input type="checkbox" id="playlistOn"> Alterna le modalità da sola</label>
+      <label class="check"><input type="checkbox" id="playlistOn"> Alterna da sola</label>
+      <p class="hint">Ogni voce può essere una modalità, una singola animazione, un gioco (in demo) o un disegno, per i minuti che scegli.</p>
       <label class="check"><input type="checkbox" id="scenesOn"> Cambia per fascia oraria</label>
       <div id="plainPlaylist">
         <div class="stack" id="playlist"></div>
@@ -270,10 +271,10 @@
       <div id="scenesBox" hidden>
         <div class="stack" id="scenes"></div>
         <div class="actions"><button class="btn quiet" id="addScene">+ Aggiungi fascia</button></div>
-        <p class="hint">Ogni fascia parte alla sua ora e vale fino alla successiva, con la sua luminosità e le sue modalità. La notte e la sveglia hanno comunque la precedenza.</p>
+        <p class="hint">Ogni fascia parte alla sua ora e vale fino alla successiva, con la sua luminosità e la sua lista. La notte e la sveglia hanno comunque la precedenza.</p>
       </div>
       <div class="actions"><button class="btn primary" id="savePlaylist">Salva</button></div>
-      <p class="hint">Scegliere una modalità a mano ferma la playlist.</p>
+      <p class="hint">Scegliere a mano cosa mostrare ferma la playlist; le animazioni, i giochi e i disegni scelti qui non cambiano quelli scelti nelle rispettive modalità.</p>
     </details>
 
     <details id="alarmBox">
@@ -287,6 +288,8 @@
         <div><label for="alarmRamp">Alba (minuti prima)</label><input type="number" id="alarmRamp" min="5" max="60"></div>
         <div><label for="alarmHold">Accesa dopo (minuti)</label><input type="number" id="alarmHold" min="1" max="120"></div>
       </div>
+      <label for="alarmScene">Dopo la sveglia</label>
+      <select id="alarmScene" class="scenepick" data-none="Quello che c'era prima"></select>
       <div class="actions">
         <button class="btn primary" id="saveAlarm">Salva</button>
         <button class="btn" id="testAlarm">Prova l'alba (1 minuto)</button>
@@ -381,6 +384,7 @@
             <option value="phone">telefono</option>
             <option value="home">casa</option>
             <option value="star">stella</option>
+            <optgroup label="Un'animazione, poi il testo" id="notifyScenes"></optgroup>
           </select></div>
       </div>
       <label class="check"><input type="checkbox" id="notifyNight"> Anche di notte (altrimenti di notte vengono ignorate)</label>

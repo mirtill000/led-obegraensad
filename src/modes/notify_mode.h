@@ -19,9 +19,10 @@ class NotifyMode : public Mode {
   void start() override;
   void update(uint32_t now) override;
 
-  // Queues a notification (UTF-8 text, icon id from ICONS or ""); the
-  // oldest waiting one is dropped when the queue is full. False if both
-  // are empty or the icon is unknown.
+  // Queues a notification (UTF-8 text, icon id from ICONS, an animation
+  // of the catalog - "a/fireworks", shown a few seconds before the text -
+  // or ""); the oldest waiting one is dropped when the queue is full. False
+  // if both are empty or the icon is unknown.
   static bool push(const String &text, const String &icon);
   static int pending();
   static void clear();
@@ -30,7 +31,7 @@ class NotifyMode : public Mode {
   void begin(uint32_t now);
   void drawIcon(uint32_t t);
 
-  enum Phase : uint8_t { ICON, TEXT, DONE } phase_ = DONE;
-  uint32_t since_ = 0;
+  enum Phase : uint8_t { SCENE, ICON, TEXT, DONE } phase_ = DONE;
+  uint32_t since_ = 0, lastFrame_ = 0;
   Pager pager_;
 };

@@ -15,6 +15,7 @@ class AmbientMode : public Mode {
   const char *name() const override { return games_ ? "Giochi" : "Animazioni"; }
   void start() override;
   void update(uint32_t now) override;
+  bool setPick(const String &id) override;
   const char *actionName() const override { return games_ ? "Prossimo gioco" : "Prossima animazione"; }
   void action() override;
 
@@ -43,6 +44,7 @@ class AmbientMode : public Mode {
 
   Animation *animation_ = nullptr;
   const char *override_ = nullptr;
+  String pick_;  // from the playlist (setPick), "" none
   uint8_t autoIndex_ = 0;
   uint32_t since_ = 0;
   uint32_t lastFrame_ = 0;

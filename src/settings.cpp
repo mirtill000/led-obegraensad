@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "animation.h"
+#include "catalog.h"
 #include "constants.h"
 #include "modes.h"
 
@@ -137,6 +138,10 @@ static const char *checkGame(String &v) {
   const Animation *a = findAnimation(v);
   return v == "auto" || (a && a->isGame()) ? nullptr : txt::UNKNOWN_GAME;
 }
+static const char *checkScene(String &v) {
+  v.trim();
+  return v.length() == 0 || validScene(v) ? nullptr : txt::UNKNOWN_SCENE;
+}
 static const char *checkPlaylist(String &v) {
   String clean;
   cleanPlaylist(v, clean);
@@ -203,6 +208,7 @@ const SettingDef SETTING_DEFS[] = {
     {"alarmDays", "alarmDays", T::U8, F_(alarmDays), 0, 127, "31", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"alarmRamp", "alarmRamp", T::U8, F_(alarmRamp), 5, 60, "20", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"alarmHold", "alarmHold", T::U8, F_(alarmHold), 1, 120, "30", nullptr, SW, FX_MODES, nullptr, nullptr},
+    {"alarmScene", "alarmScene", T::Text, F_(alarmScene), 0, 40, "", nullptr, SW, FX_MODES, nullptr, checkScene},
     {"nightOn", "nightOn", T::Bool, F_(nightOn), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr, "Notte", nullptr},
     {"nightSun", "nightSun", T::Bool, F_(nightSun), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr},
     {"nightStart", "nightStart", T::U16, F_(nightStart), 0, 1439, "1380", nullptr, SW, FX_MODES, nullptr, nullptr},
@@ -378,9 +384,9 @@ int cleanPlaylist(const String &items, String &clean) {
     int end = items.indexOf(',', start);
     if (end < 0) end = items.length();
     const String item = items.substring(start, end);
-    const int colon = item.indexOf(':');
+    const int colon = item.lastIndexOf(':');
     const long minutes = colon > 0 ? item.substring(colon + 1).toInt() : 0;
-    if (colon > 0 && validModeId(item.substring(0, colon)) && minutes >= 1 && minutes <= 240) {
+    if (colon > 0 && validScene(item.substring(0, colon)) && minutes >= 1 && minutes <= 240) {
       if (clean.length()) clean += ',';
       clean += item.substring(0, colon) + ':' + String(minutes);
       count++;

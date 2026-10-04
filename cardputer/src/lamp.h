@@ -18,7 +18,7 @@ enum class Status : uint8_t {
 };
 
 struct Item {
-  char kind;  // 'M' mode, 'G' game, 'A' animation
+  char kind;  // 'M' mode, 'G' game, 'A' animation, 'D' drawing
   String id, name;
 };
 

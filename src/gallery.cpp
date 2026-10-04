@@ -117,4 +117,6 @@ bool gallerySave(Drawing &d) {
   return ok;
 }
 
+bool galleryHas(const String &id) { return mounted && validId(id) && LittleFS.exists(pathOf(id)); }
+
 bool galleryDelete(const String &id) { return mounted && validId(id) && LittleFS.remove(pathOf(id)); }

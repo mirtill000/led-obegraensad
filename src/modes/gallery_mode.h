@@ -14,6 +14,11 @@ class GalleryMode : public Mode {
   void update(uint32_t now) override;
   const char *actionName() const override { return "Prossimo disegno"; }
   void action() override { next(); }
+  bool setPick(const String &id) override {
+    if (id == pick_) return false;
+    pick_ = id;
+    return true;
+  }
   bool hasSpeed() const override { return false; }
 
   // Id of the saved drawing on the panel ("" for a draft or none).
@@ -33,6 +38,7 @@ class GalleryMode : public Mode {
   uint32_t frameSince_ = 0;
   uint8_t frame_ = 0;
   bool draft_ = false;
+  String pick_;  // a drawing from the playlist, "" none
   uint32_t draftUntil_ = 0;
 };
 

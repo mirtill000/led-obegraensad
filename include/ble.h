@@ -10,6 +10,9 @@ void bleBegin();  // once, after WiFi (does nothing if settings.bleOn is off)
 void bleLoop();   // from loop(): runs the commands received, sends updates
 
 bool bleConnected();
+// The scene catalog changed (a drawing saved or deleted): remotes read the
+// new one the next time they connect.
+void bleCatalogChanged();
 // Forgets every paired remote and picks a new PIN (takes effect on restart).
 void bleForgetRemotes();
 

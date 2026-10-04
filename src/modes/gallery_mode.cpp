@@ -16,7 +16,9 @@ void GalleryMode::load(const String &id) {
 void GalleryMode::start() {
   draft_ = false;
   ids_.clear();
-  if (settings.galleryShow == "all") {
+  if (pick_.length()) {
+    load(pick_);
+  } else if (settings.galleryShow == "all") {
     for (const Drawing &d : galleryList()) ids_.push_back(d.id);
     index_ = 0;
     load(ids_.empty() ? String("") : ids_[0]);
@@ -52,7 +54,7 @@ void GalleryMode::showDraft(const uint8_t *frames, size_t count, uint16_t frameM
 
 void GalleryMode::update(uint32_t now) {
   if (draft_ && (int32_t)(now - draftUntil_) > 0) start();  // editor left: back to the gallery
-  if (!draft_ && settings.galleryShow == "all" && ids_.size() > 1 && now - shownSince_ >= EACH_MS) next();
+  if (!draft_ && !pick_.length() && settings.galleryShow == "all" && ids_.size() > 1 && now - shownSince_ >= EACH_MS) next();
 
   const uint8_t frames = current_.frameCount();
   if (frames > 1 && now - frameSince_ >= current_.frameMs) {

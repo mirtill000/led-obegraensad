@@ -20,5 +20,7 @@ void packedFrameHex(char out[LIVE_FRAME_BYTES * 2 + 1]);
 // "b":brightness,"t":"HH:MM"}.
 String summaryJson();
 
-// Lines "M|G|A <tab> id <tab> name": modes, games, animations.
+// The scene catalog (catalog.h) for remotes: lines "M|A|G|D <tab> id <tab>
+// name" - modes, animations, games, drawings; the id without its "a/",
+// "g/" or "d/".
 String catalogText();

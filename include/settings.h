@@ -38,7 +38,7 @@ struct Settings {
   String demoStyle;     // "Demo" mode: "auto", "rows3", "pages" or "rows2"
   String gameStyle;     // all games: "soft" (shades of gray) or "crisp" (LEDs on/off)
 
-  // Playlist: modes shown in turn, "id:minutes,id:minutes,...".
+  // Playlist: scenes (catalog.h) shown in turn, "scene:minutes,...".
   bool playlistOn;
   String playlist;
   // Time slots: up to 4 "HHMM|brightness|id:min,..." separated by ';',
@@ -63,6 +63,7 @@ struct Settings {
   uint8_t alarmDays;     // bit 0 = Monday ... bit 6 = Sunday
   uint8_t alarmRamp;     // minutes of sunrise before the alarm
   uint8_t alarmHold;     // minutes it stays bright after
+  String alarmScene;     // shown when it is over (catalog.h); "" = what was on
 
   bool nightOn;
   bool nightSun;        // from sunset to sunrise instead of nightStart/End

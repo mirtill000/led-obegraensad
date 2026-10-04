@@ -4,7 +4,8 @@
 //   Telecomando         - the lamp's picture on screen; ; . , / are the
 //                         arrows, Space/Enter the main button, D demo on/off,
 //                         X the lamp's mode button (next game), Esc back
-//   Giochi / Modalita' / Animazioni - pick one from the lamp's own lists
+//   Giochi / Modalita' / Animazioni / Disegni - pick one from the lamp's
+//                         scene catalog (sent as "v <scene>")
 //   Scrivi un testo     - type it, Enter: the lamp scrolls it
 //   Notifica            - an icon (, /) and a text, Enter: sent as a
 //                         notification
@@ -28,12 +29,12 @@ const int W = 240, H = 135;
 enum class Screen : uint8_t { Menu, Remote, List, Text, Notify, Brightness, LampSettings, Settings };
 Screen screen = Screen::Menu;
 
-const char *const MENU[] = {"Telecomando",      "Giochi",   "Modalita'",   "Animazioni",           "Scrivi un testo",
-                            "Notifica",         "Luminosita'", "Impostazioni lampada", "Abbinamento (PIN)"};
+const char *const MENU[] = {"Telecomando", "Giochi",      "Modalita'",            "Animazioni",       "Disegni",
+                            "Scrivi un testo", "Notifica", "Luminosita'", "Impostazioni lampada", "Abbinamento (PIN)"};
 const int MENU_COUNT = sizeof(MENU) / sizeof(MENU[0]);
 int menuPos = 0;
 
-char listKind = 'G';  // the List screen: 'G' games, 'M' modes, 'A' animations
+char listKind = 'G';  // the List screen: 'G' games, 'M' modes, 'A' animations, 'D' drawings
 int listPos = 0;
 std::vector<lamp::Item> listItems;
 
@@ -142,8 +143,9 @@ void drawSearching() {
 }
 
 void drawMenu() {
-  for (int i = 0; i < MENU_COUNT; i++) {
-    const int y = 17 + i * 12;  // nine rows above the footer
+  const int first = max(0, menuPos - 8);  // nine rows above the footer: it scrolls
+  for (int i = first; i < MENU_COUNT && i < first + 9; i++) {
+    const int y = 17 + (i - first) * 12;
     if (i == menuPos) canvas.fillRoundRect(2, y - 2, 150, 12, 3, ACCENT);
     canvas.setTextColor(i == menuPos ? BG : FG);
     canvas.drawString(MENU[i], 8, y);
@@ -322,7 +324,7 @@ void draw() {
 void openList(char kind) {
   listKind = kind;
   listItems.clear();
-  if (kind != 'M') listItems.push_back({kind, "auto", kind == 'G' ? "Automatica (a turno, in demo)" : "Automatica"});
+  if (kind == 'G' || kind == 'A') listItems.push_back({kind, "auto", kind == 'G' ? "Automatica (a turno, in demo)" : "Automatica"});
   for (const lamp::Item &it : lamp::catalog()) {
     if (it.kind == kind) listItems.push_back(it);
   }
@@ -377,11 +379,12 @@ void menuChoose() {
     case 1: openList('G'); break;
     case 2: openList('M'); break;
     case 3: openList('A'); break;
-    case 4: typed = ""; screen = Screen::Text; break;
-    case 5: typed = ""; screen = Screen::Notify; break;
-    case 6: screen = Screen::Brightness; break;
-    case 7: settingPos = 0; screen = Screen::LampSettings; break;
-    case 8: screen = Screen::Settings; break;
+    case 4: openList('D'); break;
+    case 5: typed = ""; screen = Screen::Text; break;
+    case 6: typed = ""; screen = Screen::Notify; break;
+    case 7: screen = Screen::Brightness; break;
+    case 8: settingPos = 0; screen = Screen::LampSettings; break;
+    case 9: screen = Screen::Settings; break;
   }
 }
 
@@ -448,7 +451,10 @@ void keys() {
       if (down && listPos + 1 < (int)listItems.size()) listPos++;
       if (k.enter && !listItems.empty()) {
         const lamp::Item &it = listItems[listPos];
-        send(String(listKind == 'M' ? "m " : listKind == 'G' ? "g " : "a ") + it.id, "Fatto");
+        // A scene of the catalog: "clock", "a/sea", "g/doom", "d/<id>"
+        // ("auto" is a choice of the Giochi / Animazioni modes, not a scene).
+        if (it.id == "auto") send(String(listKind == 'G' ? "g " : "a ") + it.id, "Fatto");
+        else send("v " + (listKind == 'M' ? it.id : String((char)(listKind + 32)) + "/" + it.id), "Fatto");
         if (listKind == 'G') screen = Screen::Remote;  // straight to the controls
       }
       if (back) screen = Screen::Menu;

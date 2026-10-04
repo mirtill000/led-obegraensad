@@ -10,6 +10,7 @@
 #include "backup.h"
 #include "ble.h"
 #include "build_info.h"
+#include "catalog.h"
 #include "commands.h"
 #include "remote_protocol.h"
 #include "events.h"
@@ -119,6 +120,7 @@ static String stateJson() {
   const AmbientMode *ambient = player ? static_cast<const AmbientMode *>(currentMode()) : nullptr;
   const Animation *playing = ambient ? ambient->playing() : nullptr;
   json += ",\"animation\":" + (playing ? jsonString(playing->id()) : String("null"));
+  json += ",\"scene\":" + jsonString(currentScene());
 
   // The game on the panel and its demo mode.
   const char *game = currentMode()->gameId();
@@ -408,6 +410,15 @@ static void handleSprite() {
   server.send(204);
 }
 
+// The catalog (catalog.h): GET lists every scene; POST /api/show scene=...
+// shows one, as if picked on the page.
+static void handleCatalog() { server.send(200, "application/json", catalogJson()); }
+
+static void handleShow() {
+  if (const char *error = runCommand("v " + server.arg("scene"))) return badRequest(error);
+  sendState();
+}
+
 static void handlePet() {
   if (server.hasArg("name")) {
     if (!server.arg("name").length()) return badRequest(txt::NEED_NAME);
@@ -444,7 +455,8 @@ static String jsonField(const String &body, const char *key) {
 // Notification from the phone: GET or POST with text and icon (form or
 // JSON). Answers {"ok":true,"queued":n}, or ok:false at night.
 static void handleNotify() {
-  String text = server.arg("text"), icon = server.arg("icon");
+  // "scene" (an animation of the catalog, "a/fireworks") goes where the icon would.
+  String text = server.arg("text"), icon = server.hasArg("scene") ? server.arg("scene") : server.arg("icon");
   if (!server.hasArg("text") && !server.hasArg("icon") && server.hasArg("plain")) {
     text = jsonField(server.arg("plain"), "text");
     icon = jsonField(server.arg("plain"), "icon");
@@ -550,6 +562,7 @@ static bool readFrames(std::vector<uint8_t> &frames, uint16_t &frameMs) {
 }
 
 static void handleGallerySave() {
+  bleCatalogChanged();
   Drawing d;
   if (!readFrames(d.frames, d.frameMs)) return badRequest(txt::DRAWING_INVALID);
   d.id = server.arg("id");
@@ -559,6 +572,7 @@ static void handleGallerySave() {
 }
 
 static void handleGalleryDelete() {
+  bleCatalogChanged();
   const String id = server.arg("id");
   galleryDelete(id);
   if (settings.galleryShow == id) {
@@ -710,6 +724,8 @@ void webBegin() {
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/pet", HTTP_POST, handlePet);
   server.on("/api/sprites", HTTP_GET, handleSprites);
+  server.on("/api/catalog", HTTP_GET, handleCatalog);
+  server.on("/api/show", HTTP_POST, handleShow);
   server.on("/api/sprite", HTTP_POST, handleSprite);
   server.on("/api/formula", HTTP_POST, handleFormula);
   server.on("/api/canvas", HTTP_GET, handleCanvas);

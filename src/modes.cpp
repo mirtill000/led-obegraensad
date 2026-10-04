@@ -2,6 +2,7 @@
 #include "moon.h"
 #include "occasions.h"
 
+#include "catalog.h"
 #include "display.h"
 #include "modes/ambient_mode.h"
 #include "modes/clock_mode.h"
@@ -128,9 +129,10 @@ static String currentPlaylist() {
   return scene >= 0 ? sceneField(scene, 2) : settings.playlist;
 }
 
-// Playlist item `n` of the playlist in use ("id:minutes,..."); false if
-// there is no such (valid) item.
-static bool playlistItem(int n, int &mode, uint32_t &minutes) {
+// Playlist item `n` of the playlist in use ("scene:minutes,...", scenes as
+// in catalog.h); false if there is no such (valid) item. `pick` is what the
+// mode shows inside it (an animation, a game, a drawing; "" for none).
+static bool playlistItem(int n, int &mode, uint32_t &minutes, String &pick) {
   const String list = currentPlaylist();
   int start = 0;
   for (int i = 0; start <= (int)list.length(); i++) {
@@ -138,9 +140,11 @@ static bool playlistItem(int n, int &mode, uint32_t &minutes) {
     if (end < 0) end = list.length();
     if (i == n) {
       const String item = list.substring(start, end);
-      const int colon = item.indexOf(':');
+      const int colon = item.lastIndexOf(':');
       if (colon < 0) return false;
-      mode = indexOf(item.substring(0, colon));
+      String modeId;
+      if (!sceneTarget(item.substring(0, colon), modeId, pick)) return false;
+      mode = indexOf(modeId);
       minutes = item.substring(colon + 1).toInt();
       return mode >= 0 && minutes > 0;
     }
@@ -165,6 +169,8 @@ static bool inNightWindow() {
   return from <= to ? (now >= from && now < to) : (now >= from || now < to);  // may cross midnight
 }
 
+static bool chooseScene(const String &scene);
+
 // Decides what to show now and switches to it if needed.
 static void evaluate(uint32_t now) {
   night = inNightWindow();
@@ -180,18 +186,20 @@ static void evaluate(uint32_t now) {
     playlistPos = -1;
   }
 
+  String pick;  // inside the mode: what the playlist item picks
   if (settings.playlistOn) {
     int mode;
     uint32_t minutes;
-    if (playlistPos < 0 || !playlistItem(playlistPos, mode, minutes)) {
+    if (playlistPos < 0 || !playlistItem(playlistPos, mode, minutes, pick)) {
       playlistPos = 0;
       playlistSince = now;
     } else if (now - playlistSince >= minutes * 60000) {
       playlistPos++;
       playlistSince = now;
     }
-    if (!playlistItem(playlistPos, mode, minutes)) playlistPos = 0;  // wrap around
-    if (playlistItem(playlistPos, mode, minutes)) wanted = mode;
+    if (!playlistItem(playlistPos, mode, minutes, pick)) playlistPos = 0;  // wrap around
+    if (playlistItem(playlistPos, mode, minutes, pick)) wanted = mode;
+    else pick = "";
   }
 
   const char *override = nullptr;
@@ -226,17 +234,31 @@ static void evaluate(uint32_t now) {
   if (NotifyMode::pending()) wanted = indexOf("notify");
 
   // The sunrise alarm wins over everything, and sets its own brightness.
+  // When it is over, the scene chosen for after it (settings.alarmScene)
+  // takes over, as if picked on the page.
   const float sunrise = SunriseMode::alarmProgress();
+  static bool alarmWasOn = false;
   if (sunrise >= 0) {
     wanted = indexOf("sunrise");
     brightness = SunriseMode::brightness(sunrise);
+  } else if (alarmWasOn) {
+    alarmWasOn = false;
+    if (settings.alarmScene.length() && chooseScene(settings.alarmScene)) {
+      saveSettings();
+      return evaluate(now);
+    }
   }
+  alarmWasOn = sunrise >= 0;
   if (brightness != appliedBrightness) {
     display.setBrightness(brightness);
     appliedBrightness = brightness;
   }
 
-  if (!started || wanted != current || (overrideChanged && wanted == indexOf("ambient"))) {
+  // The pick goes to the mode that will show it; any other mode gets none.
+  bool pickChanged = false;
+  for (uint8_t i = 0; i < MODE_COUNT; i++) pickChanged |= MODES[i]->setPick(i == wanted ? pick : String()) && i == wanted;
+
+  if (!started || wanted != current || pickChanged || (overrideChanged && wanted == indexOf("ambient"))) {
     // A notification interrupts the mode on show; afterwards that mode
     // carries on where it was (its picture put back) instead of starting
     // over.
@@ -264,6 +286,38 @@ static void evaluate(uint32_t now) {
       MODES[current]->start();
     }
   }
+}
+
+// A scene as the page's choice: its mode, and inside it the animation,
+// game or drawing (settings.ambient / game / galleryShow); playlist off.
+// Doesn't save nor switch.
+static bool chooseScene(const String &scene) {
+  String modeId, pick;
+  if (!validScene(scene) || !sceneTarget(scene, modeId, pick)) return false;
+  if (modeId == "ambient") settings.ambient = pick;
+  if (modeId == "games") settings.game = pick;
+  if (modeId == "gallery") settings.galleryShow = pick;
+  settings.mode = modeId;
+  settings.playlistOn = false;
+  return true;
+}
+
+bool showScene(const String &scene) {
+  if (!chooseScene(scene)) return false;
+  started = false;  // restart even if it is already shown
+  evaluate(millis());
+  return true;
+}
+
+String currentScene() {
+  const Mode *m = MODES[current];
+  const String id = m->id();
+  if (id == "ambient" || id == "games") {
+    const Animation *a = static_cast<const AmbientMode *>(m)->playing();
+    if (a) return String(a->isGame() ? "g/" : "a/") + a->id();
+  }
+  if (id == "gallery" && galleryModeInstance.currentId().length()) return "d/" + galleryModeInstance.currentId();
+  return id;
 }
 
 bool setMode(const String &id) {

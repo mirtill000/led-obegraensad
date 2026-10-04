@@ -39,6 +39,11 @@ class Mode {
   virtual const GameControls *controls() const { return nullptr; }
   // The game being shown and whether it is in demo mode, or nullptr.
   virtual const char *gameId() const { return nullptr; }
+  // One particular thing to show inside this mode for now - an animation,
+  // a game, a drawing, picked from the catalog by the playlist - without
+  // touching what was chosen on the page; "" = the usual choice. Returns
+  // true if it changed (the mode is then started over).
+  virtual bool setPick(const String &) { return false; }
 
  protected:
   // `baseMs` adjusted for this mode's speed setting.
@@ -75,3 +80,9 @@ void updateMode();
 void restartMode();
 
 bool validModeId(const String &id);
+// A scene of the catalog (catalog.h) as the page's choice - its mode, and
+// the animation, game or drawing in it - shown at once; playlist off.
+// Doesn't save the settings. False if there is no such scene.
+bool showScene(const String &scene);
+// What is on the panel now, as a scene id ("a/sea", "clock"...).
+String currentScene();
