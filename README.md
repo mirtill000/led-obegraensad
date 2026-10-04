@@ -508,12 +508,9 @@ Current modes:
   the end the sand pulses for a few seconds. The page shows the time left
   (the time is the setting `hgMin`; `POST /api/hourglass` starts it over)
 - **Animaletto** - a Tamagotchi-style pet (`src/modes/pet_mode.cpp`). It
-  hatches from an egg after 5 minutes and grows: *piccolo* (first day),
-  *ragazzo* (up to 3 days), *adulto*, each drawn as a fuzzy felt plush
-  (a dimmer outline and a faint shimmering fur around it) with its own
-  accessory: a felt egg, a little cloud with a beret, a frog with its eyes
-  on two bumps, a soft peak with round glasses - sunglasses when it is in
-  top form (happy, well fed, joy above 85). It gets
+  hatches from an egg after 5 minutes into a frog (*ragazzo*), drawn as a
+  fuzzy felt plush (a dimmer outline and a faint shimmering fur around
+  it), its big eyes on two bumps. It gets
   hungry and bored, sleeps from 22 to 7 (a "z" floats up; it naps when
   exhausted), leaves droppings and, after about two hours of hunger, dirt
   or sadness, falls ill (it is drawn dimmer; it never dies). Care comes as

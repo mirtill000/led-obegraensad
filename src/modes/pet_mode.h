@@ -4,7 +4,7 @@
 #include "modes.h"
 
 // "Animaletto": a Tamagotchi-style pet living on the panel. It hatches from
-// an egg, grows (piccolo, ragazzo, adulto), gets hungry and bored, sleeps
+// an egg into a little frog ("ragazzo"), gets hungry and bored, sleeps
 // at night (22-7), leaves droppings and falls ill if neglected. Time runs
 // even while another mode is shown or the lamp is off: when it comes back
 // the pet catches up on the hours it missed (up to three days). It never

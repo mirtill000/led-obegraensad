@@ -13,7 +13,7 @@
 
 namespace {
 
-enum Stage : uint8_t { EGG, BABY, CHILD, ADULT };
+enum Stage : uint8_t { EGG, FROG };
 
 // Saved as one NVS blob; `version` guards against an older layout.
 struct Life {
@@ -28,7 +28,7 @@ struct Life {
   char name[16] = "Pixel";
 };
 
-const uint32_t HATCH_MIN = 5, BABY_MIN = 24 * 60, CHILD_MIN = 72 * 60;
+const uint32_t HATCH_MIN = 5;
 const uint32_t MAX_CATCH_UP_MIN = 3 * 24 * 60;
 const uint16_t SICK_AFTER_MIN = 120;
 const uint16_t POOP_EVERY_MIN = 180;
@@ -39,10 +39,7 @@ bool loaded = false, dirty = false;
 uint32_t lastTickMs = 0, lastSaveMs = 0, pendingMs = 0;
 
 Stage stage() {
-  if (life.ageMin < HATCH_MIN) return EGG;
-  if (life.ageMin < BABY_MIN) return BABY;
-  if (life.ageMin < CHILD_MIN) return CHILD;
-  return ADULT;
+  return life.ageMin < HATCH_MIN ? EGG : FROG;
 }
 
 void load() {
@@ -121,35 +118,25 @@ bool asleepNow() {
 }
 
 // ---------------------------------------------------------------------------
-// Drawing. The pet is a soft, fuzzy plush (after the felt dolls with
-// accessories): its outline is a little dimmer and a faint fur shimmers
-// just outside it. Sprites: '#' body, ':' dim (felt, a beret), 'w' bright
-// (the frog's eye bumps), 'e' eye (dark; body when closed), 'o' lens (lit;
-// dark when the eyes close or behind sunglasses), 'g' glasses frame (dark),
-// 'm' mouth (dark), '.' nothing. The two rows from mouthRow are swapped
-// for the sad face.
+// Drawing. The pet is a soft, fuzzy plush (after the felt dolls): its
+// outline is a little dimmer and a faint fur shimmers just outside it.
+// Sprites: '#' body, ':' dim, 'w' bright (the frog's eye bumps), 'e' eye
+// (dark; body when closed), 'm' mouth (dark), '.' nothing. The two rows
+// from mouthRow are swapped for the sad face.
 
 struct Sprite {
   uint8_t w, h;
-  const char *rows[10];
+  const char *rows[8];
   int8_t mouthRow;  // first of the two mouth rows, -1 none
 };
 
 // Uovo: a felt egg.
 const Sprite EGG_SPRITE = {6, 8, {"..##..", ".####.", ".#:##.", "######", "##:###", "######", ".####.", "..##.."}, -1};
-// Piccolo: a little cloud with a beret (its pom on top), two tall eyes.
-const Sprite BABY_SPRITE = {7, 8, {"..::...", ".:::::.", ":::::::", "#######", "##e#e##", "##e#e##", "#######", ".##.##."}, -1};
-// Ragazzo: a frog, its big eyes on two bumps above the body.
-const Sprite CHILD_SPRITE = {9, 8,
-                             {".www.www.", ".wew.wew.", ".www#www.", "#########", "#########", "##m###m##",
-                              "###mmm###", ".#######."},
-                             5};
-// Adulto: a soft rounded peak with round glasses (sunglasses when it is
-// in top form).
-const Sprite ADULT_SPRITE = {11, 9,
-                             {"....###....", "...#####...", "..#######..", ".#ggg#ggg#.", "##gogggog##", "##ggg#ggg##",
-                              "###m###m###", "####mmm####", ".#########."},
-                             6};
+// Then a frog, its big eyes on two bumps above the body.
+const Sprite FROG_SPRITE = {9, 8,
+                            {".www.www.", ".wew.wew.", ".www#www.", "#########", "#########", "##m###m##",
+                             "###mmm###", ".#######."},
+                            5};
 
 const char *APPLE[] = {"..#..", ".###.", "#####", "#####", ".###."};
 const char *NOTE[] = {"..##.", "..#.#", "..#..", "###..", "##..."};
@@ -172,12 +159,7 @@ int targetX = 4;
 uint32_t lastStep = 0, lastDraw = 0;
 
 const Sprite &sprite() {
-  switch (stage()) {
-    case EGG: return EGG_SPRITE;
-    case BABY: return BABY_SPRITE;
-    case CHILD: return CHILD_SPRITE;
-    default: return ADULT_SPRITE;
-  }
+  return stage() == EGG ? EGG_SPRITE : FROG_SPRITE;
 }
 
 // The sprite's character at (c, r), with the sad mouth swapped in.
@@ -189,8 +171,7 @@ char cell(const Sprite &s, int c, int r, bool happy) {
   return s.rows[r][c];
 }
 
-void drawPet(const Sprite &s, int x, int y, uint8_t level, bool eyesOpen, bool happy, bool chewing, bool shades,
-             uint32_t now) {
+void drawPet(const Sprite &s, int x, int y, uint8_t level, bool eyesOpen, bool happy, bool chewing, uint32_t now) {
   for (int r = -1; r <= s.h; r++) {
     for (int c = -1; c <= s.w; c++) {
       const char ch = cell(s, c, r, happy);
@@ -213,9 +194,8 @@ void drawPet(const Sprite &s, int x, int y, uint8_t level, bool eyesOpen, bool h
         case ':': l = level / 3; break;
         case 'w': l = (uint8_t)min(255, level * 5 / 4); break;
         case 'e': l = eyesOpen ? 0 : level; break;
-        case 'o': l = eyesOpen && !shades ? (uint8_t)min(255, level * 5 / 4) : 0; break;
         case 'm': l = chewing ? level : 0; break;  // chewing: the mouth opens and closes
-        default: l = 0; break;                      // 'g', the frames
+        default: break;
       }
       if (edge && (ch == '#' || ch == 'w')) l = l * 7 / 10;  // a soft felt outline
       display.setLevel(px, py, l);
@@ -248,7 +228,7 @@ void draw(uint32_t now) {
     // It wobbles, more and more as it's about to hatch.
     const uint32_t period = life.ageMin + 1 >= HATCH_MIN ? 150 : 900;
     x = (COLS - s.w) / 2 + ((now / period) % 4 == 1 ? 1 : (now / period) % 4 == 3 ? -1 : 0);
-    drawPet(s, x, y, 200, true, true, false, false, now);
+    drawPet(s, x, y, 200, true, true, false, now);
     display.render();
     return;
   }
@@ -261,8 +241,7 @@ void draw(uint32_t now) {
   const bool chewing = anim == FEED && t > 800 && (t / 200) % 2;
   uint8_t level = life.sick ? 110 : 200;
   if (asleep) level = 70;
-  const bool shades = happy && life.joy > 85 && life.food > 60 && !asleep;  // in top form
-  drawPet(s, x, y, level, !asleep && !blink, happy, chewing, shades, now);
+  drawPet(s, x, y, level, !asleep && !blink, happy, chewing, now);
 
   switch (anim) {
     case FEED: {
@@ -447,7 +426,7 @@ PetMode::Status PetMode::info() {
   load();
   Status s;
   s.name = life.name;
-  static const char *STAGES[] = {"Uovo", "Piccolo", "Ragazzo", "Adulto"};
+  static const char *STAGES[] = {"Uovo", "Ragazzo"};
   s.stage = STAGES[stage()];
   s.food = (uint8_t)life.food;
   s.joy = (uint8_t)life.joy;
