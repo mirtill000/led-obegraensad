@@ -398,14 +398,30 @@ Current modes:
     into the Mandelbrot set; and, rendered per pixel with 2x2
     supersampling (`src/animations/demos3d.cpp`): *Cubo solido* (a ray per
     sub-pixel against the spinning cube, faces shaded by the light),
-    *Tunnel* (a twisting tiled pipe you fly down), *Sfera al sole* (a
+    *Tunnel* (a twisting tiled pipe you fly down) and *Sfera al sole* (a
     turning globe lit from where the sun really is in your sky, from the
     lamp's latitude and longitude, as if you faced north: sunrise lights
     its right side, noon the front, sunset the left; at night just its
-    outline among a few stars - `sunPosition()` in `moon.cpp`) and *Volo
-    sulle colline* (a voxel landscape, Comanche style: hills brighter
-    with height, fog in the distance; a slow glide with sub-pixel
-    ridges and a camera that eases over the hills ahead)
+    outline among a few stars - `sunPosition()` in `moon.cpp`)
+  - *3D e demo*, the flights (`src/animations/flights.cpp`): voxel
+    landscapes, Comanche style - one ray per column walked front to back
+    over a heightmap, with sub-pixel ridges, fog in the distance and a
+    camera that eases over the ground ahead. One engine (`Flight`), five
+    worlds that only say what the ground is and how it is lit:
+    - *Volo sulle colline*: rolling hills, brighter with height;
+    - *Volo sul mare*: low over moving waves with foam on the crests,
+      heading for the real sun - or at night the moon, placed from its
+      phase - with its glittering path on the water and its glow (or its
+      disc, when low) on the horizon;
+    - *Nel canyon*: along a winding river between layered rock walls,
+      the walls ahead and those facing east catching the light, a slit
+      of sky above;
+    - *Città di notte*: down an avenue between blocks of buildings, lit
+      windows that now and then go on or off, blinking beacons on the
+      towers; now and then the flight climbs over the roofs;
+    - *Sopra le nuvole*: ridges with snow above the snow line and a
+      drifting cloud layer the flight sometimes sinks through (all goes
+      white) and comes out of.
 - **Giochi** - one game, or "automatic" (a different one every 5
   minutes, always as a demo); button: next game. Every game derives from
   `ArcadeGame` (`src/animations/arcade_game.h`), which gives them the

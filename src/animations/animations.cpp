@@ -36,6 +36,10 @@ extern Animation *const solidCubeAnimation;
 extern Animation *const tunnelAnimation;
 extern Animation *const sunSphereAnimation;
 extern Animation *const voxelAnimation;
+extern Animation *const seaAnimation;
+extern Animation *const canyonAnimation;
+extern Animation *const cityAnimation;
+extern Animation *const cloudsAnimation;
 extern Animation *const plasmaAnimation;
 extern Animation *const metaballsAnimation;
 extern Animation *const mandelbrotAnimation;
@@ -84,6 +88,10 @@ Animation *const ANIMATIONS[] = {
     tunnelAnimation,
     sunSphereAnimation,
     voxelAnimation,
+    seaAnimation,
+    canyonAnimation,
+    cityAnimation,
+    cloudsAnimation,
     plasmaAnimation,
     metaballsAnimation,
     mandelbrotAnimation,
