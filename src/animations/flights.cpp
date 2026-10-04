@@ -16,10 +16,10 @@
 #include "moon.h"
 #include "settings.h"
 #include "timekeeping.h"
+#include "ui.h"
 
 namespace {
 
-uint8_t toLevel(float v) { return (uint8_t)(constrain(v, 0.0f, 1.0f) * 255); }
 float clamp01(float v) { return constrain(v, 0.0f, 1.0f); }
 float smooth(float a, float b, float x) {
   const float k = clamp01((x - a) / (b - a));
@@ -80,7 +80,7 @@ class Flight : public Animation {
         castRay(v, v.heading + (x - 7.5f + (r + 0.5f) / rays - 0.5f) * FAN, column);
         for (int y = 0; y < ROWS; y++) sum[y] += column[y];
       }
-      for (int y = 0; y < ROWS; y++) display.setLevel(x, y, toLevel(sum[y] / rays));
+      for (int y = 0; y < ROWS; y++) display.setLevel(x, y, ui::tone(sum[y] / rays));
     }
   }
 
@@ -104,7 +104,16 @@ class Flight : public Animation {
   // The brightness (0..1, before fog) of the ground hit, for screen row y
   // whose ray meets it at height rowH (facades, rock strata...).
   virtual float shade(const Hit &hit, float rowH, int y, const View &v) const = 0;
-  virtual float sky(int y, float, const View &) const { return max(0.0f, 0.12f - y * 0.02f); }
+  // The brightness the distance fades to (and the sky just above the horizon).
+  virtual float haze() const { return 0.12f; }
+  // How much the outline of a hill against what is behind it lights up.
+  virtual float crest() const { return 0.45f; }
+  // How much darker each hill gets below its ridge (0 none).
+  virtual float falloff() const { return 0.0f; }
+  // The sky: dark, lighter towards the horizon.
+  virtual float sky(int y, float, const View &v) const {
+    return haze() * clamp01(1 - (v.horizon - y - 0.5f) / 4);
+  }
   // After a column is drawn: depth[y] is how far the ground of each row is
   // (INF for sky). For see-through layers drawn in front of the ground.
   virtual void overlay(float *, const float *, float, float, const View &) const {}
@@ -126,11 +135,15 @@ class Flight : public Animation {
   void castRay(const View &v, float angle, float *column) {
     const float sa = sinf(angle), ca = cosf(angle);
     float depth[ROWS];
+    int8_t hill[ROWS];  // which hill (counted front to back) each row shows, -1 sky
     for (int y = 0; y < ROWS; y++) {
       column[y] = sky(y, angle, v);
       depth[y] = INF;
+      hill[y] = -1;
     }
+    int8_t hills = 0;
     float top = ROWS;  // the lowest edge painted so far, with its fraction
+    float edgeDist = 0;  // how far the ground just below `top` is
     float lastH = height(v.x, v.y, v.t);
     for (float dist = 1.2f; dist < FAR && top > 0; dist += 0.25f + dist * 0.02f) {
       Hit hit;
@@ -147,19 +160,51 @@ class Flight : public Animation {
       hit.dist = dist;
       hit.angle = angle;
       lastH = hit.h;
+      // Far away the ground melts into the haze of the horizon (not into
+      // black: the panel can't show the shades just above it).
       const float fog = 1 - dist / (FAR + 10);
+      // A hill now seen behind a nearer one: the nearer one's ridge lights up.
+      if (top < ROWS && dist > edgeDist * 1.15f + 0.6f) {
+        lightCrest(column, top, edgeDist);
+        if (hills < 100) hills++;
+      }
       // Fill from the new edge down to the old one; the row the edge
       // falls in gets its share, so ridges glide instead of jumping rows.
       const int from = (int)screen, to = min(ROWS, (int)ceilf(top));
       for (int y = from; y < to; y++) {
         const float cover = min((float)y + 1, top) - max((float)y, screen);  // 0..1 of this row
         const float rowH = v.h - (y + 0.5f - v.horizon) * dist / SCALE;    // where its ray meets
-        column[y] = mix(column[y], clamp01(shade(hit, rowH, y, v)) * fog, cover);
-        if (cover > 0.5f) depth[y] = dist;
+        column[y] = mix(column[y], mix(haze(), clamp01(shade(hit, rowH, y, v)), fog), cover);
+        if (cover > 0.5f) {
+          depth[y] = dist;
+          hill[y] = hills;
+        }
       }
       top = screen;
+      edgeDist = dist;
     }
+    // Each hill darker further down from its ridge (lit from above), so one
+    // stands out against the next.
+    if (falloff() > 0) {
+      int ridge = ROWS;
+      for (int y = 0; y < ROWS; y++) {
+        if (hill[y] < 0) continue;
+        if (y == 0 || hill[y] != hill[y - 1]) ridge = y;
+        column[y] *= 1 - falloff() * (1 - expf(-(y - ridge) / 2.5f));
+      }
+    }
+    if (top > 0 && top < ROWS) lightCrest(column, top, edgeDist);  // the skyline
     overlay(column, depth, sa, ca, v);
+  }
+
+  // Ridges are what a 16x16 panel can show best: a band one row tall just
+  // below `top` (the outline of the ground at distance `dist`) brightens.
+  void lightCrest(float *column, float top, float dist) {
+    const float amount = crest() * (1 - dist / (FAR + 10));
+    for (int y = (int)top; y < min(ROWS, (int)top + 2); y++) {
+      const float k = clamp01(min((float)y + 1, top + 1) - max((float)y, top));
+      column[y] = min(1.0f, column[y] + amount * k);
+    }
   }
 
   float camH_ = -1;
@@ -187,8 +232,15 @@ class HillsFlight : public Flight {
     return h * h * 16;
   }
   float shade(const Hit &hit, float, int, const View &) const override {
-    return 0.2f + 0.8f * sqrtf(hit.h / 16.0f) + hit.rise;
+    return 0.08f + 0.35f * hit.h / 16 + hit.rise * 0.6f;
   }
+  // Night-like: black sky, dark hills, their ridges drawn in light.
+  float haze() const override { return 0.0f; }
+  float crest() const override { return 0.85f; }
+  // Low between the hills, so they stand against the sky one behind another.
+  float altitude(const View &v) const override { return Flight::altitude(v) - 3.0f; }
+  float horizonRow(float) const override { return 6.0f; }
+  float falloff() const override { return 0.45f; }
 };
 
 // ---------------------------------------------------------------------------
@@ -229,11 +281,13 @@ class SeaFlight : public Flight {
   float clearance() const override { return 1.2f; }
   float ease() const override { return 0.05f; }
   float horizonRow(float t) const override { return 4.0f + 0.3f * sinf(t * 0.6f); }  // a gentle roll
+  float haze() const override { return 0.1f; }
+  float crest() const override { return 0.3f; }  // the lines of the waves
 
   float shade(const Hit &hit, float, int y, const View &v) const override {
     const float ambient = lit_ && isSun_ ? 0.55f + 0.45f * clamp01(lightEl_ * 3) : 0.4f;
-    float s = (0.12f + 0.25f * hit.h / 3.2f + max(0.0f, hit.rise) * 0.9f + min(0.0f, hit.rise) * 0.3f) * ambient;
-    s += smooth(2.6f, 3.1f, hit.h) * 0.55f * ambient;  // foam
+    float s = (0.08f + 0.12f * hit.h / 3.2f + max(0.0f, hit.rise) * 0.5f) * ambient;
+    s += smooth(2.6f, 3.1f, hit.h) * 0.5f * ambient;  // foam
     if (lit_) {
       // The glittering path: around the light's direction and around the
       // row where its reflection falls, broken up by the waves.
@@ -248,7 +302,8 @@ class SeaFlight : public Flight {
   }
   float sky(int y, float angle, const View &v) const override {
     const float above = v.horizon - (y + 0.5f);  // rows above the horizon
-    float s = lit_ && isSun_ ? 0.1f + 0.12f * clamp01(lightEl_ * 2) - y * 0.008f : 0.02f + stars(angle, y, v.t);
+    // Dark, with a band of light along the horizon (by day) or stars.
+    float s = lit_ && isSun_ ? 0.22f * clamp01(1 - above / 3) : stars(angle, y, v.t);
     if (lit_) {
       const float d = wrapAngle(angle - lightAz_);
       s += lightPower_ * 0.3f * expf(-d * d / 0.1f) * clamp01(1 - above / 4);  // glow on the horizon
@@ -323,13 +378,16 @@ class CanyonFlight : public Flight {
 
   float shade(const Hit &hit, float rowH, int, const View &v) const override {
     if (hit.h < 0.4f) {  // the river
-      return 0.14f + 0.18f * (0.5f + 0.5f * sinf(hit.y * 1.3f + hit.x - v.t * 4));
+      return 0.1f + 0.2f * (0.5f + 0.5f * sinf(hit.y * 1.3f + hit.x - v.t * 4));
     }
     const float east = (height(hit.x + 0.5f, hit.y, 0) - height(hit.x - 0.5f, hit.y, 0)) * 0.15f;
     const float strata = 0.07f * sinf(rowH * 2.6f);
-    return 0.18f + 0.3f * hit.h / 16 + hit.rise * 0.9f - constrain(east, -0.25f, 0.25f) + strata;
+    return 0.1f + 0.15f * hit.h / 16 + hit.rise * 0.7f - constrain(east, -0.15f, 0.15f) + strata;
   }
-  float sky(int y, float, const View &) const override { return max(0.0f, 0.32f - y * 0.03f); }
+  float haze() const override { return 0.12f; }
+  float crest() const override { return 0.6f; }
+  float falloff() const override { return 0.4f; }
+  float sky(int y, float, const View &) const override { return max(0.15f, 0.55f - y * 0.06f); }
 };
 
 // ---------------------------------------------------------------------------
@@ -375,8 +433,8 @@ class CityFlight : public Flight {
         return fmodf(v.t + random01(bx, by, 2) * 3, 1.8f) < 0.35f ? 1.0f : 0.15f;
       }
     }
-    if (rowH > hit.h - 0.3f) return 0.28f;   // the roof line, so blocks stand out
-    if (hit.rise < 0.05f) return 0.12f;     // a roof seen from above
+    if (rowH > hit.h - 0.3f) return 0.3f;   // the roof line, so blocks stand out
+    if (hit.rise < 0.05f) return 0.08f;     // a roof seen from above
     // A facade: windows by floor and by bay; far away they blur into a glow.
     const int32_t storey = (int32_t)floorf(rowH / FLOOR);
     const float across = (hit.x + hit.y) * 1.1f;
@@ -389,7 +447,7 @@ class CityFlight : public Flight {
     const float inBay = across - bay;
     const float pane = smooth(0.1f, 0.35f, inFloor) * smooth(0.95f, 0.7f, inFloor) * smooth(0.05f, 0.3f, inBay) *
                        smooth(0.95f, 0.7f, inBay);
-    const float window = mix(0.15f, on ? 0.7f : 0.08f, pane);
+    const float window = mix(0.1f, on ? 0.8f : 0.06f, pane);
     return mix(window, 0.26f, smooth(5, 14, hit.dist));
   }
   float sky(int y, float angle, const View &v) const override {
@@ -441,10 +499,11 @@ class CloudsFlight : public Flight {
 
   float shade(const Hit &hit, float, int, const View &) const override {
     const float east = (height(hit.x + 0.5f, hit.y, 0) - height(hit.x - 0.5f, hit.y, 0)) * 0.2f;
-    const float rock = 0.12f + 0.3f * hit.h / 19 + hit.rise * 0.8f - constrain(east, -0.2f, 0.2f);
-    return mix(rock, 0.85f + hit.rise * 0.4f, smooth(11.5f, 12.5f, hit.h));  // snow
+    const float rock = 0.08f + 0.15f * hit.h / 19 + hit.rise * 0.6f - constrain(east, -0.12f, 0.12f);
+    return mix(rock, 0.75f + hit.rise * 0.4f, smooth(11.5f, 12.5f, hit.h));  // snow
   }
-  float sky(int y, float, const View &) const override { return 0.2f - y * 0.012f; }
+  float haze() const override { return 0.1f; }
+  float crest() const override { return 0.5f; }
 
   void overlay(float *column, const float *depth, float sa, float ca, const View &v) const override {
     for (int y = 0; y < ROWS; y++) {
@@ -457,11 +516,11 @@ class CloudsFlight : public Flight {
       // Fades in as it gets in front of the ground, so peaks don't pop through.
       const float front = depth[y] == INF ? 1 : clamp01((depth[y] - d) / 6);
       const float k = density(v.x + sa * d, v.y + ca * d, v.t) * (1 - d / FAR) * front;
-      column[y] = mix(column[y], 0.55f + 0.2f * (1 - d / FAR), k * 0.9f);
+      column[y] = mix(column[y], 0.3f + 0.15f * (1 - d / FAR), k * 0.8f);
     }
     // Inside the layer: everything fades to white.
     const float inside = density(v.x, v.y, v.t) * clamp01(1 - fabsf(v.h - CLOUDS) / 1.5f);
-    for (int y = 0; y < ROWS; y++) column[y] = mix(column[y], 0.6f, inside * 0.9f);
+    for (int y = 0; y < ROWS; y++) column[y] = mix(column[y], 0.45f, inside * 0.9f);
   }
 };
 

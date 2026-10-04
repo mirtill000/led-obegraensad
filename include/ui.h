@@ -20,6 +20,13 @@ namespace ui {
 
 static const uint8_t LEVEL_FULL = 255, LEVEL_TEXT = 220, LEVEL_DIM = 120, LEVEL_FAINT = 35;
 
+// A brightness (0..1) for renders and shaded scenes, made to survive the
+// panel: its dimmest step is already about a fifth of full (any level above
+// 0 shows at least that), so everything a scene draws below that step
+// would look the same. Below 0.05 is off; the rest is spread evenly over
+// the panel's 31 steps of light, so dark shades stay apart.
+uint8_t tone(float v);
+
 // A picture given as rows of characters, top-left at (x, y): '#' = `level`,
 // '+' = full, ':' = a third of `level`, anything else left as it is.
 void icon(int x, int y, const char *const *rows, int count, uint8_t level = LEVEL_FULL);

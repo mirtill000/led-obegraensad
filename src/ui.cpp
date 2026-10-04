@@ -7,6 +7,14 @@
 
 namespace ui {
 
+uint8_t tone(float v) {
+  if (!(v >= 0.05f)) return 0;  // also NaN
+  // The panel's on-time units (1-31, display.cpp) spread almost evenly over
+  // 0.05-1, so the darks get as many distinct steps as the lights.
+  const float units = 1 + 30 * powf((min(v, 1.0f) - 0.05f) / 0.95f, 1.2f);
+  return (uint8_t)(255 * powf(units / 31, 1 / 2.2f) + 0.5f);
+}
+
 int mini(int x, int y, const String &text, uint8_t level) {
   for (unsigned i = 0; i < text.length(); i++) {
     const MiniGlyph *g = findMiniGlyph(text[i]);
