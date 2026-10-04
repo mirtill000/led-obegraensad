@@ -37,6 +37,10 @@ class Animation {
   virtual uint16_t frameMs() const = 0;
   virtual bool needsTime() const { return false; }  // skipped in "auto" until the clock syncs
   virtual bool fixedStep() const { return false; }  // moves one step per frame (see above)
+  // An animation you can nudge (feed the fish...): what the page's button
+  // says, nullptr if none. poke() comes from that button or from key A.
+  virtual const char *pokeName() const { return nullptr; }
+  virtual void poke() {}
   virtual void start() {}
   virtual void frame(uint32_t now) = 0;
 

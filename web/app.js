@@ -179,6 +179,10 @@ function render() {
   const playing = s.animations.find((a) => a.id === s.animation);
   $('ambientInfo').textContent = playing && s.active === 'ambient' ? 'In riproduzione: ' + playing.name + (s.night ? ' (modalità notte)' : '') : '';
   $('gamesInfo').textContent = playing && s.active === 'games' ? 'In gioco: ' + playing.name : '';
+  // An animation you can nudge (the aquarium's food): its button.
+  const poke = playing && s.active === 'ambient' && playing.poke;
+  $('pokeBox').hidden = !poke;
+  if (poke) $('poke').textContent = poke;
 
   if (!dirty.playlist) {
     $('playlistOn').checked = s.settings.playlistOn;
@@ -840,6 +844,8 @@ $('demoStyle').onchange = (e) => saveSettings({ demoStyle: e.target.value })
   .then(() => status('Stile cambiato')).catch(fail);
 $('clockStyle').onchange = (e) => saveSettings({ clockStyle: e.target.value }).then(() => status('Quadrante cambiato')).catch(fail);
 $('showDemo').onclick = () => post('/api/mode', { id: 'demo' }).then(() => { status('Demo dei font'); $('modeCard').scrollIntoView({ behavior: 'smooth' }); }).catch(fail);
+$('poke').onclick = () => fetch('/api/input', { method: 'POST', body: new URLSearchParams({ key: 'A' }) })
+  .then(() => status('Fatto')).catch(fail);
 $('ambient').onchange = (e) => saveSettings({ ambient: e.target.value }).then(() => status('Animazione cambiata')).catch(fail);
 $('games').onchange = (e) => saveSettings({ games: e.target.value }).then(() => status('Gioco cambiato')).catch(fail);
 

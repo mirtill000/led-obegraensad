@@ -391,7 +391,13 @@ Current modes:
     phase) where they really are, the light of the hour (a dim day sky,
     the glow of sunrise and sunset on the sun's side, stars at night),
     clouds as thick as the current weather, and its rain, snow, fog or
-    lightning; the ground a dark line of hills, white when it snows
+    lightning; the ground a dark line of hills, white when it snows, and
+    *Acquario* (`src/animations/aquarium.cpp`): fish swimming as a school
+    (apart from each other, along with their neighbours, towards the
+    group, turning before the glass), weeds swaying, bubbles, sand; the
+    page shows *Dai da mangiare* while it plays (or key A, also from the
+    Cardputer): a few flakes sink and the fish dart for them. Any
+    animation can offer such a button (`Animation::pokeName()` / `poke()`)
   - *Icone geek*: *Alieno* (a walking Space Invader), Pac-Man chased by a ghost, a
     terminal (four lines in a 3x3 font) typing commands whose answers are
     the lamp's own - `ls` its files, `w` the time and uptime, `ip` its

@@ -110,6 +110,7 @@ static String stateJson() {
             ",\"group\":" + jsonString(ANIMATIONS[i]->group()) + ",\"game\":" + jsonBool(ANIMATIONS[i]->isGame());
     if (ANIMATIONS[i]->isGame()) json += ",\"style\":" + jsonString(styleId(ANIMATIONS[i]->style()));
     if (ANIMATIONS[i]->isClockFace()) json += ",\"clock\":true";
+    if (ANIMATIONS[i]->pokeName()) json += ",\"poke\":" + jsonString(ANIMATIONS[i]->pokeName());
     json += "}";
   }
   json += "]";

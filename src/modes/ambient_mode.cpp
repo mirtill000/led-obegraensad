@@ -78,6 +78,10 @@ void AmbientMode::action() {
 bool AmbientMode::demoForced() const { return override_ || autoRotation(); }
 
 bool AmbientMode::input(char key) {
+  if (animation_ && !animation_->isGame() && animation_->pokeName() && (key == 'A' || key == 'a')) {
+    animation_->poke();
+    return true;
+  }
   if (!animation_ || !animation_->isGame() || demoForced() || demoMode(animation_->id())) return false;
   animation_->input(key);
   return true;
