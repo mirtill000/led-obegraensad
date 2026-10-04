@@ -35,6 +35,10 @@ extern Animation *const englishWordClockAnimation;
 extern Animation *const cubeAnimation;
 extern Animation *const solidCubeAnimation;
 extern Animation *const tunnelAnimation;
+extern Animation *const torusAnimation;
+extern Animation *const metaball3dAnimation;
+extern Animation *const pillarsAnimation;
+extern Animation *const planetAnimation;
 extern Animation *const voxelAnimation;
 extern Animation *const seaAnimation;
 extern Animation *const canyonAnimation;
@@ -87,6 +91,10 @@ Animation *const ANIMATIONS[] = {
     cubeAnimation,
     solidCubeAnimation,
     tunnelAnimation,
+    torusAnimation,
+    metaball3dAnimation,
+    pillarsAnimation,
+    planetAnimation,
     voxelAnimation,
     seaAnimation,
     canyonAnimation,

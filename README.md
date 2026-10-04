@@ -419,7 +419,15 @@ Current modes:
     (`src/animations/demos3d.cpp`): *Cubo solido* (16 rays per pixel
     against the spinning cube, faces shaded by the light, 50 frames a
     second, the spin gently speeding up and slowing down) and *Tunnel* (a
-    twisting tiled pipe you fly down)
+    twisting tiled pipe you fly down); and raymarched
+    (`src/animations/raymarch.cpp`: scenes as signed distance functions,
+    one ray per pixel corner shared by the four pixels around it, normals,
+    soft shadows): *Toro* (a torus turning over a floor, its soft shadow
+    on it), *Metaball 3D* (three spheres melting into each other as they
+    orbit, with a glow along their edges), *Colonne infinite* (a hall of
+    pillars without end, flown through, tiles on the floor and ceiling)
+    and *Pianeta con anelli* (a banded planet lit from the side, the rings'
+    shadow on it and its shadow on the rings, among stars)
   - *3D e demo*, the flights (`src/animations/flights.cpp`): voxel
     landscapes, Comanche style - one ray per column walked front to back
     over a heightmap, with sub-pixel ridges, fog in the distance and a
