@@ -385,7 +385,13 @@ Current modes:
   steps - particles, fire, blinking icons - take as many steps as the
   clock has gone through). The animations (the games have their
   own mode, below), in `src/animations/`:
-  - *Atmosfere*: digital rain, fire, stars, waves
+  - *Atmosfere*: digital rain, fire, stars, waves, and *Finestra sul
+    cielo* (`src/animations/sky.cpp`): the sky outside right now, as if
+    you looked south through a window - the sun and the moon (with its
+    phase) where they really are, the light of the hour (a dim day sky,
+    the glow of sunrise and sunset on the sun's side, stars at night),
+    clouds as thick as the current weather, and its rain, snow, fog or
+    lightning; the ground a dark line of hills, white when it snows
   - *Icone geek*: *Alieno* (a walking Space Invader), Pac-Man chased by a ghost, a
     terminal (four lines in a 3x3 font) typing commands whose answers are
     the lamp's own - `ls` its files, `w` the time and uptime, `ip` its
