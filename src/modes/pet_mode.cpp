@@ -121,22 +121,34 @@ bool asleepNow() {
 }
 
 // ---------------------------------------------------------------------------
-// Drawing. Sprites: '#' body, 'e' eye, 'm' mouth (both dark), ':' a
-// dimmer spot, '.' nothing. The rows marked in MOUTH_ROW are swapped for
-// the sad version when it is unhappy.
+// Drawing. The pet is a soft, fuzzy plush (after the felt dolls with
+// accessories): its outline is a little dimmer and a faint fur shimmers
+// just outside it. Sprites: '#' body, ':' dim (felt, a beret), 'w' bright
+// (the frog's eye bumps), 'e' eye (dark; body when closed), 'o' lens (lit;
+// dark when the eyes close or behind sunglasses), 'g' glasses frame (dark),
+// 'm' mouth (dark), '.' nothing. The two rows from mouthRow are swapped
+// for the sad face.
 
 struct Sprite {
   uint8_t w, h;
-  const char *rows[9];
+  const char *rows[10];
   int8_t mouthRow;  // first of the two mouth rows, -1 none
 };
 
+// Uovo: a felt egg.
 const Sprite EGG_SPRITE = {6, 8, {"..##..", ".####.", ".#:##.", "######", "##:###", "######", ".####.", "..##.."}, -1};
-const Sprite BABY_SPRITE = {5, 5, {".###.", "#e#e#", "#####", "#m#m#", ".###."}, -1};
-const Sprite CHILD_SPRITE = {7, 7, {"..###..", ".#####.", "##e#e##", "#######", "#m###m#", "##mmm##", ".#...#."}, 4};
-const Sprite ADULT_SPRITE = {9, 9,
-                             {".#.....#.", "..#...#..", ".#######.", "#########", "##e###e##", "#########", "##m###m##",
-                              "###mmm###", ".##...##."},
+// Piccolo: a little cloud with a beret (its pom on top), two tall eyes.
+const Sprite BABY_SPRITE = {7, 8, {"..::...", ".:::::.", ":::::::", "#######", "##e#e##", "##e#e##", "#######", ".##.##."}, -1};
+// Ragazzo: a frog, its big eyes on two bumps above the body.
+const Sprite CHILD_SPRITE = {9, 8,
+                             {".www.www.", ".wew.wew.", ".www#www.", "#########", "#########", "##m###m##",
+                              "###mmm###", ".#######."},
+                             5};
+// Adulto: a soft rounded peak with round glasses (sunglasses when it is
+// in top form).
+const Sprite ADULT_SPRITE = {11, 9,
+                             {"....###....", "...#####...", "..#######..", ".#ggg#ggg#.", "##gogggog##", "##ggg#ggg##",
+                              "###m###m###", "####mmm####", ".#########."},
                              6};
 
 const char *APPLE[] = {"..#..", ".###.", "#####", "#####", ".###."};
@@ -168,22 +180,45 @@ const Sprite &sprite() {
   }
 }
 
-void drawPet(const Sprite &s, int x, int y, uint8_t level, bool eyesOpen, bool happy, bool chewing) {
-  for (int r = 0; r < s.h; r++) {
-    const char *row = s.rows[r];
-    // Unhappy: the two mouth rows swap, the smile turns upside down.
-    if (s.mouthRow >= 0 && !happy && (r == s.mouthRow || r == s.mouthRow + 1)) {
-      row = s.rows[r == s.mouthRow ? s.mouthRow + 1 : s.mouthRow];
-    }
-    for (int c = 0; c < s.w; c++) {
-      const char ch = row[c];
+// The sprite's character at (c, r), with the sad mouth swapped in.
+char cell(const Sprite &s, int c, int r, bool happy) {
+  if (c < 0 || r < 0 || c >= s.w || r >= s.h) return '.';
+  if (s.mouthRow >= 0 && !happy && (r == s.mouthRow || r == s.mouthRow + 1)) {
+    r = r == s.mouthRow ? s.mouthRow + 1 : s.mouthRow;
+  }
+  return s.rows[r][c];
+}
+
+void drawPet(const Sprite &s, int x, int y, uint8_t level, bool eyesOpen, bool happy, bool chewing, bool shades,
+             uint32_t now) {
+  for (int r = -1; r <= s.h; r++) {
+    for (int c = -1; c <= s.w; c++) {
+      const char ch = cell(s, c, r, happy);
+      const bool edge = cell(s, c - 1, r, happy) == '.' || cell(s, c + 1, r, happy) == '.' ||
+                        cell(s, c, r - 1, happy) == '.' || cell(s, c, r + 1, happy) == '.';
+      const int px = x + c, py = y + r;
+      if (ch == '.') {
+        // The fur: a faint shimmer around the body (not over anything else).
+        const bool nextToBody = cell(s, c - 1, r, happy) != '.' || cell(s, c + 1, r, happy) != '.' ||
+                                cell(s, c, r - 1, happy) != '.';
+        if (nextToBody && r < s.h && display.getLevel(px, py) == 0) {
+          const uint32_t wave = (uint32_t)(px * 3 + py * 5) + now / 300;
+          display.setLevel(px, py, (uint8_t)(level * (wave % 3 == 0 ? 0.22f : 0.12f)));
+        }
+        continue;
+      }
       uint8_t l = 0;
-      if (ch == '#') l = level;
-      else if (ch == ':') l = level / 3;
-      else if (ch == 'e') l = eyesOpen ? 0 : level;
-      else if (ch == 'm') l = chewing ? level : 0;  // chewing: the mouth opens and closes
-      else continue;
-      display.setLevel(x + c, y + r, l);
+      switch (ch) {
+        case '#': l = level; break;
+        case ':': l = level / 3; break;
+        case 'w': l = (uint8_t)min(255, level * 5 / 4); break;
+        case 'e': l = eyesOpen ? 0 : level; break;
+        case 'o': l = eyesOpen && !shades ? (uint8_t)min(255, level * 5 / 4) : 0; break;
+        case 'm': l = chewing ? level : 0; break;  // chewing: the mouth opens and closes
+        default: l = 0; break;                      // 'g', the frames
+      }
+      if (edge && (ch == '#' || ch == 'w')) l = l * 7 / 10;  // a soft felt outline
+      display.setLevel(px, py, l);
     }
   }
 }
@@ -213,7 +248,7 @@ void draw(uint32_t now) {
     // It wobbles, more and more as it's about to hatch.
     const uint32_t period = life.ageMin + 1 >= HATCH_MIN ? 150 : 900;
     x = (COLS - s.w) / 2 + ((now / period) % 4 == 1 ? 1 : (now / period) % 4 == 3 ? -1 : 0);
-    drawPet(s, x, y, 200, true, true, false);
+    drawPet(s, x, y, 200, true, true, false, false, now);
     display.render();
     return;
   }
@@ -226,7 +261,8 @@ void draw(uint32_t now) {
   const bool chewing = anim == FEED && t > 800 && (t / 200) % 2;
   uint8_t level = life.sick ? 110 : 200;
   if (asleep) level = 70;
-  drawPet(s, x, y, level, !asleep && !blink, happy, chewing);
+  const bool shades = happy && life.joy > 85 && life.food > 60 && !asleep;  // in top form
+  drawPet(s, x, y, level, !asleep && !blink, happy, chewing, shades, now);
 
   switch (anim) {
     case FEED: {
