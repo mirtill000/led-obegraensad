@@ -169,7 +169,7 @@ bool Pager::update(uint32_t now, uint32_t pageMs) {
   lastStep_ = now;
   page_++;
   if (page_ * linesPerPage(font_) >= lines_.size()) return true;
-  display.beginTransition();
+  display.beginPageTransition();
   draw();
   return false;
 }

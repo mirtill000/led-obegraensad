@@ -32,7 +32,10 @@ void GalleryMode::next() {
   } else {
     index_ = (index_ + 1) % ids_.size();
   }
-  if (!ids_.empty()) load(ids_[index_]);
+  if (!ids_.empty()) {
+    display.beginTransition();
+    load(ids_[index_]);
+  }
 }
 
 void GalleryMode::showDraft(const uint8_t *frames, size_t count, uint16_t frameMs) {

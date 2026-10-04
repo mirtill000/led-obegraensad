@@ -55,7 +55,7 @@ void WorldMode::next(uint32_t now, bool fade) {
     card_ = (card_ + 1) % CARDS;
     if (available(w, card_)) break;
   }
-  if (fade && card_ != before) display.beginFade(FADE_MS);
+  if (fade && card_ != before) display.beginPageTransition(FADE_MS);
   cardStart_ = now;
 }
 

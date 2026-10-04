@@ -73,6 +73,7 @@ static volatile int8_t frontSet = 0;     // being displayed by the refresh
 static volatile int8_t pendingSet = -1;  // next frame, picked up at cycle start
 static portMUX_TYPE setLock = portMUX_INITIALIZER_UNLOCKED;
 static uint8_t gammaTable[256];  // level 0-255 -> 0-31 on-time units
+static uint8_t dissolveSlot[TOTAL_PIXELS];  // the turn of each pixel in a Dissolve, a fixed shuffle
 
 static void shiftBits(const uint8_t *bits) { SPI.writeBytes(bits, FRAME_BYTES); }
 // The registers' outputs take what was shifted in on the latch's rising edge.
@@ -204,6 +205,17 @@ void Display::begin() {
   SPI.begin(PIN_CLOCK, -1 /* MISO unused */, PIN_DATA, -1 /* SS unused */);
   SPI.beginTransaction(SPISettings(10000000, MSBFIRST, SPI_MODE0));
 
+  // A fixed shuffle (same every boot) for the Dissolve transition.
+  uint32_t seed = 0x2545F491;
+  for (int i = 0; i < TOTAL_PIXELS; i++) dissolveSlot[i] = i;
+  for (int i = TOTAL_PIXELS - 1; i > 0; i--) {
+    seed = seed * 1664525u + 1013904223u;
+    const int j = (seed >> 8) % (i + 1);
+    const uint8_t tmp = dissolveSlot[i];
+    dissolveSlot[i] = dissolveSlot[j];
+    dissolveSlot[j] = tmp;
+  }
+
   for (int i = 0; i < 256; i++) {
     const int units = (int)lroundf(31.0f * powf(i / 255.0f, 2.2f));
     gammaTable[i] = (i > 0 && units == 0) ? 1 : units;  // any level > 0 stays visible
@@ -294,6 +306,7 @@ void Display::render() {
 
 static const uint32_t FADE_MS = 600;
 static const uint32_t WIPE_MS = 500;
+static const uint32_t DISSOLVE_MS = 700;
 static const uint32_t BLEND_STEP_MS = 16;
 
 void Display::beginTransition() {
@@ -301,11 +314,12 @@ void Display::beginTransition() {
   memcpy(from_, shown_, sizeof(from_));
   blending_ = true;
   blendStyle_ = transition_;
-  blendMs_ = transition_ == Transition::Wipe ? WIPE_MS : FADE_MS;
+  blendMs_ = transition_ == Transition::Wipe ? WIPE_MS : transition_ == Transition::Dissolve ? DISSOLVE_MS : FADE_MS;
   blendStart_ = millis();
 }
 
-void Display::beginFade(uint16_t ms) {
+void Display::beginPageTransition(uint16_t ms) {
+  if (transition_ == Transition::None) return;
   memcpy(from_, shown_, sizeof(from_));
   blending_ = true;
   blendStyle_ = Transition::Fade;
@@ -334,6 +348,14 @@ void Display::output() {
     t = t * t * (3 - 2 * t);  // ease in and out
     if (blendStyle_ == Transition::Fade) {
       for (int i = 0; i < TOTAL_PIXELS; i++) shown_[i] = (uint8_t)(from_[i] + (target_[i] - from_[i]) * t + 0.5f);
+    } else if (blendStyle_ == Transition::Dissolve) {
+      // Each pixel turns over in its own slot of the time (a fixed
+      // scattered order), in a quick fade of its own.
+      for (int i = 0; i < TOTAL_PIXELS; i++) {
+        const float slot = dissolveSlot[i] / (float)(TOTAL_PIXELS - 1);
+        const float k = constrain((t - slot * 0.75f) / 0.25f, 0.0f, 1.0f);
+        shown_[i] = (uint8_t)(from_[i] + (target_[i] - from_[i]) * k + 0.5f);
+      }
     } else {
       // The edge moves across the logical columns (whatever the rotation),
       // one column of soft blend wide.

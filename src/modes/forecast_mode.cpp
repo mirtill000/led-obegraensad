@@ -109,7 +109,7 @@ static void drawTemperature(int y, float celsius, uint8_t level) {
 //                                        max x7-13 rows 11-15, ° x15
 //
 // Everything is at full brightness. The screen shows today, then each of
-// the next 3 days in turn, 5 s each, with the mode transition in between.
+// the next 3 days in turn, 5 s each, cross-faded (a page transition).
 void ForecastMode::update(uint32_t now) {
   if (now - lastDraw_ < 50) return;
   lastDraw_ = now;
@@ -119,7 +119,7 @@ void ForecastMode::update(uint32_t now) {
   if (now - dayStart_ >= DAY_MS && w.days > 1) {
     day_ = (day_ + 1) % w.days;
     dayStart_ = now;
-    display.beginTransition();
+    display.beginPageTransition();
   }
   display.clear();
   drawDay(w, day_);

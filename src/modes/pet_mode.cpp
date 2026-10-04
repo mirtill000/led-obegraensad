@@ -346,6 +346,11 @@ void PetMode::update(uint32_t now) {
   lastDraw = now;
   walk(now);
   if ((int)petX > COLS - (int)sprite().w) petX = COLS - sprite().w;  // it grew
+  static Stage shown = stage();
+  if (stage() != shown) {
+    shown = stage();
+    display.beginPageTransition(900);  // the egg hatches
+  }
   draw(now);
 }
 

@@ -162,7 +162,7 @@ const SettingDef SETTING_DEFS[] = {
     {"textPos", "textPos", T::Text, F_(textPosition), 0, 0, "random", "random|top|middle|bottom|pages", SW, FX_RESTART, "text", nullptr, "Posizione del testo", "Altezza variabile|In alto|Al centro|In basso|A pagine ferme"},
     {"brightness", "brightness", T::U8, F_(brightness), 1, 255, "255", nullptr, SW, FX_MODES, nullptr, nullptr, "Luminosita'", nullptr},
     {"vertical", "vertical", T::Bool, F_(vertical), 0, 1, "0", nullptr, SW, FX_ROTATION | FX_RESTART, nullptr, nullptr, "Lampada verticale", nullptr},
-    {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|none", SW, FX_TRANSITION, nullptr, nullptr, "Passaggio", "Dissolvenza|Tendina da sinistra|Stacco netto"},
+    {"transition", "transition", T::Text, F_(transition), 0, 0, "fade", "fade|wipe|dissolve|none", SW, FX_TRANSITION, nullptr, nullptr, "Passaggio", "Dissolvenza|Tendina da sinistra|Pixel sparsi|Stacco netto"},
     {"clockStyle", "clockStyle", T::Text, F_(clockStyle), 0, 0, "weather", "weather|binary|words|wordsen", SW, FX_RESTART, "clock", nullptr, "Quadrante", "Ora e meteo|Binario|A parole|A parole, in inglese"},
     {"occasions", "occasions", T::Bool, F_(occasions), 0, 1, "1", nullptr, SW, FX_MODES, nullptr, nullptr, "Ricorrenze", nullptr},
     {"autoBright", "autoBright", T::Bool, F_(autoBright), 0, 1, "0", nullptr, SW, FX_MODES, nullptr, nullptr, "Segue il sole", nullptr},
@@ -506,6 +506,7 @@ TextFont fontForSettings() {
 
 Transition transitionForSettings() {
   if (settings.transition == "wipe") return Transition::Wipe;
+  if (settings.transition == "dissolve") return Transition::Dissolve;
   if (settings.transition == "none") return Transition::None;
   return Transition::Fade;
 }

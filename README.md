@@ -249,9 +249,14 @@ animation menu, ...). General settings are in collapsible sections:
   font A, proportional, lowercase; the default; 2 lines a page - and, when
   the lamp hangs vertically, a 6-px lowercase version so the text is
   shorter), *Piccola* (5 px, capitals only; 2 lines a page) or *Minima*
-  (4 px capitals; 3 lines a page). Also how the lamp goes from
-  one mode or animation to the next: *Dissolvenza* (cross-fade, 0.6 s, the
-  default), *Tendina da sinistra* (the new image sweeps in, 0.5 s) or
+  (4 px capitals; 3 lines a page). Also how the lamp changes picture -
+  one rule for everything (`beginTransition()` / `beginPageTransition()`
+  in `display.h`): a new scene (mode, animation, game, a drawing of the
+  gallery) comes in with *Dissolvenza* (cross-fade, 0.6 s, the default),
+  *Tendina da sinistra* (the new image sweeps in, 0.5 s), *Pixel sparsi*
+  (pixel by pixel in a scattered order, 0.7 s) or *Stacco netto*; a new
+  page within a scene (pages of a text, cards of Mondo, days of
+  Previsioni, the egg hatching) always cross-fades, unless it is
   *Stacco netto*.
 
 - **Notifiche dal telefono** - anything that can open a web address can

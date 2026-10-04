@@ -21,11 +21,12 @@
 //  Short - Small/Compact folded to 6 rows (font_short.h): "Media" when vertical
 enum class TextFont : uint8_t { Small, Big, Mini, Compact, Tiny, Short };
 
-// How the panel goes from one mode to the next (see beginTransition()).
-//  None - straight cut
-//  Fade - cross-fade from the old image to the new one
-//  Wipe - the new image sweeps in from the left, with a soft edge
-enum class Transition : uint8_t { None, Fade, Wipe };
+// How the panel goes from one scene to the next (see beginTransition()).
+//  None    - straight cut
+//  Fade    - cross-fade from the old image to the new one
+//  Wipe    - the new image sweeps in from the left, with a soft edge
+//  Dissolve - the new image appears pixel by pixel, in a scattered order
+enum class Transition : uint8_t { None, Fade, Wipe, Dissolve };
 
 class Display {
  public:
@@ -41,15 +42,17 @@ class Display {
   int drawChar(int x, int y, char c);
   void render();
 
-  // Blends from what is on the panel now to the frames rendered next, in
-  // the style set by setTransition(). Call it just before a new mode or
-  // animation starts drawing; tick() keeps the blend moving even if the
-  // new mode renders only once.
+  // The one way the panel changes picture (setting "transition"):
+  //  - beginTransition(): a new scene - a mode, an animation, a game, a
+  //    drawing of the gallery - in the style set by setTransition();
+  //  - beginPageTransition(): a new page within a scene - the pages of a
+  //    text, the cards of Mondo, the days of Previsioni, the egg hatching -
+  //    always a cross-fade (`ms` long), unless transitions are off.
+  // Call either just before drawing the new picture; tick() keeps the
+  // blend moving even if nothing renders after.
   void setTransition(Transition style) { transition_ = style; }
   void beginTransition();
-  // A cross-fade of `ms` whatever the transition setting (e.g. between the
-  // pages of one mode).
-  void beginFade(uint16_t ms);
+  void beginPageTransition(uint16_t ms = 500);
   void tick(uint32_t now);
 
   // How steady the grayscale refresh is, for the diagnostics page: plane
