@@ -773,7 +773,7 @@ drawCanvas();
 
 // The catalog (GET /api/catalog): every scene - modes, animations, games,
 // drawings - with the one id the playlist, the alarm and the notifications
-// use ("clock", "a/sea", "g/doom", "d/<id>"). Fetched once, and again when
+// use ("clock", "a/voxel", "g/doom", "d/<id>"). Fetched once, and again when
 // the drawings change.
 let scenes = null;
 function loadCatalog() {
@@ -786,7 +786,7 @@ function loadCatalog() {
     if (!dirty.playlist && state) { renderPlaylist(state.settings.playlist.split(',').filter(Boolean).map(splitItem)); }
   }).catch(() => {});
 }
-// "a/sea:10" -> ["a/sea", "10"] (the minutes after the last colon).
+// "a/voxel:10" -> ["a/voxel", "10"] (the minutes after the last colon).
 function splitItem(item) { const k = item.lastIndexOf(':'); return [item.slice(0, k), item.slice(k + 1)]; }
 // A <select> of scenes, grouped (Modalità, the animation groups, Giochi, Disegni).
 function fillScenes(sel, value) {

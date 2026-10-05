@@ -26,7 +26,7 @@
 // used by the web page's own buttons.
 //   k <L|R|U|D|A>        game key (lower case: player 2)
 //   v <scene>            show anything from the catalog: a mode ("clock"),
-//                        an animation ("a/sea"), a game ("g/doom"), a
+//                        an animation ("a/voxel"), a game ("g/doom"), a
 //                        drawing ("d/<id>") - see the catalog below
 //   m <mode id>          show a mode
 //   g <game id|auto>     play a game            a <anim id|auto>  an animation

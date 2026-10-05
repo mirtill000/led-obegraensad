@@ -135,7 +135,7 @@ src/
   live.cpp           - the frame and short-state formats shared by the page's live channel and Bluetooth
   formula.cpp        - the Formule mode's expression compiler and evaluator
   moon.cpp           - moon phase from the date, the sun's position
-  occasions.cpp      - special days (New Year, Christmas, Easter, ..., birthdays in the calendar)
+  occasions.cpp      - special days (New Year, Christmas, Halloween, ..., birthdays in the calendar)
   gallery.cpp        - drawings saved in flash (LittleFS)
   ble.cpp            - Bluetooth LE remote control (see "Bluetooth remote")
   commands.cpp       - the remote commands, the same for Bluetooth, /api/cmd and the page
@@ -228,7 +228,7 @@ animation menu, ...). General settings are in collapsible sections:
 
 - **Playlist** - scenes of the catalog (see *One catalog of scenes*
   below) shown in turn, each for the minutes you choose: a mode, a single
-  animation (*Volo sul mare* 10 min), a game (as a demo) or one of your
+  animation (*Volo sulle colline* 10 min), a game (as a demo) or one of your
   drawings; what the playlist picks doesn't change the animation, game or
   drawing chosen in their own modes (by default clock 10 min, quote 3 min,
   animations 5 min, games 5 min). With **Cambia per
@@ -420,14 +420,13 @@ Current modes:
     generations in a 3x3 grid) and the Wi-Fi sign connecting arc by arc
   - *Ricorrenze* (`src/animations/seasonal.cpp`): snow settling into
     drifts past a small pine, a Christmas tree with twinkling lights,
-    fireworks, floating hearts, a rocking Easter egg, a Halloween pumpkin
+    fireworks, floating hearts, a Halloween pumpkin
     lit by a flickering candle, a birthday cake whose greeting scrolls by.
     With **Ricorrenze** on (Impostazioni), on a special day the lamp shows
     its animation for the first minute of every hour, then goes back to
     what it was doing (not at night, not during a game): fireworks for New
     Year (from 22:00 on 31 December), the tree on 24-26 December, snow the
-    rest of December, hearts on Valentine's day, the egg on Easter Sunday
-    and Monday (computed for each year), the pumpkin on Halloween, the
+    rest of December, hearts on Valentine's day, the pumpkin on Halloween, the
     cake on a birthday of the calendar ("Dal web": an event today whose
     title says "compleanno" or "birthday", matched by day and month so
     Google's yearly birthdays count) - `src/occasions.cpp`
@@ -439,8 +438,7 @@ Current modes:
     twisting tiled pipe you fly down); and raymarched
     (`src/animations/raymarch.cpp`: scenes as signed distance functions,
     one ray per pixel corner shared by the four pixels around it, normals,
-    soft shadows): *Toro* (a torus turning over a floor, its soft shadow
-    on it), *Metaball 3D* (three spheres melting into each other as they
+    soft shadows): *Metaball 3D* (three spheres melting into each other as they
     orbit, with a glow along their edges), *Colonne infinite* (a hall of
     pillars without end, flown through, tiles on the floor and ceiling)
     and *Pianeta con anelli* (a banded planet lit from the side, the rings'
@@ -448,16 +446,9 @@ Current modes:
   - *3D e demo*, the flights (`src/animations/flights.cpp`): voxel
     landscapes, Comanche style - one ray per column walked front to back
     over a heightmap, with sub-pixel ridges, fog in the distance and a
-    camera that eases over the ground ahead. One engine (`Flight`), five
+    camera that eases over the ground ahead. One engine (`Flight`), three
     worlds that only say what the ground is and how it is lit:
     - *Volo sulle colline*: rolling hills, brighter with height;
-    - *Volo sul mare*: low over moving waves with foam on the crests,
-      heading for the real sun - or at night the moon, placed from its
-      phase - with its glittering path on the water and its glow (or its
-      disc, when low) on the horizon;
-    - *Nel canyon*: along a winding river between layered rock walls,
-      the walls ahead and those facing east catching the light, a slit
-      of sky above;
     - *Città di notte*: down an avenue between blocks of buildings, lit
       windows that now and then go on or off, blinking beacons on the
       towers; now and then the flight climbs over the roofs;
@@ -640,7 +631,7 @@ panel (its dimmest step is already a fifth of full light).
 
 Everything the lamp can show is a *scene* with one id (`include/catalog.h`,
 `src/catalog.cpp`): a mode by its id (`clock`, `pet`, `world`...), an
-animation as `a/<id>` (`a/sea`, `a/aquarium`), a game as `g/<id>`
+animation as `a/<id>` (`a/voxel`, `a/aquarium`), a game as `g/<id>`
 (`g/doom`), a drawing of the gallery as `d/<id>`. The same id is used
 everywhere:
 
@@ -650,7 +641,7 @@ everywhere:
 - the alarm (`alarmScene`: what comes on when the sunrise is over);
 - notifications (`icon=a/fireworks`: an animation before the text);
 - the API: `GET /api/catalog` lists every scene `{id, name, group, kind}`,
-  `POST /api/show` with `scene=a/sea` shows one, and `/api/state` says
+  `POST /api/show` with `scene=a/voxel` shows one, and `/api/state` says
   which is on (`"scene"`);
 - Bluetooth and the Cardputer: the command `v <scene>` and the catalog
   characteristic (its *Giochi*, *Modalita'*, *Animazioni* and *Disegni*
@@ -773,7 +764,7 @@ source: Bluetooth, the page's buttons and `POST /api/cmd` with `c=<command>`
 
 | Characteristic | | |
 |---|---|---|
-| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `v a/sea` (any scene of the catalog: `clock`, `a/sea`, `g/doom`, `d/<id>`), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9), `w 3 4 255` (paint a cell of the Game of Life's board), `w c` (clear it), `w l` (set it going) |
+| command `…0001` | write | one command per write: `k L` (key L/R/U/D/A), `v a/voxel` (any scene of the catalog: `clock`, `a/voxel`, `g/doom`, `d/<id>`), `m clock` (mode), `g doom` / `a rain` (game / animation, or `auto`), `d 0` / `d 1` (demo), `x` (mode button), `n` (next mode), `b 128` (brightness), `t text` (show a text), `p bell\|text` (notification), `s 5` (speed 1-9), `w 3 4 255` (paint a cell of the Game of Life's board), `w c` (clear it), `w l` (set it going) |
 | state `…0002` | read, notify | `{"m":"games","mn":"Giochi","x":"Prossimo gioco","g":"doom","gn":"Doom","d":0,"f":0,"c":"LRUDA","ca":"Spara","cl":"↶|↷|||Spara","n":1,"b":200,"t":"15:42"}`, sent when it changes (`n`: players, `s`: the mode's status line, for modes that have one) |
 | frame `…0003` | read, notify | 128 bytes: the 256 LEDs as levels 0-15, two per byte (high nibble first), row by row |
 | catalog `…0004` | read | the scene catalog: lines `M`/`A`/`G`/`D`, tab, id (without `a/`, `g/`, `d/`), tab, name: modes, animations, games, drawings; updated when a drawing is saved or deleted |

@@ -3,7 +3,6 @@
 // in steps as long as that distance. One engine (Raymarch) does the rays
 // (one per pixel corner, shared), the normals and a soft shadow; each scene
 // only says its shape, its light and where the camera is:
-//  - Toro: a torus turning over a floor, casting its soft shadow;
 //  - Metaball 3D: three spheres that melt into each other as they orbit;
 //  - Colonne infinite: a hall of pillars without end, flown through;
 //  - Pianeta con anelli: a planet with its rings, lit from the side, the
@@ -135,41 +134,6 @@ class Raymarch : public Animation {
 };
 
 // ---------------------------------------------------------------------------
-class TorusRender : public Raymarch {
- public:
-  const char *id() const override { return "torus"; }
-  const char *name() const override { return "Toro"; }
-
- protected:
-  float ax_ = 0, ay_ = 0;
-  void setup(float t) override {
-    ax_ = t * 0.7f;
-    ay_ = t * 0.45f;
-    lookAt({3.2f * sinf(t * 0.15f), 1.6f, -3.2f * cosf(t * 0.15f)}, {0, -0.1f, 0});
-  }
-  float sdf(V3 p, int *id) const override {
-    const V3 q = rotX(rotY(p, ay_), ax_);
-    const float ring = sqrtf(q.x * q.x + q.z * q.z) - 1.0f;
-    const float torus = sqrtf(ring * ring + q.y * q.y) - 0.4f;
-    const float floorD = p.y + 1.5f;
-    *id = torus < floorD ? 0 : 1;
-    return min(torus, floorD);
-  }
-  float light(const Hit &h, V3 dir) const override {
-    const V3 l = norm({-0.5f, 0.9f, -0.4f});
-    const float diff = max(0.0f, dot(h.n, l)) * shadow(h.p + h.n * 0.02f, l, 6);
-    if (h.id == 1) {
-      // The floor: dark, fading away, the torus's shadow on it.
-      const float fade = clamp01(1 - h.dist / 12);
-      return (0.02f + 0.16f * diff) * fade;
-    }
-    const V3 r = dir - h.n * (2 * dot(dir, h.n));
-    const float spec = powf(max(0.0f, dot(r, l)), 16);
-    return 0.2f + 0.7f * diff + 0.4f * spec;
-  }
-};
-
-// ---------------------------------------------------------------------------
 class MetaballRender : public Raymarch {
  public:
   const char *id() const override { return "metaball3d"; }
@@ -287,11 +251,9 @@ class PlanetRender : public Raymarch {
   }
 };
 
-static TorusRender torus;
 static MetaballRender metaball3d;
 static PillarsRender pillars;
 static PlanetRender planet;
-extern Animation *const torusAnimation = &torus;
 extern Animation *const metaball3dAnimation = &metaball3d;
 extern Animation *const pillarsAnimation = &pillars;
 extern Animation *const planetAnimation = &planet;

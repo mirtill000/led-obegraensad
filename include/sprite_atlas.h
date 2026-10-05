@@ -30,7 +30,6 @@ extern const Sprite GEEK_CUP;
 extern const Sprite GEEK_GLIDER;
 extern const Sprite SEASON_PINE;
 extern const Sprite SEASON_HEART;
-extern const Sprite SEASON_EGG;
 extern const Sprite SEASON_PUMPKIN;
 extern const Sprite SEASON_PUMPKIN_FACE;
 extern const Sprite SEASON_CAKE;

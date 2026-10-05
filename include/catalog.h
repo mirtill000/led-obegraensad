@@ -8,7 +8,7 @@
 // the playlist and its time slots, the alarm, the notifications, the page,
 // the API, Bluetooth and the Cardputer all use the same way:
 //   "clock", "pet", ...   a mode, as its id
-//   "a/sea"               an animation (shown by the Animazioni mode)
+//   "a/voxel"               an animation (shown by the Animazioni mode)
 //   "g/doom"              a game (Giochi; in demo when nobody picked it)
 //   "d/<id>"              a drawing of the gallery (Disegni)
 struct Scene {

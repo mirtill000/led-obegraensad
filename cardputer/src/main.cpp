@@ -451,7 +451,7 @@ void keys() {
       if (down && listPos + 1 < (int)listItems.size()) listPos++;
       if (k.enter && !listItems.empty()) {
         const lamp::Item &it = listItems[listPos];
-        // A scene of the catalog: "clock", "a/sea", "g/doom", "d/<id>"
+        // A scene of the catalog: "clock", "a/voxel", "g/doom", "d/<id>"
         // ("auto" is a choice of the Giochi / Animazioni modes, not a scene).
         if (it.id == "auto") send(String(listKind == 'G' ? "g " : "a ") + it.id, "Fatto");
         else send("v " + (listKind == 'M' ? it.id : String((char)(listKind + 32)) + "/" + it.id), "Fatto");

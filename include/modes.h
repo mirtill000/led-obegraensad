@@ -84,5 +84,5 @@ bool validModeId(const String &id);
 // the animation, game or drawing in it - shown at once; playlist off.
 // Doesn't save the settings. False if there is no such scene.
 bool showScene(const String &scene);
-// What is on the panel now, as a scene id ("a/sea", "clock"...).
+// What is on the panel now, as a scene id ("a/voxel", "clock"...).
 String currentScene();

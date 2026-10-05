@@ -1,5 +1,5 @@
 // "Ricorrenze": animations for special days (see occasions.h) - snow,
-// a Christmas tree, fireworks, hearts, an Easter egg, a Halloween pumpkin
+// a Christmas tree, fireworks, hearts, a Halloween pumpkin
 // and a birthday cake with the greeting from the calendar.
 #include <math.h>
 #include <string.h>
@@ -214,20 +214,6 @@ class HeartsAnimation : public Seasonal {
 };
 
 // ---------------------------------------------------------------------------
-// An Easter egg with a zigzag band and dots, rocking from side to side.
-class EasterEggAnimation : public Seasonal {
- public:
-  const char *id() const override { return "easter"; }
-  const char *name() const override { return "Uovo di Pasqua"; }
-  uint16_t frameMs() const override { return 120; }
-  void frame(uint32_t now) override {
-    display.clear();
-    const int rock = (int)lroundf(sinf(now / 450.0f) * 1.2f);
-    sprites::draw(spr::SEASON_EGG, 2 + rock, 2, 0, 70);
-  }
-};
-
-// ---------------------------------------------------------------------------
 // A Halloween pumpkin, its carved face lit by a flickering candle.
 class PumpkinAnimation : public Seasonal {
  public:
@@ -293,7 +279,6 @@ SnowAnimation snow;
 XmasTreeAnimation xmasTree;
 FireworksAnimation fireworks;
 HeartsAnimation hearts;
-EasterEggAnimation easterEgg;
 PumpkinAnimation pumpkin;
 CakeAnimation cake;
 
@@ -303,6 +288,5 @@ extern Animation *const snowAnimation = &snow;
 extern Animation *const xmasTreeAnimation = &xmasTree;
 extern Animation *const fireworksAnimation = &fireworks;
 extern Animation *const heartsAnimation = &hearts;
-extern Animation *const easterEggAnimation = &easterEgg;
 extern Animation *const pumpkinAnimation = &pumpkin;
 extern Animation *const cakeAnimation = &cake;

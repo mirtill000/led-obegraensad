@@ -12,7 +12,6 @@
 //   24-26 Dec                      Christmas tree Natale
 //   the rest of December           snow          Dicembre
 //   14 Feb                         hearts        San Valentino
-//   Easter Sunday and Monday       egg           Pasqua
 //   31 Oct                         pumpkin       Halloween
 //   a birthday in the calendar     cake          Compleanno (wins over the rest)
 //
@@ -27,8 +26,6 @@ struct Occasion {
 Occasion occasionOn(const struct tm &local, const String &birthday);
 Occasion occasionNow();
 
-// Easter Sunday of `year` (Gregorian, the anonymous algorithm).
-void easterDate(int year, int &month, int &day);
 // "Buon compleanno, Anna!" from a calendar title ("Compleanno di Anna",
 // "Anna's birthday", ...).
 String birthdayGreeting(const String &title);

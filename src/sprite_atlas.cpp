@@ -138,11 +138,6 @@ static const char *const SEASON_HEART_ROWS[] = {
 };
 const Sprite SEASON_HEART = {"season.heart", 5, 5, 1, 0, SEASON_HEART_ROWS};
 
-static const char *const SEASON_EGG_ROWS[] = {
-    "....####....", "...######...", "..########..", "..#+##+##+..", ".##########.", ".#+#+#+#+#+.", ".+#+#+#+#+#.", ".##########.", ".##+##+##+#.", "..########..", "..########..", "...######...", "....####....",
-};
-const Sprite SEASON_EGG = {"season.egg", 12, 13, 1, 0, SEASON_EGG_ROWS};
-
 static const char *const SEASON_PUMPKIN_ROWS[] = {
     "......##......", "......#.......", "..##########..", ".############.", "##############", "##############", "##############", "##############", "##############", ".############.", "..##########..",
 };
@@ -363,7 +358,6 @@ const Sprite *const ATLAS[] = {
     &spr::GEEK_GLIDER,
     &spr::SEASON_PINE,
     &spr::SEASON_HEART,
-    &spr::SEASON_EGG,
     &spr::SEASON_PUMPKIN,
     &spr::SEASON_PUMPKIN_FACE,
     &spr::SEASON_CAKE,

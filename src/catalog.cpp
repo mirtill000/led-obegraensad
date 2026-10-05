@@ -6,7 +6,7 @@
 
 namespace {
 
-// "a/sea" -> the animation (of the right kind), or nullptr.
+// "a/voxel" -> the animation (of the right kind), or nullptr.
 const Animation *animationOf(const String &id, bool game) {
   const Animation *a = findAnimation(id.substring(2));
   return a && !a->isClockFace() && a->isGame() == game ? a : nullptr;
