@@ -707,7 +707,8 @@ void webBegin() {
   server.on("/api/diag", HTTP_GET, handleDiag);
   server.on("/api/diag/reset", HTTP_POST, [] {
     Display::resetRefreshStats();
-    loopRounds = loopMaxUs = 0;
+    loopRounds = 0;
+    loopMaxUs = 0;
     loopSince = millis();
     server.send(204);
   });
