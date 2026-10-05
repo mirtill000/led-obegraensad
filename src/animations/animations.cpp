@@ -30,6 +30,14 @@ extern Animation *const gameBoyIconAnimation;
 extern Animation *const matrixIconAnimation;
 extern Animation *const gliderIconAnimation;
 extern Animation *const wifiIconAnimation;
+extern Animation *const skullIconAnimation;
+extern Animation *const bulbIconAnimation;
+extern Animation *const houseIconAnimation;
+extern Animation *const burgerIconAnimation;
+extern Animation *const computerIconAnimation;
+extern Animation *const birdIconAnimation;
+extern Animation *const robotIconAnimation;
+extern Animation *const diceIconAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
 extern Animation *const englishWordClockAnimation;
@@ -83,6 +91,14 @@ Animation *const ANIMATIONS[] = {
     matrixIconAnimation,
     gliderIconAnimation,
     wifiIconAnimation,
+    skullIconAnimation,
+    bulbIconAnimation,
+    houseIconAnimation,
+    burgerIconAnimation,
+    computerIconAnimation,
+    birdIconAnimation,
+    robotIconAnimation,
+    diceIconAnimation,
     binaryClockAnimation,
     wordClockAnimation,
     englishWordClockAnimation,

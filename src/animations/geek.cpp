@@ -1,6 +1,8 @@
 // "Icone geek": small pixel-art loops - a Space Invader, Pac-Man with a
 // ghost, a terminal typing commands, a rocket among the stars, a coffee
-// cup, a floppy disk, a Game Boy, Matrix rain, the hacker emblem, Wi-Fi.
+// cup, a floppy disk, a Game Boy, Matrix rain, the hacker emblem, Wi-Fi,
+// a skull, a light bulb, a little house, a burger, an old computer, a
+// bird, a robot and a die.
 #include <math.h>
 
 #include "animation.h"
@@ -495,6 +497,263 @@ class WifiIcon : public GeekAnimation {
   uint32_t tick_ = 0;
 };
 
+// ---------------------------------------------------------------------------
+// A skull that chatters its teeth now and then, its eyes glowing.
+class SkullIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "skull"; }
+  const char *name() const override { return "Teschio"; }
+  uint16_t frameMs() const override { return 90; }
+  void frame(uint32_t) override {
+    tick_++;
+    display.clear();
+    const uint32_t c = tick_ % 50;
+    const bool chatter = c < 14;
+    const int jaw = chatter ? (tick_ / 2) % 2 : 0;
+    const int y = 2 + (chatter ? 0 : (tick_ / 12) % 2);
+    glow_ = (uint8_t)(70 + 185 * fabsf(sinf(tick_ * 0.12f)));
+    sprites::draw(spr::GEEK_SKULL, 2, y, jaw, 255, eyes, this);
+  }
+
+ private:
+  static int eyes(char mark, uint8_t, void *self) { return mark == 'e' ? static_cast<SkullIcon *>(self)->glow_ : 255; }
+  uint32_t tick_ = 0;
+  uint8_t glow_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// A light bulb switching on: the filament flickers, the glass fills with
+// light, rays shine around it; after a while it goes out again.
+class BulbIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "bulb"; }
+  const char *name() const override { return "Lampadina"; }
+  uint16_t frameMs() const override { return 60; }
+  void frame(uint32_t) override {
+    tick_++;
+    display.clear();
+    const uint32_t c = tick_ % 130;
+    float on = 0;  // 0 off .. 1 fully lit
+    if (c >= 20 && c < 36) on = esp_random() % 3 ? 0.9f : 0.1f;  // flickering on
+    else if (c >= 36 && c < 115) on = 1;
+    else if (c >= 115) on = 1 - (c - 115) / 15.0f;                // fading out
+    light_ = on;
+    sprites::draw(spr::GEEK_BULB, 2, 1, 0, 255, parts, this);
+    if (on > 0.5f) {
+      // Rays: eight short strokes around the glass, breathing.
+      static const int8_t RAYS[8][2] = {{7, -1}, {12, 1}, {14, 5}, {12, 9}, {2, 9}, {0, 5}, {2, 1}, {-1, -1}};
+      for (int i = 0; i < 7; i++) {
+        const float b = on * (0.35f + 0.25f * sinf(tick_ * 0.3f + i));
+        gfx::plot(RAYS[i][0], RAYS[i][1] + 1, b);
+      }
+    }
+  }
+
+ private:
+  static int parts(char mark, uint8_t, void *self) {
+    const float on = static_cast<BulbIcon *>(self)->light_;
+    if (mark == 'f') return on > 0 ? gfx::level(0.25f + 0.75f * on) : 40;  // the filament
+    if (mark == 'g') return on > 0.05f ? gfx::level(0.45f * on) : -1;       // the glass
+    return 255;
+  }
+  uint32_t tick_ = 0;
+  float light_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// A little house at dusk: smoke curls from the chimney, the windows light
+// up one after the other, then go dark again.
+class HouseIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "house"; }
+  const char *name() const override { return "Casetta"; }
+  uint16_t frameMs() const override { return 120; }
+  void frame(uint32_t) override {
+    tick_++;
+    display.clear();
+    const uint32_t c = tick_ % 100;
+    lit_ = c < 15 ? 0 : c < 30 ? 1 : c < 85 ? 2 : c < 92 ? 1 : 0;  // windows on
+    sprites::draw(spr::GEEK_HOUSE, 1, 3, 0, 255, parts, this);
+    // Smoke: three puffs rising from the chimney (x 11-12, top row 3).
+    for (int p = 0; p < 3; p++) {
+      const float age = fmodf(tick_ * 0.08f + p / 3.0f, 1.0f);
+      const float x = 11.5f + sinf(age * 6 + p) * 0.8f + age * 1.5f, y = 3 - age * 4;
+      if (y >= 0) gfx::plot((int)lroundf(x), (int)lroundf(y), 0.45f * (1 - age));
+    }
+  }
+
+ private:
+  static int parts(char mark, uint8_t, void *self) {
+    const int lit = static_cast<HouseIcon *>(self)->lit_;
+    if (mark == 'w') return lit ? 255 : 45;  // (both windows go on together after the first)
+    if (mark == 'd') return 90;              // the door
+    return 255;
+  }
+  uint32_t tick_ = 0;
+  int lit_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// A burger whose top bun hops up and lands again, sesame seeds glinting.
+class BurgerIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "burger"; }
+  const char *name() const override { return "Hamburger"; }
+  uint16_t frameMs() const override { return 70; }
+  void frame(uint32_t) override {
+    tick_++;
+    display.clear();
+    const uint32_t c = tick_ % 40;
+    const int hop = c < 12 ? (int)lroundf(3 * sinf(c / 12.0f * (float)M_PI)) : 0;
+    sprites::draw(spr::GEEK_BURGER_BOTTOM, 1, 9);
+    sprites::draw(spr::GEEK_BURGER_TOP, 1, 5 - hop, 0, 255, seeds, this);
+  }
+
+ private:
+  static int seeds(char, uint8_t, void *self) {
+    return (static_cast<BurgerIcon *>(self)->tick_ / 3) % 4 ? 70 : 0;  // a seed glints dark-light
+  }
+  uint32_t tick_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// An old computer showing its screensaver: a ball bouncing round the
+// screen, leaving a fading trail.
+class ComputerIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "computer"; }
+  const char *name() const override { return "Computer"; }
+  uint16_t frameMs() const override { return 50; }
+  void start() override {
+    x_ = 3;
+    y_ = 4;
+    vx_ = 0.45f;
+    vy_ = 0.3f;
+    for (auto &t : trail_) t[0] = t[1] = -1;
+  }
+  void frame(uint32_t) override {
+    // The screen's inside: columns 2-13, rows 3-9.
+    x_ += vx_;
+    y_ += vy_;
+    if (x_ < 2 || x_ > 13) vx_ = -vx_, x_ = constrain(x_, 2.0f, 13.0f);
+    if (y_ < 3 || y_ > 9) vy_ = -vy_, y_ = constrain(y_, 3.0f, 9.0f);
+    for (int i = TRAIL - 1; i > 0; i--) {
+      trail_[i][0] = trail_[i - 1][0];
+      trail_[i][1] = trail_[i - 1][1];
+    }
+    trail_[0][0] = (int)lroundf(x_);
+    trail_[0][1] = (int)lroundf(y_);
+    display.clear();
+    sprites::draw(spr::GEEK_MONITOR, 1, 2);
+    for (int i = TRAIL - 1; i >= 0; i--) {
+      if (trail_[i][0] >= 0) gfx::plot(trail_[i][0], trail_[i][1], i ? 0.5f - i * 0.08f : 1.0f);
+    }
+  }
+
+ private:
+  static const int TRAIL = 6;
+  float x_ = 3, y_ = 4, vx_ = 0.45f, vy_ = 0.3f;
+  int trail_[TRAIL][2];
+};
+
+// ---------------------------------------------------------------------------
+// A little bird hopping along the ground, flicking its tail, stopping to
+// peck.
+class BirdIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "bird"; }
+  const char *name() const override { return "Uccellino"; }
+  uint16_t frameMs() const override { return 80; }
+  void frame(uint32_t) override {
+    tick_++;
+    display.clear();
+    for (int x = 0; x < COLS; x += 2) display.setLevel(x, 14, 40);  // the ground
+    const uint32_t c = tick_ % 24;
+    int y = 7, frame = 0;
+    if (c < 8) {  // a hop forward
+      y -= (int)lroundf(2.5f * sinf(c / 8.0f * (float)M_PI));
+      frame = 1;
+      x_ += 0.5f;
+    } else if (c >= 14 && c < 20) {
+      y += (c / 2) % 2;  // pecking
+    }
+    if (x_ > COLS) x_ = -9;
+    sprites::draw(spr::GEEK_BIRD, (int)x_, y, frame, 255, eye, this);
+  }
+
+ private:
+  static int eye(char mark, uint8_t, void *self) {
+    if (mark != 'e') return 255;
+    return static_cast<BirdIcon *>(self)->tick_ % 30 < 2 ? 255 : 0;  // blinks now and then
+  }
+  uint32_t tick_ = 0;
+  float x_ = 2;
+};
+
+// ---------------------------------------------------------------------------
+// A robot pacing back and forth, its antenna blinking and its eyes
+// scanning left and right.
+class RobotIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "robot"; }
+  const char *name() const override { return "Robot"; }
+  uint16_t frameMs() const override { return 140; }
+  void frame(uint32_t) override {
+    tick_++;
+    display.clear();
+    const int span = 6, p = tick_ % (2 * span);
+    const int x = 1 + (p < span ? p : 2 * span - p);
+    sprites::draw(spr::GEEK_ROBOT, x, 1, tick_ % 2, 220, parts, this);
+  }
+
+ private:
+  static int parts(char mark, uint8_t level, void *self) {
+    const uint32_t t = static_cast<RobotIcon *>(self)->tick_;
+    if (mark == 'a') return t % 4 < 2 ? 255 : 30;  // the antenna light
+    if (mark == 'e') return 255;
+    return level;
+  }
+  uint32_t tick_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// A die rolling: it rattles, its faces flashing by slower and slower, then
+// it settles on a number for a moment.
+class DiceIcon : public GeekAnimation {
+ public:
+  const char *id() const override { return "dice"; }
+  const char *name() const override { return "Dado"; }
+  uint16_t frameMs() const override { return 60; }
+  void frame(uint32_t) override {
+    tick_++;
+    const uint32_t c = tick_ % 70;
+    int dx = 0, dy = 0;
+    if (c < 35) {
+      // Rolling: a new face more and more rarely, a shake each time.
+      const uint32_t every = 1 + c / 7;
+      if (c % every == 0) {
+        face_ = (face_ + 1 + esp_random() % 5) % 6;
+        dx = (int)(esp_random() % 3) - 1;
+        dy = (int)(esp_random() % 3) - 1;
+      }
+    }
+    display.clear();
+    const int x0 = 2 + dx, y0 = 2 + dy;
+    sprites::draw(spr::GEEK_DIE, x0, y0);
+    // Pips, 2x2, on a 3x3 grid inside the die.
+    static const uint16_t FACES[6] = {0x010, 0x101, 0x111, 0x145, 0x155, 0x16D};  // bit 8 = top left .. bit 0 = bottom right
+    for (int i = 0; i < 9; i++) {
+      if (!(FACES[face_] & (0x100 >> i))) continue;
+      const int px = x0 + 2 + (i % 3) * 3, py = y0 + 2 + (i / 3) * 3;
+      for (int k = 0; k < 4; k++) display.setLevel(px + k % 2, py + k / 2, 255);
+    }
+  }
+
+ private:
+  uint32_t tick_ = 0;
+  uint8_t face_ = 0;
+};
+
 InvaderIcon invader;
 PacManIcon pacIcon;
 TerminalIcon terminal;
@@ -505,6 +764,14 @@ GameBoyIcon gameBoy;
 MatrixIcon matrix;
 GliderIcon glider;
 WifiIcon wifi;
+SkullIcon skull;
+BulbIcon bulb;
+HouseIcon house;
+BurgerIcon burger;
+ComputerIcon computer;
+BirdIcon bird;
+RobotIcon robot;
+DiceIcon dice;
 
 }  // namespace
 
@@ -518,3 +785,11 @@ extern Animation *const gameBoyIconAnimation = &gameBoy;
 extern Animation *const matrixIconAnimation = &matrix;
 extern Animation *const gliderIconAnimation = &glider;
 extern Animation *const wifiIconAnimation = &wifi;
+extern Animation *const skullIconAnimation = &skull;
+extern Animation *const bulbIconAnimation = &bulb;
+extern Animation *const houseIconAnimation = &house;
+extern Animation *const burgerIconAnimation = &burger;
+extern Animation *const computerIconAnimation = &computer;
+extern Animation *const birdIconAnimation = &bird;
+extern Animation *const robotIconAnimation = &robot;
+extern Animation *const diceIconAnimation = &dice;

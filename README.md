@@ -417,7 +417,16 @@ Current modes:
     with steam, a 3.5" floppy (the shutter slides, lines get written on
     the label), a Game Boy with a Tetris piece falling on its screen,
     Matrix rain, the hacker emblem (a glider going through its four
-    generations in a 3x3 grid) and the Wi-Fi sign connecting arc by arc
+    generations in a 3x3 grid), the Wi-Fi sign connecting arc by arc, and
+    eight more drawn after a sheet of pixel-art icons: *Teschio* (it
+    chatters its teeth, its eyes glow), *Lampadina* (it flickers on, the
+    glass fills with light, rays shine, then it goes out), *Casetta*
+    (smoke from the chimney, windows lighting up), *Hamburger* (the top
+    bun hops, sesame seeds glint), *Computer* (a bouncing-ball
+    screensaver with a trail), *Uccellino* (it hops along the ground and
+    pecks, blinking), *Robot* (pacing, antenna blinking) and *Dado* (it
+    rolls, faces flashing by slower and slower, then settles); their
+    pictures are in the sprite atlas (`geek.*`), retouchable from the page
   - *Ricorrenze* (`src/animations/seasonal.cpp`): snow settling into
     drifts past a small pine, a Christmas tree with twinkling lights,
     fireworks, floating hearts, a Halloween pumpkin
