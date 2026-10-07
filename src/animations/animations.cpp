@@ -51,6 +51,8 @@ extern Animation *const solidCubeAnimation;
 extern Animation *const tunnelAnimation;
 extern Animation *const metaball3dAnimation;
 extern Animation *const planetAnimation;
+extern Animation *const saturnMoonAnimation;
+extern Animation *const saturnCloseAnimation;
 extern Animation *const voxelAnimation;
 extern Animation *const cityAnimation;
 extern Animation *const cloudsAnimation;
@@ -116,6 +118,8 @@ Animation *const ANIMATIONS[] = {
     tunnelAnimation,
     metaball3dAnimation,
     planetAnimation,
+    saturnMoonAnimation,
+    saturnCloseAnimation,
     voxelAnimation,
     cityAnimation,
     cloudsAnimation,

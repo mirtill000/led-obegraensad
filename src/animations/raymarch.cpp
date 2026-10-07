@@ -3,9 +3,7 @@
 // in steps as long as that distance. One engine (Raymarch) does the rays
 // (one per pixel corner, shared), the normals and a soft shadow; each scene
 // only says its shape, its light and where the camera is:
-//  - Metaball 3D: three spheres that melt into each other as they orbit;
-//  - Pianeta con anelli: a planet with its rings, lit from the side, the
-//    rings' shadow on it and its shadow on the rings, among stars.
+//  - Metaball 3D: three spheres that melt into each other as they orbit.
 #include <math.h>
 
 #include "animation.h"
@@ -32,12 +30,6 @@ inline V3 rotX(V3 p, float a) { return {p.x, p.y * cosf(a) - p.z * sinf(a), p.y 
 inline float smin(float a, float b, float k) {
   const float h = clamp01(0.5f + 0.5f * (b - a) / k);
   return mixf(b, a, h) - k * h * (1 - h);
-}
-float hash01(int a, int b) {
-  uint32_t h = (uint32_t)a * 0x8da6b343u ^ (uint32_t)b * 0xd8163841u;
-  h ^= h >> 15;
-  h *= 0x2c1b3c6du;
-  return (h >> 8 & 0xFFFF) / 65535.0f;
 }
 
 }  // namespace
@@ -163,57 +155,5 @@ class MetaballRender : public Raymarch {
   }
 };
 
-// ---------------------------------------------------------------------------
-class PlanetRender : public Raymarch {
- public:
-  const char *id() const override { return "planet"; }
-  const char *name() const override { return "Pianeta con anelli"; }
-
- protected:
-  float spin_ = 0;
-  void setup(float t) override {
-    spin_ = t * 0.25f;
-    const float a = 0.35f + 0.25f * sinf(t * 0.07f);
-    lookAt({4.8f * sinf(t * 0.05f), 4.8f * sinf(a), -4.8f * cosf(t * 0.05f) * cosf(a)}, {0, 0, 0});
-    zoom_ = 1.5f;
-  }
-  // The planet tilted 25 degrees; the rings a thin flat torus around it.
-  static V3 tilt(V3 p) { return rotX(p, 0.44f); }
-  float sdf(V3 p, int *id) const override {
-    const float planet = len(p) - 1.0f;
-    const V3 q = tilt(p);
-    const float r = sqrtf(q.x * q.x + q.z * q.z);
-    const float band = max(fabsf(r - 1.75f) - 0.45f, fabsf(q.y) - 0.015f);  // 1.3 .. 2.2 wide, paper thin
-    *id = planet < band ? 0 : 1;
-    return min(planet, band);
-  }
-  float light(const Hit &h, V3 dir) const override {
-    const V3 l = norm({1, 0.25f, -0.3f});  // the sun, from the side
-    if (h.id == 0) {
-      // Bands of cloud across the planet, turning; the rings' shadow.
-      const V3 q = tilt(h.p);
-      const float lat = q.y, lon = atan2f(q.z, q.x) + spin_;
-      const float bands = 0.75f + 0.25f * sinf(lat * 9 + 0.6f * sinf(lon * 2));
-      const float diff = max(0.0f, dot(h.n, l)) * shadow(h.p + h.n * 0.02f, l, 4);
-      return (0.04f + 0.85f * diff) * bands;
-    }
-    // The rings: grooves, lit on both faces, dark where the planet hides the sun.
-    const V3 q = tilt(h.p);
-    const float r = sqrtf(q.x * q.x + q.z * q.z);
-    const float grooves = 0.55f + 0.45f * sinf(r * 22) * sinf(r * 7);
-    const float gap = fabsf(r - 1.85f) < 0.07f ? 0.2f : 1;  // a division
-    const float lit = shadow(h.p + l * 0.03f, l, 4);
-    return (0.06f + 0.6f * lit) * grooves * gap;
-  }
-  float background(V3 dir, float u, float v) const override {
-    // Fixed stars, twinkling a little.
-    const int sx = (int)floorf((atan2f(dir.x, dir.z) + 4) * 9), sy = (int)floorf((dir.y + 2) * 9);
-    const float r = hash01(sx, sy);
-    return r < 0.05f ? 0.25f + 0.15f * sinf(t_ * 2 + r * 100) : 0;
-  }
-};
-
 static MetaballRender metaball3d;
-static PlanetRender planet;
 extern Animation *const metaball3dAnimation = &metaball3d;
-extern Animation *const planetAnimation = &planet;

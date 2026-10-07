@@ -475,8 +475,12 @@ Current modes:
     (`src/animations/raymarch.cpp`: scenes as signed distance functions,
     one ray per pixel corner shared by the four pixels around it, normals,
     soft shadows): *Metaball 3D* (three spheres melting into each other as they
-    orbit, with a glow along their edges) and *Pianeta con anelli* (a banded planet lit from the side, the rings'
-    shadow on it and its shadow on the rings, among stars)
+    orbit, with a glow along their edges); and Saturn, drawn flat so it
+    reads at 16x16 (`src/animations/saturn.cpp`): *Saturno* (the classic
+    picture, the rings rocking slowly, their shadow across the planet's
+    bands), *Saturno e la luna* (half lit by the sun, a moon going round
+    it, behind the planet and then in front) and *Saturno da vicino* (a
+    close-up, the planet in a corner, its grooved rings across the sky)
   - *3D e demo*, the flights (`src/animations/flights.cpp`): voxel
     landscapes, Comanche style - one ray per column walked front to back
     over a heightmap, with sub-pixel ridges, fog in the distance and a
