@@ -168,7 +168,7 @@ function render() {
     gsel.add(new Option('Automatica (cambia ogni 5 minuti, in demo)', 'auto'));
     let group = null;
     for (const a of s.animations) {
-      if (a.clock) continue;  // the Orologio's faces
+      if (a.clock || a.off) continue;  // the Orologio's faces; seasonal ones out of season
       if (a.game) { gsel.add(new Option(a.name, a.id)); continue; }
       if (!group || group.label !== a.group) { group = document.createElement('optgroup'); group.label = a.group; sel.appendChild(group); }
       group.appendChild(new Option(a.name, a.id));

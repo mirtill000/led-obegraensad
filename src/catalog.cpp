@@ -34,6 +34,7 @@ std::vector<Scene> catalog() {
     for (uint8_t i = 0; i < ANIMATION_COUNT; i++) {
       const Animation *a = ANIMATIONS[i];
       if (a->isClockFace() || a->isGame() != (games == 1)) continue;  // clock faces: styles of the Orologio
+      if (!a->available()) continue;                                   // out of season
       if (games) out.push_back({String("g/") + a->id(), a->name(), "Giochi", 'G'});
       else out.push_back({String("a/") + a->id(), a->name(), a->group(), 'A'});
     }
@@ -60,6 +61,12 @@ bool sceneTarget(const String &id, String &modeId, String &pick) {
   if (!validModeId(id)) return false;
   modeId = id;
   return true;
+}
+
+bool sceneAvailable(const String &id) {
+  if (!id.startsWith("a/") && !id.startsWith("g/")) return true;
+  const Animation *a = animationOf(id, id[0] == 'g');
+  return a && a->available();
 }
 
 bool validScene(const String &id) {

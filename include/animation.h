@@ -37,6 +37,10 @@ class Animation {
   virtual uint16_t frameMs() const = 0;
   virtual bool needsTime() const { return false; }  // skipped in "auto" until the clock syncs
   virtual bool fixedStep() const { return false; }  // moves one step per frame (see above)
+  // Whether it is offered now: the seasonal ones only around their days
+  // (occasions.h). Out of it, an animation is left out of the lists, the
+  // automatic choice, the catalog and the playlist.
+  virtual bool available() const { return true; }
   // An animation you can nudge (feed the fish...): what the page's button
   // says, nullptr if none. poke() comes from that button or from key A.
   virtual const char *pokeName() const { return nullptr; }

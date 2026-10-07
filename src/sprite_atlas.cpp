@@ -179,10 +179,18 @@ static const char *const GEEK_DIE_ROWS[] = {
 };
 const Sprite GEEK_DIE = {"geek.die", 12, 12, 1, 0, GEEK_DIE_ROWS};
 
+// A pine under the snow: s snow on the branches, # the dark needles.
 static const char *const SEASON_PINE_ROWS[] = {
-    "..#..", ".###.", "..#..", ".###.", "#####", "..#..",
+    "..s..", ".s#s.", "..#..", ".s#s.", "s###s", ".s#s.", "ss#ss", "..#..",
 };
-const Sprite SEASON_PINE = {"season.pine", 5, 6, 1, 0, SEASON_PINE_ROWS};
+const Sprite SEASON_PINE = {"season.pine", 5, 8, 1, 0, SEASON_PINE_ROWS};
+
+// A cottage in the snow: s the snow on its roof, c the chimney, # the
+// walls, w the lit window, d the door.
+static const char *const SEASON_COTTAGE_ROWS[] = {
+    "......c...", "....ssc...", "...ssssss.", "..ssssssss", "...#ww#dd.", "...#ww#dd.",
+};
+const Sprite SEASON_COTTAGE = {"season.cottage", 10, 6, 1, 0, SEASON_COTTAGE_ROWS};
 
 static const char *const SEASON_HEART_ROWS[] = {
     ".#.#.", "#####", "#####", ".###.", "..#..",
@@ -417,6 +425,7 @@ const Sprite *const ATLAS[] = {
     &spr::GEEK_ROBOT,
     &spr::GEEK_DIE,
     &spr::SEASON_PINE,
+    &spr::SEASON_COTTAGE,
     &spr::SEASON_HEART,
     &spr::SEASON_PUMPKIN,
     &spr::SEASON_PUMPKIN_FACE,

@@ -26,6 +26,9 @@ std::vector<Scene> catalog();
 // (cheap enough for every second): validScene() does that.
 bool sceneTarget(const String &id, String &modeId, String &pick);
 bool validScene(const String &id);
+// Whether a (valid) scene can be shown now: a seasonal animation only
+// around its days. The playlist skips the others; showing one is refused.
+bool sceneAvailable(const String &id);
 String sceneName(const String &id);
 // The catalog as JSON for the page: [{id, name, group, kind}].
 String catalogJson();

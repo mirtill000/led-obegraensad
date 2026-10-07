@@ -38,6 +38,7 @@ extern const Sprite GEEK_BIRD;
 extern const Sprite GEEK_ROBOT;
 extern const Sprite GEEK_DIE;
 extern const Sprite SEASON_PINE;
+extern const Sprite SEASON_COTTAGE;
 extern const Sprite SEASON_HEART;
 extern const Sprite SEASON_PUMPKIN;
 extern const Sprite SEASON_PUMPKIN_FACE;

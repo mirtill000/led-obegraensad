@@ -112,6 +112,7 @@ static String stateJson() {
     if (ANIMATIONS[i]->isGame()) json += ",\"style\":" + jsonString(styleId(ANIMATIONS[i]->style()));
     if (ANIMATIONS[i]->isClockFace()) json += ",\"clock\":true";
     if (ANIMATIONS[i]->pokeName()) json += ",\"poke\":" + jsonString(ANIMATIONS[i]->pokeName());
+    if (!ANIMATIONS[i]->available()) json += ",\"off\":true";  // out of season
     json += "}";
   }
   json += "]";

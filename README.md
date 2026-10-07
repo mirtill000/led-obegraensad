@@ -427,10 +427,21 @@ Current modes:
     pecks, blinking), *Robot* (pacing, antenna blinking) and *Dado* (it
     rolls, faces flashing by slower and slower, then settles); their
     pictures are in the sprite atlas (`geek.*`), retouchable from the page
-  - *Ricorrenze* (`src/animations/seasonal.cpp`): snow settling into
-    drifts past a small pine, a Christmas tree with twinkling lights,
+  - *Ricorrenze* (`src/animations/seasonal.cpp`): *Neve* (a snowy
+    night: a crescent moon and stars, a far white ridge, a pine and a
+    cottage with snow on the roof, its window flickering like a fire and
+    smoke bent by the wind; the snow falls in three depths - far flakes
+    small, dim and slow, near ones bright and quick - blown by gusts, and
+    settles in drifts that grow and slowly sink back), a Christmas tree
+    with twinkling lights,
     fireworks, floating hearts, a Halloween pumpkin
     lit by a flickering candle, a birthday cake whose greeting scrolls by.
+    They are offered only around their days - in the lists, the automatic
+    choice, the catalog and the playlist (which skips them otherwise):
+    snow December - February, the tree 1 December - 6 January, fireworks
+    26 December - 6 January, hearts 1 - 15 February, the pumpkin 15
+    October - 2 November, the cake on a birthday (`inSeason()` in
+    `occasions.cpp`; `v a/pumpkin` in July answers "Fuori stagione").
     With **Ricorrenze** on (Impostazioni), on a special day the lamp shows
     its animation for the first minute of every hour, then goes back to
     what it was doing (not at night, not during a game): fireworks for New

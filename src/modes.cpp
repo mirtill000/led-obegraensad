@@ -144,6 +144,7 @@ static bool playlistItem(int n, int &mode, uint32_t &minutes, String &pick) {
       if (colon < 0) return false;
       String modeId;
       if (!sceneTarget(item.substring(0, colon), modeId, pick)) return false;
+      if (!sceneAvailable(item.substring(0, colon))) return false;  // out of season: skipped
       mode = indexOf(modeId);
       minutes = item.substring(colon + 1).toInt();
       return mode >= 0 && minutes > 0;
@@ -197,8 +198,15 @@ static void evaluate(uint32_t now) {
       playlistPos++;
       playlistSince = now;
     }
-    if (!playlistItem(playlistPos, mode, minutes, pick)) playlistPos = 0;  // wrap around
-    if (playlistItem(playlistPos, mode, minutes, pick)) wanted = mode;
+    // The next item that can be shown (skipping the ones out of season),
+    // wrapping around.
+    bool found = false;
+    for (int tries = 0; tries < 24 && !found; tries++) {
+      found = playlistItem(playlistPos, mode, minutes, pick);
+      if (!found) playlistPos = tries < 12 ? playlistPos + 1 : 0;
+      if (playlistPos >= 12) playlistPos = 0;
+    }
+    if (found) wanted = mode;
     else pick = "";
   }
 
@@ -293,7 +301,7 @@ static void evaluate(uint32_t now) {
 // Doesn't save nor switch.
 static bool chooseScene(const String &scene) {
   String modeId, pick;
-  if (!validScene(scene) || !sceneTarget(scene, modeId, pick)) return false;
+  if (!validScene(scene) || !sceneAvailable(scene) || !sceneTarget(scene, modeId, pick)) return false;
   if (modeId == "ambient") settings.ambient = pick;
   if (modeId == "games") settings.game = pick;
   if (modeId == "gallery") settings.galleryShow = pick;

@@ -10,6 +10,7 @@
 #include "gfx.h"
 #include "occasions.h"
 #include "scroller.h"
+#include "timekeeping.h"
 #include "ui.h"
 #include "webinfo.h"
 
@@ -21,57 +22,142 @@ class Seasonal : public Animation {
  public:
   const char *group() const override { return "Ricorrenze"; }
   bool fixedStep() const override { return true; }  // particles and flickers
+  // Only around its days (occasions.h); without the clock, not at all.
+  bool available() const override {
+    struct tm t;
+    return localTime(t) && inSeason(id(), t, webInfoNow().birthday.length() > 0);
+  }
 };
 
 
 // ---------------------------------------------------------------------------
-// Snow falling past a small pine, settling into drifts that slowly melt.
+// A snowy night: a crescent moon and a few stars, a far white ridge, two
+// pines and a cottage with its window lit and smoke from the chimney.
+// The snow falls in three depths - far flakes small, dim and slow, near
+// ones bright and quick - blown by gusts of wind, and settles on the
+// ground in drifts that grow and slowly sink back.
 class SnowAnimation : public Seasonal {
  public:
   const char *id() const override { return "snow"; }
   const char *name() const override { return "Neve"; }
-  uint16_t frameMs() const override { return 60; }
+  uint16_t frameMs() const override { return 50; }
   void start() override {
-    memset(pile_, 0, sizeof(pile_));
-    for (Flake &f : flakes_) reset(f, true);
+    for (float &d : drift_) d = 0.3f + rnd() * 0.4f;
+    for (int i = 0; i < FLAKES; i++) reset(flakes_[i], i % 3, true);
+    t_ = 0;
   }
-  void frame(uint32_t now) override {
-    display.clear();
-    sprites::draw(spr::SEASON_PINE, 10, ROWS - 1 - 6, 0, 45);
-    for (Flake &f : flakes_) {
-      f.y += f.speed;
-      f.x += sinf(now / 700.0f + f.phase) * 0.06f;
-      const int x = ((int)lroundf(f.x) % COLS + COLS) % COLS;
-      if (f.y >= ROWS - 1 - pile_[x]) {
-        if (pile_[x] < 4) pile_[x]++;
-        reset(f, false);
-        continue;
-      }
-      display.setLevel(x, (int)f.y, f.speed > 0.2f ? 230 : 120);  // nearer flakes brighter
+  void frame(uint32_t) override {
+    const float dt = frameMs() / 1000.0f;
+    t_ += dt;
+    // The wind: slow gusts, now one way now the other.
+    const float wind = 0.9f * sinf(t_ * 0.13f) + 0.5f * sinf(t_ * 0.41f + 1);
+
+    float px[ROWS][COLS] = {};
+    // Sky: stars twinkling, the moon, a pale ridge far away.
+    static const uint8_t STARS[][2] = {{6, 1}, {11, 0}, {14, 3}, {9, 4}, {4, 5}};
+    for (int i = 0; i < 5; i++) px[STARS[i][1]][STARS[i][0]] = 0.1f + 0.08f * sinf(t_ * (1.3f + i * 0.4f) + i);
+    static const uint8_t MOON[][2] = {{2, 1}, {3, 1}, {1, 2}, {1, 3}, {2, 4}, {3, 4}};
+    for (const auto &m : MOON) px[m[1]][m[0]] = 0.45f;
+    for (int x = 0; x < COLS; x++) {
+      const float ridge = 10.2f + 0.8f * sinf(x * 0.5f + 0.7f) + 0.4f * sinf(x * 1.3f);
+      for (int y = (int)ridge; y < ROWS; y++) px[y][x] = y == (int)ridge ? 0.14f : 0.07f;
     }
-    if (now - lastMelt_ > 2500) {  // drifts sink slowly, so it never fills up
-      lastMelt_ = now;
-      const int x = esp_random() % COLS;
-      pile_[x] = max(0, pile_[x] - 1);
+    // Far snow behind everything.
+    for (Flake &f : flakes_) {
+      if (f.layer == 0) fall(f, wind, dt, px);
+    }
+    for (int y = 0; y < ROWS; y++) {
+      for (int x = 0; x < COLS; x++) display.setLevel(x, y, ui::tone(px[y][x]));
+    }
+
+    // The pines and the cottage, its window glowing like a fire inside.
+    window_ = (uint8_t)(150 + 50 * sinf(t_ * 7) * sinf(t_ * 2.3f) + (esp_random() % 20));
+    // ('#' is drawn at the level given: dark needles and walls.)
+    sprites::draw(spr::SEASON_PINE, 1, 6, 0, 45, parts, this);
+    sprites::draw(spr::SEASON_COTTAGE, 6, 7, 0, 55, parts, this);
+    // Smoke from the chimney (column 12, row 7), bent by the wind.
+    for (int p = 0; p < 3; p++) {
+      const float age = fmodf(t_ * 0.35f + p / 3.0f, 1.0f);
+      blend(12 + wind * age * 2 + sinf(age * 7 + p) * 0.6f, 6.5f - age * 6, 0.3f * (1 - age));
+    }
+
+    // Nearer snow in front, then the ground: white, its drifts on top.
+    for (Flake &f : flakes_) {
+      if (f.layer > 0) fall(f, wind, dt, nullptr);
     }
     for (int x = 0; x < COLS; x++) {
-      for (int h = 0; h < pile_[x]; h++) display.setLevel(x, ROWS - 1 - h, 160);
+      drift_[x] = max(0.2f, drift_[x] - dt * 0.012f);  // settling, so it never fills up
+      const float top = ROWS - 1 - drift_[x];
+      for (int y = ROWS - 1; y >= (int)floorf(top); y--) {
+        const float cover = constrain(y + 1 - top, 0.0f, 1.0f);
+        const uint8_t snow = ui::tone(0.3f + 0.08f * sinf(x * 1.7f + y));
+        const uint8_t was = display.getLevel(x, y);
+        display.setLevel(x, y, (uint8_t)(was + (snow - was) * cover));
+      }
     }
   }
 
  private:
+  static const int FLAKES = 21;
   struct Flake {
     float x, y, speed, phase;
-  };
-  static void reset(Flake &f, bool anywhere) {
+    uint8_t layer;  // 0 far, 1 middle, 2 near
+  } flakes_[FLAKES];
+  float drift_[COLS];
+  float t_ = 0;
+  uint8_t window_ = 180;
+
+  static void reset(Flake &f, uint8_t layer, bool anywhere) {
+    static const float SPEED[3] = {1.0f, 1.8f, 3.0f};  // rows per second
+    f.layer = layer;
     f.x = rnd() * COLS;
-    f.y = anywhere ? rnd() * ROWS : -rnd() * 4;
-    f.speed = 0.08f + rnd() * 0.2f;
+    f.y = anywhere ? rnd() * ROWS : -rnd() * 3;
+    f.speed = SPEED[layer] * (0.8f + 0.4f * rnd());
     f.phase = rnd() * 6.28f;
   }
-  Flake flakes_[22];
-  int pile_[COLS];
-  uint32_t lastMelt_ = 0;
+  // Moves a flake on and draws it (into `px`, or over the panel); near
+  // ones land on the drifts and pile up.
+  void fall(Flake &f, float wind, float dt, float (*px)[COLS]) {
+    static const float LIGHT[3] = {0.16f, 0.4f, 0.85f};
+    const float depth = 0.4f + 0.3f * f.layer;  // the far ones drift less
+    f.y += f.speed * dt;
+    f.x += (wind * depth + 0.5f * sinf(t_ * 1.7f + f.phase)) * dt;
+    f.x = fmodf(f.x + COLS, COLS);
+    const int col = (int)f.x;
+    if (f.layer > 0 && f.y >= ROWS - 1 - drift_[col]) {
+      drift_[col] = min(1.8f, drift_[col] + (f.layer == 2 ? 0.1f : 0.05f));
+      reset(f, f.layer, false);
+      return;
+    }
+    if (f.y > ROWS) reset(f, f.layer, false);
+    if (px) {
+      const int x = (int)lroundf(f.x) % COLS, y = (int)lroundf(f.y);
+      if (y >= 0 && y < ROWS) px[y][x] = max(px[y][x], LIGHT[0]);
+    } else {
+      blend(f.x, f.y, LIGHT[f.layer]);
+    }
+  }
+  // A soft point over what is drawn: shared by the four pixels around it.
+  static void blend(float x, float y, float v) {
+    const int x0 = (int)floorf(x), y0 = (int)floorf(y);
+    const float fx = x - x0, fy = y - y0;
+    const float w[4] = {(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy};
+    for (int i = 0; i < 4; i++) {
+      const int px = ((x0 + (i & 1)) % COLS + COLS) % COLS, py = y0 + (i >> 1);
+      if (py < 0 || py >= ROWS || w[i] < 0.15f) continue;
+      const uint8_t l = ui::tone(v * w[i]);
+      if (l > display.getLevel(px, py)) display.setLevel(px, py, l);
+    }
+  }
+  static int parts(char mark, uint8_t level, void *self) {
+    switch (mark) {
+      case 's': return 110;                                          // snow on branches and roof
+      case 'w': return static_cast<SnowAnimation *>(self)->window_;  // the lit window
+      case 'd': return 40;                                           // the door
+      case 'c': return 70;                                           // the chimney
+      default: return level;
+    }
+  }
 };
 
 // ---------------------------------------------------------------------------

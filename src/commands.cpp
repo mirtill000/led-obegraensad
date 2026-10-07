@@ -1,6 +1,7 @@
 #include "commands.h"
 
 #include "animation.h"
+#include "catalog.h"
 #include "modes.h"
 #include "modes/board.h"
 #include "modes/life_mode.h"
@@ -59,7 +60,7 @@ const char *runCommand(const String &command) {
       currentMode()->input(arg[0]);
       return nullptr;
     case 'v':
-      if (!showScene(arg)) return txt::UNKNOWN_SCENE;
+      if (!showScene(arg)) return validScene(arg) ? txt::OUT_OF_SEASON : txt::UNKNOWN_SCENE;
       saveSettings();
       return nullptr;
     case 'm':

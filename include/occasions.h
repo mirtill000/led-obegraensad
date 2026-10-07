@@ -26,6 +26,16 @@ struct Occasion {
 Occasion occasionOn(const struct tm &local, const String &birthday);
 Occasion occasionNow();
 
+// Whether a seasonal animation belongs to the days around `local` - it is
+// only offered then (Animation::available()):
+//   snow       December - February
+//   xmastree   1 December - 6 January
+//   fireworks  26 December - 6 January
+//   hearts     1 - 15 February
+//   pumpkin    15 October - 2 November
+//   cake       a birthday in the calendar today
+// Any other id: always.
+bool inSeason(const char *animationId, const struct tm &local, bool birthdayToday);
 // "Buon compleanno, Anna!" from a calendar title ("Compleanno di Anna",
 // "Anna's birthday", ...).
 String birthdayGreeting(const String &title);

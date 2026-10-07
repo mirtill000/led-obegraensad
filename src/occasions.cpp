@@ -51,6 +51,18 @@ Occasion occasionOn(const struct tm &t, const String &birthday) {
   return o;
 }
 
+bool inSeason(const char *id, const struct tm &t, bool birthdayToday) {
+  const int month = t.tm_mon + 1, day = t.tm_mday;
+  const String a = id;
+  if (a == "snow") return month == 12 || month <= 2;
+  if (a == "xmastree") return month == 12 || (month == 1 && day <= 6);
+  if (a == "fireworks") return (month == 12 && day >= 26) || (month == 1 && day <= 6);
+  if (a == "hearts") return month == 2 && day <= 15;
+  if (a == "pumpkin") return (month == 10 && day >= 15) || (month == 11 && day <= 2);
+  if (a == "cake") return birthdayToday;
+  return true;
+}
+
 Occasion occasionNow() {
   struct tm t;
   if (!localTime(t)) return Occasion();
