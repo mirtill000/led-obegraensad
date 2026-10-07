@@ -397,12 +397,13 @@ Current modes:
   clock has gone through). The animations (the games have their
   own mode, below), in `src/animations/`:
   - *Atmosfere*: digital rain, fire, stars, waves, and *Finestra sul
-    cielo* (`src/animations/sky.cpp`): the sky outside right now, as if
-    you looked south through a window - the sun and the moon (with its
-    phase) where they really are, the light of the hour (a dim day sky,
-    the glow of sunrise and sunset on the sun's side, stars at night),
-    clouds as thick as the current weather, and its rain, snow, fog or
-    lightning; the ground a dark line of hills, white when it snows, and
+    cielo* (`src/animations/sky.cpp`): the sky outside right now, seen
+    through a window (its frame and sill drawn) looking south over the
+    roofs - the sun with its rays and the moon with its phase where they
+    really are, the light of the hour (a dim day sky, the glow of sunrise
+    and sunset on the sun's side, stars and a few lit windows at night),
+    puffy clouds drifting, as many as the current weather says, and its
+    rain, snow, fog or lightning (a bolt from the clouds to the roofs), and
     *Acquario* (`src/animations/aquarium.cpp`): fish swimming as a school
     (apart from each other, along with their neighbours, towards the
     group, turning before the glass), weeds swaying, bubbles, sand; the
