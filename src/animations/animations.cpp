@@ -7,6 +7,15 @@ extern Animation *const starsAnimation;
 extern Animation *const wavesAnimation;
 extern Animation *const skyAnimation;
 extern Animation *const aquariumAnimation;
+extern Animation *const lighthouseAnimation;
+extern Animation *const firefliesAnimation;
+extern Animation *const auroraAnimation;
+extern Animation *const rainGlassAnimation;
+extern Animation *const campfireAnimation;
+extern Animation *const meteorsAnimation;
+extern Animation *const starTrailsAnimation;
+extern Animation *const nightTrainAnimation;
+extern Animation *const breathAnimation;
 extern Animation *const marioAnimation;
 extern Animation *const tetrisAnimation;
 extern Animation *const snakeAnimation;
@@ -63,6 +72,15 @@ Animation *const ANIMATIONS[] = {
     wavesAnimation,
     skyAnimation,
     aquariumAnimation,
+    lighthouseAnimation,
+    firefliesAnimation,
+    auroraAnimation,
+    rainGlassAnimation,
+    campfireAnimation,
+    meteorsAnimation,
+    starTrailsAnimation,
+    nightTrainAnimation,
+    breathAnimation,
     marioAnimation,
     tetrisAnimation,
     snakeAnimation,

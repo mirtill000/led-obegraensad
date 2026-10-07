@@ -409,7 +409,21 @@ Current modes:
     group, turning before the glass), weeds swaying, bubbles, sand; the
     page shows *Dai da mangiare* while it plays (or key A, also from the
     Cardputer): a few flakes sink and the fish dart for them. Any
-    animation can offer such a button (`Animation::pokeName()` / `poke()`)
+    animation can offer such a button (`Animation::pokeName()` / `poke()`).
+    Then the night scenes (`src/animations/nightscapes.cpp`): *Faro* (a
+    lighthouse on a cliff, its beam sweeping through the mist and flashing
+    when it faces you, waves breaking below), *Lucciole* (fireflies over
+    the grass, each blinking at its own pace and falling into step with
+    the others, until they scatter again), *Aurora boreale* (curtains of
+    light waving over the mountains, shimmering in the lake), *Pioggia sul
+    vetro* (drops growing on the pane and sliding down in fits and starts,
+    leaving trails, city lights blurred behind), *Falò* (flames licking up
+    from glowing logs, sparks rising), *Stelle cadenti* (the Milky Way and
+    now and then a shooting star - a shower of them during the Perseids,
+    9-14 August), *Stelle circolari* (the sky turning round the pole star,
+    the stars drawing arcs as in a long exposure), *Treno nella notte* (a
+    train with lit windows crossing the countryside under the moon) and
+    *Respiro* (one wave of light breathing in for 4 s and out for 6 s)
   - *Icone geek*: *Alieno* (a walking Space Invader), Pac-Man chased by a ghost, a
     terminal (four lines in a 3x3 font) typing commands whose answers are
     the lamp's own - `ls` its files, `w` the time and uptime, `ip` its
