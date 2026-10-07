@@ -432,10 +432,14 @@ Current modes:
     cottage with snow on the roof, its window flickering like a fire and
     smoke bent by the wind; the snow falls in three depths - far flakes
     small, dim and slow, near ones bright and quick - blown by gusts, and
-    settles in drifts that grow and slowly sink back), a Christmas tree
-    with twinkling lights,
-    fireworks, floating hearts, a Halloween pumpkin
-    lit by a flickering candle, a birthday cake whose greeting scrolls by.
+    settles in drifts that grow and slowly sink back), *Albero di Natale*
+    (on a snowy night: shaded tiers with snow on the branch tips, a
+    garland whose lights a wave runs down, each glowing on the needles
+    around it, the star pulsing and now and then sparkling, presents
+    underneath, a few flakes), fireworks, floating hearts, *Zucca di
+    Halloween* (a full moon and stars, a bat flapping across now and
+    then, the pumpkin round with its ribs, its carved face lit by a candle
+    that flickers and gutters), a birthday cake whose greeting scrolls by.
     They are offered only around their days - in the lists, the automatic
     choice, the catalog and the playlist (which skips them otherwise):
     snow December - February, the tree 1 December - 6 January, fireworks

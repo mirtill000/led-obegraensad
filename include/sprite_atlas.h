@@ -42,6 +42,8 @@ extern const Sprite SEASON_COTTAGE;
 extern const Sprite SEASON_HEART;
 extern const Sprite SEASON_PUMPKIN;
 extern const Sprite SEASON_PUMPKIN_FACE;
+extern const Sprite SEASON_BAT;
+extern const Sprite SEASON_GIFTS;
 extern const Sprite SEASON_CAKE;
 extern const Sprite GALLERY_PENCIL;
 extern const Sprite RUNNER_DINO;

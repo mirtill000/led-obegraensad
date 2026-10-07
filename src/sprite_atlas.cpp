@@ -197,10 +197,25 @@ static const char *const SEASON_HEART_ROWS[] = {
 };
 const Sprite SEASON_HEART = {"season.heart", 5, 5, 1, 0, SEASON_HEART_ROWS};
 
+// Its ribs a little darker ('5'), the sides too ('7'), so it looks round.
 static const char *const SEASON_PUMPKIN_ROWS[] = {
-    "......##......", "......#.......", "..##########..", ".############.", "##############", "##############", "##############", "##############", "##############", ".############.", "..##########..",
+    "......##......", "......#.......", "..7###5##5###.", ".7##5####5##7.", "7###5####5###7", "7###5####5###7",
+    "7###5####5###7", "7###5####5###7", "7###5####5###7", ".7##5####5##7.", "..7###5##5#7..",
 };
 const Sprite SEASON_PUMPKIN = {"season.pumpkin", 14, 11, 1, 0, SEASON_PUMPKIN_ROWS};
+
+// A bat, wings up and down.
+static const char *const SEASON_BAT_ROWS[] = {
+    "#...#", "##.##", "..#..",
+    ".....", "##.##", "#.#.#",
+};
+const Sprite SEASON_BAT = {"season.bat", 5, 3, 2, 0, SEASON_BAT_ROWS};
+
+// Two presents under the tree: # paper, r ribbon.
+static const char *const SEASON_GIFTS_ROWS[] = {
+    ".r.r.....rr..", "##r##...##r#.", "rrrrr...rrrr.", "##r##...##r#.",
+};
+const Sprite SEASON_GIFTS = {"season.gifts", 13, 4, 1, 0, SEASON_GIFTS_ROWS};
 
 static const char *const SEASON_PUMPKIN_FACE_ROWS[] = {
     "..............", "..............", "..............", "..............", "...#......#...", "..###....###..", "..............", "...#.#..#.#...", "....#.##.#....", "..............", "..............",
@@ -429,6 +444,8 @@ const Sprite *const ATLAS[] = {
     &spr::SEASON_HEART,
     &spr::SEASON_PUMPKIN,
     &spr::SEASON_PUMPKIN_FACE,
+    &spr::SEASON_BAT,
+    &spr::SEASON_GIFTS,
     &spr::SEASON_CAKE,
     &spr::GALLERY_PENCIL,
     &spr::RUNNER_DINO,

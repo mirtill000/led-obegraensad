@@ -161,39 +161,85 @@ class SnowAnimation : public Seasonal {
 };
 
 // ---------------------------------------------------------------------------
-// A Christmas tree: dim branches, lights twinkling one by one, a star
-// pulsing on top.
+// A Christmas tree on a snowy night: its tiers shaded, snow on the tips of
+// the branches, a garland of lights with a wave of light running down it
+// (each light glowing on the needles around it), the star on top pulsing
+// and now and then sparkling, presents underneath, a few flakes falling.
 class XmasTreeAnimation : public Seasonal {
  public:
   const char *id() const override { return "xmastree"; }
   const char *name() const override { return "Albero di Natale"; }
-  uint16_t frameMs() const override { return 80; }
-  void frame(uint32_t now) override {
-    display.clear();
-    // Three tiers, wider and wider, and the trunk.
+  uint16_t frameMs() const override { return 50; }
+  void start() override {
+    for (Flake &f : flakes_) f = {rnd() * COLS, rnd() * ROWS, 0.8f + rnd() * 0.8f, rnd() * 6};
+    t_ = 0;
+  }
+  void frame(uint32_t) override {
+    const float dt = frameMs() / 1000.0f;
+    t_ += dt;
+    float px[ROWS][COLS] = {};
+    // The tree: three tiers, each wider going down; their lowest row is
+    // the snowy tips of the branches, their sides a little lighter.
     static const int8_t HALF[ROWS] = {-1, -1, 0, 1, 2, 1, 2, 3, 4, 2, 3, 4, 5, 6, -1, -1};
     for (int y = 0; y < ROWS; y++) {
       if (HALF[y] < 0) continue;
-      for (int x = 7 - HALF[y]; x <= 8 + HALF[y]; x++) display.setLevel(x, y, 50);
+      const bool tips = y + 1 < ROWS && HALF[y + 1] <= HALF[y];
+      for (int x = 7 - HALF[y]; x <= 8 + HALF[y]; x++) {
+        const bool side = x == 7 - HALF[y] || x == 8 + HALF[y];
+        px[y][x] = tips ? (side ? 0.22f : 0.3f) : side ? 0.16f : 0.1f + 0.03f * ((x * 7 + y * 3) % 3);
+      }
     }
-    for (int y = 14; y < ROWS; y++) {
-      display.setLevel(7, y, 70);
-      display.setLevel(8, y, 70);
+    for (int y = 13; y < ROWS; y++) px[y][7] = px[y][8] = 0.12f;  // the trunk
+    for (int x = 0; x < COLS; x++) px[ROWS - 1][x] = 0.28f + 0.05f * sinf(x * 1.9f);  // snow on the ground
+
+    // The garland: a wave of light runs down it; each light lights the
+    // needles around it.
+    static const uint8_t LIGHTS[][2] = {{7, 2},  {8, 4},  {6, 4},  {9, 6},  {7, 7},  {5, 8},  {10, 8},
+                                        {8, 10}, {5, 10}, {11, 11}, {7, 12}, {3, 12}, {12, 12}, {9, 13}};
+    const int count = sizeof(LIGHTS) / sizeof(LIGHTS[0]);
+    for (int i = 0; i < count; i++) {
+      const float wave = 0.5f + 0.5f * cosf(t_ * 2.6f - i * 0.75f);
+      const float b = 0.3f + 0.7f * wave * wave;
+      const int x = LIGHTS[i][0], y = LIGHTS[i][1];
+      px[y][x] = max(px[y][x], b);
+      static const int8_t AROUND[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+      for (const auto &d : AROUND) {
+        const int nx = x + d[0], ny = y + d[1];
+        if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && px[ny][nx] > 0) px[ny][nx] = max(px[ny][nx], 0.1f + 0.25f * b);
+      }
     }
-    // The star.
-    const uint8_t star = 150 + (uint8_t)(105 * (0.5f + 0.5f * sinf(now / 300.0f)));
-    display.setLevel(7, 0, star);
-    display.setLevel(8, 0, star);
-    display.setLevel(7, 1, star / 2);
-    display.setLevel(8, 1, star / 2);
-    // Lights: each blinks at its own pace.
-    static const uint8_t LIGHTS[][2] = {{8, 3}, {6, 4}, {9, 5}, {5, 7}, {10, 7}, {7, 8}, {4, 10},
-                                        {9, 10}, {11, 11}, {6, 12}, {3, 13}, {9, 13}, {12, 13}};
-    for (unsigned i = 0; i < sizeof(LIGHTS) / sizeof(LIGHTS[0]); i++) {
-      const float s = sinf(now / (260.0f + i * 37) + i * 1.9f);
-      display.setLevel(LIGHTS[i][0], LIGHTS[i][1], s > 0.2f ? 255 : 110);
+    // The star: pulsing, and every few seconds a sparkle of four rays.
+    const float star = 0.65f + 0.35f * sinf(t_ * 2.2f);
+    px[0][7] = px[0][8] = star;
+    px[1][7] = px[1][8] = star * 0.7f;
+    const float spark = fmodf(t_, 4.0f);
+    if (spark < 0.6f) {
+      const float k = sinf(spark / 0.6f * (float)M_PI);
+      px[0][6] = px[0][9] = max(px[0][6], 0.5f * k);
+      px[1][5] = px[1][10] = max(px[1][5], 0.35f * k);
+      px[2][6] = px[2][9] = max(px[2][6], 0.3f * k);
     }
+    // A few flakes, slow, swaying.
+    for (Flake &f : flakes_) {
+      f.y += f.speed * dt;
+      f.x += 0.3f * sinf(t_ + f.phase) * dt;
+      if (f.y > ROWS - 1) f = {rnd() * COLS, -1, 0.8f + rnd() * 0.8f, rnd() * 6};
+      const int x = ((int)lroundf(f.x) % COLS + COLS) % COLS, y = (int)lroundf(f.y);
+      if (y >= 0 && y < ROWS) px[y][x] = max(px[y][x], 0.32f);
+    }
+    for (int y = 0; y < ROWS; y++) {
+      for (int x = 0; x < COLS; x++) display.setLevel(x, y, ui::tone(px[y][x]));
+    }
+    // The presents, in front of the lowest branches.
+    sprites::draw(spr::SEASON_GIFTS, 1, 12, 0, 70, ribbon, nullptr);
   }
+
+ private:
+  struct Flake {
+    float x, y, speed, phase;
+  } flakes_[9];
+  float t_ = 0;
+  static int ribbon(char mark, uint8_t level, void *) { return mark == 'r' ? 190 : level; }
 };
 
 // ---------------------------------------------------------------------------
@@ -300,21 +346,50 @@ class HeartsAnimation : public Seasonal {
 };
 
 // ---------------------------------------------------------------------------
-// A Halloween pumpkin, its carved face lit by a flickering candle.
+// Halloween night: a full moon and a few stars, a bat flapping across
+// now and then, and the pumpkin - round, with its ribs - its carved face
+// lit by a candle inside that flickers and gutters now and then (the skin
+// brightens and darkens a little with it).
 class PumpkinAnimation : public Seasonal {
  public:
   const char *id() const override { return "pumpkin"; }
   const char *name() const override { return "Zucca di Halloween"; }
-  uint16_t frameMs() const override { return 70; }
+  uint16_t frameMs() const override { return 60; }
+  void start() override { t_ = 0; }
   void frame(uint32_t) override {
-    display.clear();
-    sprites::draw(spr::SEASON_PUMPKIN, 1, 3, 0, 60);
-    flicker_ = constrain(flicker_ + (int)(esp_random() % 61) - 30, 150, 255);
-    sprites::draw(spr::SEASON_PUMPKIN_FACE, 1, 3, 0, (uint8_t)flicker_);
+    t_ += frameMs() / 1000.0f;
+    float px[ROWS][COLS] = {};
+    // Stars, and the moon with a darker sea on it.
+    static const uint8_t STARS[][2] = {{1, 1}, {5, 0}, {8, 2}, {3, 3}};
+    for (int i = 0; i < 4; i++) px[STARS[i][1]][STARS[i][0]] = 0.1f + 0.08f * sinf(t_ * (1.1f + i * 0.5f) + i * 2);
+    for (int y = 0; y < 5; y++) {
+      for (int x = 10; x < COLS; x++) {
+        const float dx = x + 0.5f - 13, dy = y + 0.5f - 2.2f, d = sqrtf(dx * dx + dy * dy);
+        if (d < 2.3f) px[y][x] = (0.5f - ((x == 12 && y == 2) || (x == 13 && y == 1) ? 0.15f : 0)) * min(1.0f, (2.3f - d) * 1.5f);
+      }
+    }
+    for (int y = 0; y < ROWS; y++) {
+      for (int x = 0; x < COLS; x++) display.setLevel(x, y, ui::tone(px[y][x]));
+    }
+    // A bat crossing every 9 seconds, flapping, bobbing.
+    const float b = fmodf(t_, 9.0f);
+    if (b < 5) {
+      const int x = (int)lroundf(-5 + b / 5 * 21), y = (int)lroundf(1.5f + 1.2f * sinf(b * 3));
+      sprites::draw(spr::SEASON_BAT, x, y, (int)(t_ * 8) % 2, 110);
+    }
+    // The candle: a restless flame, guttering low now and then.
+    flame_ += ((float)(esp_random() % 1000) / 1000 - 0.5f) * 0.25f;
+    flame_ += (0.85f - flame_) * 0.15f;
+    if (esp_random() % 120 == 0) flame_ = 0.35f;  // a draught
+    flame_ = constrain(flame_, 0.3f, 1.0f);
+    // The skin dim, the carving bright: the candle is all the light.
+    sprites::draw(spr::SEASON_PUMPKIN, 1, 5, 0, (uint8_t)(80 + 20 * flame_));
+    const uint8_t face = (uint8_t)(255 * flame_);
+    sprites::draw(spr::SEASON_PUMPKIN_FACE, 1, 5, 0, face);
   }
 
  private:
-  int flicker_ = 220;
+  float t_ = 0, flame_ = 0.85f;
 };
 
 // ---------------------------------------------------------------------------
