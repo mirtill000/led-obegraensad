@@ -29,14 +29,10 @@ extern Animation *const floppyIconAnimation;
 extern Animation *const gameBoyIconAnimation;
 extern Animation *const matrixIconAnimation;
 extern Animation *const gliderIconAnimation;
-extern Animation *const wifiIconAnimation;
 extern Animation *const skullIconAnimation;
-extern Animation *const bulbIconAnimation;
 extern Animation *const houseIconAnimation;
 extern Animation *const burgerIconAnimation;
-extern Animation *const computerIconAnimation;
 extern Animation *const birdIconAnimation;
-extern Animation *const robotIconAnimation;
 extern Animation *const diceIconAnimation;
 extern Animation *const binaryClockAnimation;
 extern Animation *const wordClockAnimation;
@@ -45,7 +41,6 @@ extern Animation *const cubeAnimation;
 extern Animation *const solidCubeAnimation;
 extern Animation *const tunnelAnimation;
 extern Animation *const metaball3dAnimation;
-extern Animation *const pillarsAnimation;
 extern Animation *const planetAnimation;
 extern Animation *const voxelAnimation;
 extern Animation *const cityAnimation;
@@ -90,14 +85,10 @@ Animation *const ANIMATIONS[] = {
     gameBoyIconAnimation,
     matrixIconAnimation,
     gliderIconAnimation,
-    wifiIconAnimation,
     skullIconAnimation,
-    bulbIconAnimation,
     houseIconAnimation,
     burgerIconAnimation,
-    computerIconAnimation,
     birdIconAnimation,
-    robotIconAnimation,
     diceIconAnimation,
     binaryClockAnimation,
     wordClockAnimation,
@@ -106,7 +97,6 @@ Animation *const ANIMATIONS[] = {
     solidCubeAnimation,
     tunnelAnimation,
     metaball3dAnimation,
-    pillarsAnimation,
     planetAnimation,
     voxelAnimation,
     cityAnimation,

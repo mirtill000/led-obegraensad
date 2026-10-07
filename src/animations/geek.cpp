@@ -1,8 +1,7 @@
 // "Icone geek": small pixel-art loops - a Space Invader, Pac-Man with a
 // ghost, a terminal typing commands, a rocket among the stars, a coffee
-// cup, a floppy disk, a Game Boy, Matrix rain, the hacker emblem, Wi-Fi,
-// a skull, a light bulb, a little house, a burger, an old computer, a
-// bird, a robot and a die.
+// cup, a floppy disk, a Game Boy, Matrix rain, the hacker emblem, a
+// skull, a little house, a burger, a bird and a die.
 #include <math.h>
 
 #include "animation.h"
@@ -463,41 +462,6 @@ class GliderIcon : public GeekAnimation {
 };
 
 // ---------------------------------------------------------------------------
-// The Wi-Fi sign "connecting": the dot, then the three arcs lighting one by
-// one, then all of them flashing.
-class WifiIcon : public GeekAnimation {
- public:
-  const char *id() const override { return "wifi"; }
-  const char *name() const override { return "Wi-Fi"; }
-  uint16_t frameMs() const override { return 250; }
-  void frame(uint32_t) override {
-    tick_++;
-    display.clear();
-    const int step = tick_ % 9;  // 0 dot, 1-3 arcs, 4-8 full (blinking once)
-    const int arcs = step < 4 ? step : (step == 6 ? 0 : 3);
-    const float cx = 7.5f, cy = 13.0f;
-    for (int y = 0; y < ROWS; y++) {
-      for (int x = 0; x < COLS; x++) {
-        const float dx = x - cx, dy = cy - y;
-        const float r = sqrtf(dx * dx + dy * dy);
-        if (r < 1.3f) {
-          display.setLevel(x, y, 255);  // the dot
-          continue;
-        }
-        if (dy <= 0 || fabsf(dx) > dy * 1.05f) continue;  // a 90-degree wedge, pointing up
-        for (int a = 1; a <= arcs; a++) {
-          const float d = fabsf(r - (0.4f + a * 3.3f));
-          if (d < 0.8f) display.setLevel(x, y, gfx::level(1.0f - d * 0.9f));
-        }
-      }
-    }
-  }
-
- private:
-  uint32_t tick_ = 0;
-};
-
-// ---------------------------------------------------------------------------
 // A skull that chatters its teeth now and then, its eyes glowing.
 class SkullIcon : public GeekAnimation {
  public:
@@ -519,45 +483,6 @@ class SkullIcon : public GeekAnimation {
   static int eyes(char mark, uint8_t, void *self) { return mark == 'e' ? static_cast<SkullIcon *>(self)->glow_ : 255; }
   uint32_t tick_ = 0;
   uint8_t glow_ = 0;
-};
-
-// ---------------------------------------------------------------------------
-// A light bulb switching on: the filament flickers, the glass fills with
-// light, rays shine around it; after a while it goes out again.
-class BulbIcon : public GeekAnimation {
- public:
-  const char *id() const override { return "bulb"; }
-  const char *name() const override { return "Lampadina"; }
-  uint16_t frameMs() const override { return 60; }
-  void frame(uint32_t) override {
-    tick_++;
-    display.clear();
-    const uint32_t c = tick_ % 130;
-    float on = 0;  // 0 off .. 1 fully lit
-    if (c >= 20 && c < 36) on = esp_random() % 3 ? 0.9f : 0.1f;  // flickering on
-    else if (c >= 36 && c < 115) on = 1;
-    else if (c >= 115) on = 1 - (c - 115) / 15.0f;                // fading out
-    light_ = on;
-    sprites::draw(spr::GEEK_BULB, 2, 1, 0, 255, parts, this);
-    if (on > 0.5f) {
-      // Rays: eight short strokes around the glass, breathing.
-      static const int8_t RAYS[8][2] = {{7, -1}, {12, 1}, {14, 5}, {12, 9}, {2, 9}, {0, 5}, {2, 1}, {-1, -1}};
-      for (int i = 0; i < 7; i++) {
-        const float b = on * (0.35f + 0.25f * sinf(tick_ * 0.3f + i));
-        gfx::plot(RAYS[i][0], RAYS[i][1] + 1, b);
-      }
-    }
-  }
-
- private:
-  static int parts(char mark, uint8_t, void *self) {
-    const float on = static_cast<BulbIcon *>(self)->light_;
-    if (mark == 'f') return on > 0 ? gfx::level(0.25f + 0.75f * on) : 40;  // the filament
-    if (mark == 'g') return on > 0.05f ? gfx::level(0.45f * on) : -1;       // the glass
-    return 255;
-  }
-  uint32_t tick_ = 0;
-  float light_ = 0;
 };
 
 // ---------------------------------------------------------------------------
@@ -617,46 +542,6 @@ class BurgerIcon : public GeekAnimation {
 };
 
 // ---------------------------------------------------------------------------
-// An old computer showing its screensaver: a ball bouncing round the
-// screen, leaving a fading trail.
-class ComputerIcon : public GeekAnimation {
- public:
-  const char *id() const override { return "computer"; }
-  const char *name() const override { return "Computer"; }
-  uint16_t frameMs() const override { return 50; }
-  void start() override {
-    x_ = 3;
-    y_ = 4;
-    vx_ = 0.45f;
-    vy_ = 0.3f;
-    for (auto &t : trail_) t[0] = t[1] = -1;
-  }
-  void frame(uint32_t) override {
-    // The screen's inside: columns 2-13, rows 3-9.
-    x_ += vx_;
-    y_ += vy_;
-    if (x_ < 2 || x_ > 13) vx_ = -vx_, x_ = constrain(x_, 2.0f, 13.0f);
-    if (y_ < 3 || y_ > 9) vy_ = -vy_, y_ = constrain(y_, 3.0f, 9.0f);
-    for (int i = TRAIL - 1; i > 0; i--) {
-      trail_[i][0] = trail_[i - 1][0];
-      trail_[i][1] = trail_[i - 1][1];
-    }
-    trail_[0][0] = (int)lroundf(x_);
-    trail_[0][1] = (int)lroundf(y_);
-    display.clear();
-    sprites::draw(spr::GEEK_MONITOR, 1, 2);
-    for (int i = TRAIL - 1; i >= 0; i--) {
-      if (trail_[i][0] >= 0) gfx::plot(trail_[i][0], trail_[i][1], i ? 0.5f - i * 0.08f : 1.0f);
-    }
-  }
-
- private:
-  static const int TRAIL = 6;
-  float x_ = 3, y_ = 4, vx_ = 0.45f, vy_ = 0.3f;
-  int trail_[TRAIL][2];
-};
-
-// ---------------------------------------------------------------------------
 // A little bird hopping along the ground, flicking its tail, stopping to
 // peck.
 class BirdIcon : public GeekAnimation {
@@ -688,32 +573,6 @@ class BirdIcon : public GeekAnimation {
   }
   uint32_t tick_ = 0;
   float x_ = 2;
-};
-
-// ---------------------------------------------------------------------------
-// A robot pacing back and forth, its antenna blinking and its eyes
-// scanning left and right.
-class RobotIcon : public GeekAnimation {
- public:
-  const char *id() const override { return "robot"; }
-  const char *name() const override { return "Robot"; }
-  uint16_t frameMs() const override { return 140; }
-  void frame(uint32_t) override {
-    tick_++;
-    display.clear();
-    const int span = 6, p = tick_ % (2 * span);
-    const int x = 1 + (p < span ? p : 2 * span - p);
-    sprites::draw(spr::GEEK_ROBOT, x, 1, tick_ % 2, 220, parts, this);
-  }
-
- private:
-  static int parts(char mark, uint8_t level, void *self) {
-    const uint32_t t = static_cast<RobotIcon *>(self)->tick_;
-    if (mark == 'a') return t % 4 < 2 ? 255 : 30;  // the antenna light
-    if (mark == 'e') return 255;
-    return level;
-  }
-  uint32_t tick_ = 0;
 };
 
 // ---------------------------------------------------------------------------
@@ -763,14 +622,10 @@ FloppyIcon floppy;
 GameBoyIcon gameBoy;
 MatrixIcon matrix;
 GliderIcon glider;
-WifiIcon wifi;
 SkullIcon skull;
-BulbIcon bulb;
 HouseIcon house;
 BurgerIcon burger;
-ComputerIcon computer;
 BirdIcon bird;
-RobotIcon robot;
 DiceIcon dice;
 
 }  // namespace
@@ -784,12 +639,8 @@ extern Animation *const floppyIconAnimation = &floppy;
 extern Animation *const gameBoyIconAnimation = &gameBoy;
 extern Animation *const matrixIconAnimation = &matrix;
 extern Animation *const gliderIconAnimation = &glider;
-extern Animation *const wifiIconAnimation = &wifi;
 extern Animation *const skullIconAnimation = &skull;
-extern Animation *const bulbIconAnimation = &bulb;
 extern Animation *const houseIconAnimation = &house;
 extern Animation *const burgerIconAnimation = &burger;
-extern Animation *const computerIconAnimation = &computer;
 extern Animation *const birdIconAnimation = &bird;
-extern Animation *const robotIconAnimation = &robot;
 extern Animation *const diceIconAnimation = &dice;

@@ -417,14 +417,11 @@ Current modes:
     with steam, a 3.5" floppy (the shutter slides, lines get written on
     the label), a Game Boy with a Tetris piece falling on its screen,
     Matrix rain, the hacker emblem (a glider going through its four
-    generations in a 3x3 grid), the Wi-Fi sign connecting arc by arc, and
-    eight more drawn after a sheet of pixel-art icons: *Teschio* (it
-    chatters its teeth, its eyes glow), *Lampadina* (it flickers on, the
-    glass fills with light, rays shine, then it goes out), *Casetta*
-    (smoke from the chimney, windows lighting up), *Hamburger* (the top
-    bun hops, sesame seeds glint), *Computer* (a bouncing-ball
-    screensaver with a trail), *Uccellino* (it hops along the ground and
-    pecks, blinking), *Robot* (pacing, antenna blinking) and *Dado* (it
+    generations in a 3x3 grid), and five more drawn after a sheet of
+    pixel-art icons: *Teschio* (it chatters its teeth, its eyes glow),
+    *Casetta* (smoke from the chimney, windows lighting up), *Hamburger*
+    (the top bun hops, sesame seeds glint), *Uccellino* (it hops along
+    the ground and pecks, blinking) and *Dado* (it
     rolls, faces flashing by slower and slower, then settles); their
     pictures are in the sprite atlas (`geek.*`), retouchable from the page
   - *Ricorrenze* (`src/animations/seasonal.cpp`): *Neve* (a snowy
@@ -463,9 +460,7 @@ Current modes:
     (`src/animations/raymarch.cpp`: scenes as signed distance functions,
     one ray per pixel corner shared by the four pixels around it, normals,
     soft shadows): *Metaball 3D* (three spheres melting into each other as they
-    orbit, with a glow along their edges), *Colonne infinite* (a hall of
-    pillars without end, flown through, tiles on the floor and ceiling)
-    and *Pianeta con anelli* (a banded planet lit from the side, the rings'
+    orbit, with a glow along their edges) and *Pianeta con anelli* (a banded planet lit from the side, the rings'
     shadow on it and its shadow on the rings, among stars)
   - *3D e demo*, the flights (`src/animations/flights.cpp`): voxel
     landscapes, Comanche style - one ray per column walked front to back

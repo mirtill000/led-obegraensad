@@ -4,7 +4,6 @@
 // (one per pixel corner, shared), the normals and a soft shadow; each scene
 // only says its shape, its light and where the camera is:
 //  - Metaball 3D: three spheres that melt into each other as they orbit;
-//  - Colonne infinite: a hall of pillars without end, flown through;
 //  - Pianeta con anelli: a planet with its rings, lit from the side, the
 //    rings' shadow on it and its shadow on the rings, among stars.
 #include <math.h>
@@ -165,43 +164,6 @@ class MetaballRender : public Raymarch {
 };
 
 // ---------------------------------------------------------------------------
-class PillarsRender : public Raymarch {
- public:
-  const char *id() const override { return "pillars"; }
-  const char *name() const override { return "Colonne infinite"; }
-
- protected:
-  float farPlane() const override { return 18; }
-  int maxSteps() const override { return 48; }
-  void setup(float t) override {
-    const float z = t * 0.8f;
-    const float x = 2 + 0.9f * sinf(t * 0.3f);  // weaving between the rows
-    lookAt({x, 0.2f + 0.3f * sinf(t * 0.21f), z}, {x + 1.4f * sinf(t * 0.17f), 0, z + 4});
-  }
-  float sdf(V3 p, int *id) const override {
-    // Pillars every 4 units both ways (the space repeated), floor and ceiling.
-    const float cx = p.x - 4 * floorf(p.x / 4 + 0.5f), cz = p.z - 4 * floorf(p.z / 4 + 0.5f);
-    const float pillar = sqrtf(cx * cx + cz * cz) - 0.45f;
-    const float slab = 1.6f - fabsf(p.y);
-    *id = pillar < slab ? 0 : 1;
-    return min(pillar, slab);
-  }
-  float light(const Hit &h, V3 dir) const override {
-    const float fog = clamp01(1 - h.dist / 16);
-    if (h.id == 1) {
-      // Floor and ceiling: tiles drawn by the lines between them.
-      const float gx = fabsf(h.p.x - 2 * floorf(h.p.x / 2 + 0.5f)), gz = fabsf(h.p.z - 2 * floorf(h.p.z / 2 + 0.5f));
-      const float line = min(gx, gz) < 0.06f ? 0.25f : 0;
-      return (0.06f + line) * fog * fog;
-    }
-    // Pillars lit from the camera, with rings around them.
-    const float face = max(0.0f, -dot(dir, h.n));
-    const float ring = fabsf(fmodf(h.p.y + 4, 0.8f) - 0.4f) < 0.05f ? -0.2f : 0;
-    return (0.1f + 0.75f * face * face + ring) * fog;
-  }
-};
-
-// ---------------------------------------------------------------------------
 class PlanetRender : public Raymarch {
  public:
   const char *id() const override { return "planet"; }
@@ -252,8 +214,6 @@ class PlanetRender : public Raymarch {
 };
 
 static MetaballRender metaball3d;
-static PillarsRender pillars;
 static PlanetRender planet;
 extern Animation *const metaball3dAnimation = &metaball3d;
-extern Animation *const pillarsAnimation = &pillars;
 extern Animation *const planetAnimation = &planet;

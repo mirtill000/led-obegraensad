@@ -128,19 +128,13 @@ static const char *const GEEK_GLIDER_ROWS[] = {
 };
 const Sprite GEEK_GLIDER = {"geek.glider", 3, 3, 4, 0, GEEK_GLIDER_ROWS};
 
-// Marks of the new geek icons: e eyes (skull, bird, robot), g glass and f
-// filament (bulb), w windows and d door (house), s sesame (burger), a the
-// robot's antenna.
+// Marks of the geek icons: e eyes (skull, bird), w windows and d door
+// (house), s sesame (burger).
 static const char *const GEEK_SKULL_ROWS[] = {
     "...######...", ".##########.", "############", "##...##...##", "##.e.##.e.##", "##...##...##", "#####..#####", ".####..####.", "..########..", "..#.#..#.#..", "..########..", "............",
     "...######...", ".##########.", "############", "##...##...##", "##.e.##.e.##", "##...##...##", "#####..#####", ".####..####.", "..########..", "..#.#..#.#..", "............", "..########..",
 };
 const Sprite GEEK_SKULL = {"geek.skull", 12, 12, 2, 0, GEEK_SKULL_ROWS};
-
-static const char *const GEEK_BULB_ROWS[] = {
-    "...#####...", "..#ggggg#..", ".#ggggggg#.", "#ggggggggg#", "#ggfgggfgg#", "#gggfgfggg#", "#ggggfgggg#", ".#gggfggg#.", "..#ggfgg#..", "...#ggg#...", "...:::::...", "...#####...", "...:::::...", "....###....",
-};
-const Sprite GEEK_BULB = {"geek.bulb", 11, 14, 1, 0, GEEK_BULB_ROWS};
 
 static const char *const GEEK_HOUSE_ROWS[] = {
     "..........##..", "......#...##..", ".....###..##..", "....#####.##..", "...#########..", "..###########.", ".#############", "..#.........#.", "..#.ww...ww.#.", "..#.ww...ww.#.", "..#....d....#.", "..#...ddd...#.", "..###########.",
@@ -157,22 +151,11 @@ static const char *const GEEK_BURGER_BOTTOM_ROWS[] = {
 };
 const Sprite GEEK_BURGER_BOTTOM = {"geek.burger-bottom", 14, 6, 1, 0, GEEK_BURGER_BOTTOM_ROWS};
 
-static const char *const GEEK_MONITOR_ROWS[] = {
-    "##############", "#............#", "#............#", "#............#", "#............#", "#............#", "#............#", "#............#", "##############", "......##......", "....######....",
-};
-const Sprite GEEK_MONITOR = {"geek.monitor", 14, 11, 1, 0, GEEK_MONITOR_ROWS};
-
 static const char *const GEEK_BIRD_ROWS[] = {
     "....###..", "...#####.", "...##e##:", "#.######.", "########.", ".######..", "...#.#...",
     "....###..", "...#####.", "#..##e##:", "########.", ".#######.", "..#####..", "...#.#...",
 };
 const Sprite GEEK_BIRD = {"geek.bird", 9, 7, 2, 0, GEEK_BIRD_ROWS};
-
-static const char *const GEEK_ROBOT_ROWS[] = {
-    "....a....", "....#....", ".#######.", ".#e###e#.", ".#######.", ".##...##.", ".#######.", "...###...", "#########", "#.#####.#", "#.##:##.#", "..#####..", "..#...#..", "..#...#..",
-    "....a....", "....#....", ".#######.", ".#e###e#.", ".#######.", ".##...##.", ".#######.", "...###...", "#########", "#.#####.#", "#.##:##.#", "..#####..", "..#..#...", ".#....#..",
-};
-const Sprite GEEK_ROBOT = {"geek.robot", 9, 14, 2, 0, GEEK_ROBOT_ROWS};
 
 static const char *const GEEK_DIE_ROWS[] = {
     ".##########.", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", "#..........#", ".##########.",
@@ -431,13 +414,10 @@ const Sprite *const ATLAS[] = {
     &spr::GEEK_CUP,
     &spr::GEEK_GLIDER,
     &spr::GEEK_SKULL,
-    &spr::GEEK_BULB,
     &spr::GEEK_HOUSE,
     &spr::GEEK_BURGER_TOP,
     &spr::GEEK_BURGER_BOTTOM,
-    &spr::GEEK_MONITOR,
     &spr::GEEK_BIRD,
-    &spr::GEEK_ROBOT,
     &spr::GEEK_DIE,
     &spr::SEASON_PINE,
     &spr::SEASON_COTTAGE,
