@@ -182,7 +182,8 @@ The page is laid out top to bottom as what you use most:
   the mode on show. While you play a game the preview moves right above
   the pad, so you can play without looking at the lamp.
 - **Modalità** - the modes as tiles in three groups (Informazioni, Giochi
-  e creatività, Altro).
+  e creatività, Altro), after a *Playlist* tile that starts the playlist
+  (lit while it runs; tapping a mode stops it).
 - One card with the settings of the mode picked, titled with its name.
 - **Impostazioni** (playlist, alarm, night, place, display),
   **Collegamenti** (phone notifications, Bluetooth) and **Sistema**

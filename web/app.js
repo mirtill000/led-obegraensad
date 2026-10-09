@@ -100,6 +100,27 @@ function render() {
   const selected = s.playlistPos >= 0 ? s.active : s.settings.mode;
   const box = $('modes');
   box.innerHTML = '';
+  // First, the playlist: one tap and the modes alternate by themselves
+  // (as set in «Playlist» below); tapping a mode stops it.
+  {
+    const group = document.createElement('div');
+    group.className = 'modegroup';
+    const h = document.createElement('h3');
+    h.textContent = 'Automatico';
+    const tiles = document.createElement('div');
+    tiles.className = 'tiles';
+    const b = document.createElement('button');
+    b.className = 'tile' + (s.settings.playlistOn ? ' on' : '');
+    b.textContent = 'Playlist';
+    const tag = document.createElement('small');
+    tag.textContent = s.settings.playlistOn ? 'in corso' : 'alterna da sola';
+    b.appendChild(tag);
+    b.onclick = () => saveSettings({ playlistOn: 1 })
+      .then(() => { dirty.playlist = false; status('Playlist avviata'); refresh(); }).catch(fail);
+    tiles.appendChild(b);
+    group.append(h, tiles);
+    box.appendChild(group);
+  }
   for (const [title, ids] of groupModes(s.modes)) {
     const group = document.createElement('div');
     group.className = 'modegroup';
