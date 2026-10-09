@@ -595,6 +595,41 @@ Current modes:
   three days. The page shows name, age, mood and three bars, and can rename
   it or start a new egg (`POST /api/pet` with `name` or `reset=1`); the
   state is the NVS blob `pet`, so it is in the settings backup.
+- **Bonsai**, **Gatto**, **Draghetto** - three more creatures on one base
+  (`src/modes/creature.cpp`: a life simulated a minute at a time, also
+  while other modes are shown or the lamp is off, up to three days of
+  catch-up; the state an NVS blob named after the mode, so in the backup;
+  care as keys from the page, the arrows or the Cardputer; the page shows
+  title, mood and bars, renames and starts over with `POST /api/creature`
+  `id=` and `name=` or `reset=1`). None of them dies.
+  - *Bonsai* (`bonsai_mode.cpp`): a little tree in a pot on the balcony.
+    It drinks about half the pot a day, more in the heat, and the real
+    rain (the weather) waters it; it grows every day it is well - full
+    size in about two weeks -, leans its lit side towards the sun (left in
+    the morning, right in the afternoon), blossoms in spring, drops leaves
+    in autumn, rests in winter. Stray shoots grow and want pruning; thirst
+    wilts it, too much water rots it; fertiliser doubles its growth for a
+    day but burns the roots more than once in three days. Keys: L
+    *Annaffia* (a watering can pours), R *Pota* (the shoots fall), U
+    *Concima* (sparkles from the soil).
+  - *Gatto* (`cat_mode.cpp`, sprites `cat.*`): it strolls, sits and licks
+    its paw, now and then sits right in front of the clock hiding a digit,
+    sleeps curled up at night (22-7 or the lamp's night mode), and after a
+    notification wakes up and bats it about. Hungry, it shows a bowl in the
+    corner; neglected, it sulks with its back to you, its tail flicking,
+    and ignores laser and yarn until stroked. Keys: L *Pappa* (a bowl), R
+    *Laser* (it runs after the dot), U *Gomitolo* (it bats the ball back),
+    A *Carezza* (it purrs, a heart rises).
+  - *Draghetto* (`dragon_mode.cpp`, sprites `dragon.*`): an egg, a cub for
+    its first day, a youngster until the third, then grown into what it
+    was trained for - fire dragon (spikes; it puffs flames when stroked),
+    sky dragon (great wings; it hovers), wise dragon (long horns, beard) -,
+    or a round lazy dragon if hardly trained; training fades a point a day,
+    so a grown dragon can still change. Three mini-games: R *Riflessi* (six
+    arrows, each shown a little shorter: press it in time - agility), U
+    *Memoria* (repeat the arrows it shows, one more each round - mind), D
+    *Forza* (press as fast as you can for 4 s, the flame grows - strength).
+    L *Pappa*, A *Coccole*.
 - **Demo** (under Diagnostica, *Prova i font*: a tool, not among the
   modes) - the hourly quotes shown three ways, to compare how a long
   text reads on 16x16 LEDs (a whole quote never fits one screen: they

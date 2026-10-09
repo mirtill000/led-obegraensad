@@ -6,6 +6,7 @@
 #include "display.h"
 #include "modes/ambient_mode.h"
 #include "modes/clock_mode.h"
+#include "modes/creature.h"
 #include "modes/hourglass_mode.h"
 #include "modes/notify_mode.h"
 #include "modes/demo_mode.h"
@@ -43,8 +44,10 @@ static SunriseMode sunriseMode;
 static OffMode offMode;
 
 Mode *const MODES[] = {&textMode, &quotesMode, &clockMode, &forecastMode, &webMode, &worldMode, &lifeMode, &ambientMode, &gamesMode, &galleryModeInstance, &formulaMode,
-                        &hourglassMode, &petMode, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
+                        &hourglassMode, &petMode, bonsaiCreature, catCreature, dragonCreature, &demoModeInstance, &offMode, &sunriseMode, &notifyMode};
 const uint8_t MODE_COUNT = sizeof(MODES) / sizeof(MODES[0]);
+Creature *const CREATURES[] = {bonsaiCreature, catCreature, dragonCreature};
+const uint8_t CREATURE_COUNT = sizeof(CREATURES) / sizeof(CREATURES[0]);
 
 static uint8_t current = 0;       // index of the mode being shown
 static bool started = false;      // current has been start()ed
@@ -356,6 +359,7 @@ void refreshModes() { evaluate(millis()); }
 void updateMode() {
   const uint32_t now = millis();
   PetMode::tickClock();  // the pet lives on while other modes are shown
+  for (uint8_t i = 0; i < CREATURE_COUNT; i++) CREATURES[i]->tick();  // and so do the others
   // A notification arriving or ending is picked up at once.
   const bool notifyChanged = (NotifyMode::pending() > 0) != (strcmp(MODES[current]->id(), "notify") == 0);
   if (!started || now - lastCheck >= (notifyChanged ? 100u : 1000u)) {

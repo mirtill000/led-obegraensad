@@ -86,6 +86,72 @@ static const char *const PET_ZED_ROWS[] = {
 };
 const Sprite PET_ZED = {"pet.zed", 4, 4, 1, 0, PET_ZED_ROWS};
 
+// mark: e eye (dark; lit when closed); walking right, 2 frames
+static const char *const CAT_WALK_ROWS[] = {
+    "......#.#", "#.....###", ".#....#e#", "..######.", "..######.", "..#.#.#.#", "......#.#", ".#....###", "#.....#e#", "..######.", "..######.", "...#.#.#.",
+};
+const Sprite CAT_WALK = {"cat.walk", 9, 6, 2, 0, CAT_WALK_ROWS};
+
+// mark: e eye
+static const char *const CAT_SIT_ROWS[] = {
+    "....#.#", "....###", "....#e#", "...###.", ".#.###.", "#.####.", ".#####.",
+};
+const Sprite CAT_SIT = {"cat.sit", 7, 7, 1, 0, CAT_SIT_ROWS};
+
+// curled up
+static const char *const CAT_SLEEP_ROWS[] = {
+    ".....#.#", ".#######", "########", ".######.",
+};
+const Sprite CAT_SLEEP = {"cat.sleep", 8, 4, 1, 0, CAT_SLEEP_ROWS};
+
+// sitting with its back to you (sulking)
+static const char *const CAT_BACK_ROWS[] = {
+    "#....#", "##..##", "######", ".####.", ".####.", "######", "######",
+};
+const Sprite CAT_BACK = {"cat.back", 6, 7, 1, 0, CAT_BACK_ROWS};
+
+// ':' scales
+static const char *const DRAGON_EGG_ROWS[] = {
+    "..##..", ".#:##.", ".##:#.", "#:##:#", "##:###", "#:##:#", ".####.", "..##..",
+};
+const Sprite DRAGON_EGG = {"dragon.egg", 6, 8, 1, 0, DRAGON_EGG_ROWS};
+
+// marks: e eye; ':' wings (dimmer)
+static const char *const DRAGON_BABY_ROWS[] = {
+    "....#.#.", "....####", "....#e##", ".:..###.", "#:#####.", ".######.", "..#..#..",
+};
+const Sprite DRAGON_BABY = {"dragon.baby", 8, 7, 1, 0, DRAGON_BABY_ROWS};
+
+// marks: e eye
+static const char *const DRAGON_YOUNG_ROWS[] = {
+    "......#.#.", "......####", "..:...#e##", ".::..####.", ".:::####..", "#.######..", ".#######..", "...#..#...",
+};
+const Sprite DRAGON_YOUNG = {"dragon.young", 10, 8, 1, 0, DRAGON_YOUNG_ROWS};
+
+// adult, trained in strength: spikes on its back
+static const char *const DRAGON_FIRE_ROWS[] = {
+    "........#.#.", "........####", "..#.#.#.#e##", "..:::::#####", ".:::::####..", "#:#######...", "#.########..", ".#########..", "..#######...", "..##...##...",
+};
+const Sprite DRAGON_FIRE = {"dragon.fire", 12, 10, 1, 0, DRAGON_FIRE_ROWS};
+
+// adult, trained in agility: great wings
+static const char *const DRAGON_SKY_ROWS[] = {
+    ":.......#.#.", "::......####", ":::.....#e##", ".::::..####.", "..:::::###..", "#..:######..", "#..######...", ".#######....", "...#...#....", "...#...#....",
+};
+const Sprite DRAGON_SKY = {"dragon.sky", 12, 10, 1, 0, DRAGON_SKY_ROWS};
+
+// adult, trained in memory: long horns, a beard
+static const char *const DRAGON_WISE_ROWS[] = {
+    ".......##.#.", ".........#.#", "........####", "..::....#e##", ".::::..####.", "#:::######..", "#.#######:..", ".########...", "..######....", "..#....#....",
+};
+const Sprite DRAGON_WISE = {"dragon.wise", 12, 10, 1, 0, DRAGON_WISE_ROWS};
+
+// adult, left untrained: round and wingless-ish
+static const char *const DRAGON_LAZY_ROWS[] = {
+    "............", "........####", "........#e##", "..::...#####", ".::######...", "#.########..", "#.#########.", ".##########.", "..########..", "..##....##..",
+};
+const Sprite DRAGON_LAZY = {"dragon.lazy", 12, 10, 1, 0, DRAGON_LAZY_ROWS};
+
 static const char *const GEEK_INVADER_ROWS[] = {
     "..#.....#..", "...#...#...", "..#######..", ".##.###.##.", "###########", "#.#######.#", "#.#.....#.#", "...##.##...",
     "..#.....#..", "#..#...#..#", "#.#######.#", "###.###.###", "###########", ".#########.", "..#.....#..", ".#.......#.",
@@ -406,6 +472,17 @@ const Sprite *const ATLAS[] = {
     &spr::PET_HEART,
     &spr::PET_POOP,
     &spr::PET_ZED,
+    &spr::CAT_WALK,
+    &spr::CAT_SIT,
+    &spr::CAT_SLEEP,
+    &spr::CAT_BACK,
+    &spr::DRAGON_EGG,
+    &spr::DRAGON_BABY,
+    &spr::DRAGON_YOUNG,
+    &spr::DRAGON_FIRE,
+    &spr::DRAGON_SKY,
+    &spr::DRAGON_WISE,
+    &spr::DRAGON_LAZY,
     &spr::GEEK_INVADER,
     &spr::GEEK_PACMAN,
     &spr::GEEK_GHOST,

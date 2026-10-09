@@ -23,6 +23,7 @@
 #include "modes/board.h"
 #include "modes/formula_mode.h"
 #include "modes/hourglass_mode.h"
+#include "modes/creature.h"
 #include "modes/pet_mode.h"
 #include "modes/notify_mode.h"
 #include "modes/quotes_mode.h"
@@ -153,6 +154,21 @@ static String stateJson() {
           ",\"energy\":" + String(pet.energy) + ",\"poops\":" + String(pet.poops) + ",\"sick\":" + jsonBool(pet.sick) +
           ",\"asleep\":" + jsonBool(pet.asleep) + ",\"hours\":" + String(pet.ageHours) +
           ",\"pad\":" + controlsJson(PetMode::keys()) + "}";
+  // The other creatures (creature.h): one object each, by id.
+  json += ",\"creatures\":{";
+  for (uint8_t i = 0; i < CREATURE_COUNT; i++) {
+    Creature *c = CREATURES[i];
+    const Creature::Info in = c->info();
+    if (i) json += ",";
+    json += jsonString(c->id()) + ":{\"title\":" + jsonString(in.title) + ",\"mood\":" + jsonString(in.mood) + ",\"stats\":[";
+    for (uint8_t k = 0; k < in.count; k++) {
+      json += String(k ? "," : "") + "[" + jsonString(in.stats[k].label) + "," + String(in.stats[k].value) + "," +
+              String(in.stats[k].low) + "]";
+    }
+    json += "],\"name\":" + jsonString(c->petName()) + ",\"reset\":" + jsonString(c->resetName()) +
+            ",\"question\":" + jsonString(c->resetQuestion()) + ",\"pad\":" + controlsJson(c->keys()) + "}";
+  }
+  json += "}";
   json += ",\"ble\":{\"connected\":" + jsonBool(bleConnected()) + "}";
   json += ",\"notifyPending\":" + String(NotifyMode::pending());
   const float phase = moonPhase(time(nullptr));
@@ -428,6 +444,22 @@ static void handlePet() {
   if (server.arg("reset") == "1") {
     PetMode::reset();
     logEvent("Animaletto: nuovo uovo");
+  }
+  sendState();
+}
+
+// A creature's name (id=, name=) or a new life (id=, reset=1); care goes
+// through /api/cmd like the pet's.
+static void handleCreature() {
+  Creature *c = Creature::find(server.arg("id"));
+  if (!c) return badRequest(txt::UNKNOWN_MODE);
+  if (server.hasArg("name")) {
+    if (!server.arg("name").length()) return badRequest(txt::NEED_NAME);
+    c->rename(server.arg("name"));
+  }
+  if (server.arg("reset") == "1") {
+    c->reset();
+    logEvent(String(c->name()) + ": " + c->resetName());
   }
   sendState();
 }
@@ -725,6 +757,7 @@ void webBegin() {
   server.on("/api/settings", HTTP_POST, handleSettings);
   server.on("/api/hourglass", HTTP_POST, handleHourglass);
   server.on("/api/pet", HTTP_POST, handlePet);
+  server.on("/api/creature", HTTP_POST, handleCreature);
   server.on("/api/sprites", HTTP_GET, handleSprites);
   server.on("/api/catalog", HTTP_GET, handleCatalog);
   server.on("/api/show", HTTP_POST, handleShow);

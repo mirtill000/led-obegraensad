@@ -61,7 +61,7 @@ function minutesOf(value) { const [h, m] = value.split(':').map(Number); return 
 // The mode tiles, in three groups; modes not listed go under "Altro".
 const MODE_GROUPS = [
   ['Informazioni', ['clock', 'forecast', 'web', 'world', 'quotes', 'text']],
-  ['Giochi e creatività', ['games', 'ambient', 'life', 'pet', 'formula', 'gallery']],
+  ['Giochi e creatività', ['games', 'ambient', 'life', 'pet', 'bonsai', 'cat', 'dragon', 'formula', 'gallery']],
   ['Altro', []],
 ];
 function groupModes(allModes) {
@@ -438,6 +438,61 @@ function renderPet(p) {
     $('petHint').textContent = p.pad.hint;
   }
 }
+// The other creatures (bonsai, cat, dragon): one panel each, built from
+// what the lamp says about them (title, mood, stats, keys, name, reset).
+function renderCreatures(all) {
+  for (const [id, cr] of Object.entries(all || {})) {
+    const box = $('cr-' + id);
+    if (!box) continue;
+    if (!box.dataset.built) {
+      box.dataset.built = '1';
+      box.innerHTML = '<p class="lead"></p><p class="hint mood"></p><div class="petStats"></div><div class="petCare"></div><p class="hint keys"></p>';
+      const stats = box.querySelector('.petStats');
+      for (const [label, , low] of cr.stats) {
+        const l = document.createElement('label');
+        l.textContent = label + ' ';
+        const m = document.createElement('meter');
+        m.min = 0; m.max = 100; m.optimum = 100;
+        if (low) m.low = low;
+        l.appendChild(m);
+        stats.appendChild(l);
+      }
+      const care = box.querySelector('.petCare');
+      [...cr.pad.keys].forEach((k) => {
+        const b = document.createElement('button');
+        b.className = 'btn';
+        b.textContent = cr.pad.labels['LRUDA'.indexOf(k)] || DEFAULT_LABELS[k];
+        b.onclick = () => post('/api/cmd', { c: 'k ' + k }).catch(fail);
+        care.appendChild(b);
+      });
+      box.querySelector('.keys').textContent = cr.pad.hint;
+      if (cr.name) {
+        const label = document.createElement('label');
+        label.htmlFor = 'crName-' + id;
+        label.textContent = 'Nome';
+        const row = document.createElement('div');
+        row.className = 'inline';
+        row.innerHTML = '<input type="text" maxlength="15"><button class="btn primary">Salva</button>';
+        row.firstChild.id = 'crName-' + id;
+        row.lastChild.onclick = () => post('/api/creature', { id, name: row.firstChild.value }).then(() => status('Nome salvato')).catch(fail);
+        box.append(label, row);
+      }
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      const reset = document.createElement('button');
+      reset.className = 'btn quiet';
+      reset.textContent = cr.reset;
+      reset.onclick = () => confirm(cr.question) && post('/api/creature', { id, reset: 1 }).then(() => status(cr.reset)).catch(fail);
+      actions.appendChild(reset);
+      box.appendChild(actions);
+    }
+    box.querySelector('.lead').textContent = cr.title;
+    box.querySelector('.mood').textContent = cr.mood;
+    box.querySelectorAll('.petStats meter').forEach((m, i) => { m.value = cr.stats[i][1]; });
+    const name = $('crName-' + id);
+    if (name && !editing(name.id)) name.value = cr.name;
+  }
+}
 $('petNameSave').onclick = () => post('/api/pet', { name: $('petName').value }).then(() => status('Nome salvato')).catch(fail);
 $('petReset').onclick = () => confirm('Il tuo animaletto lascerà il posto a un nuovo uovo. Continuare?')
   && post('/api/pet', { reset: 1 }).then(() => status('Nuovo uovo')).catch(fail);
@@ -502,6 +557,7 @@ function renderExtras() {
   $('brightInfo').textContent = s.settings.autoBright ? 'Ora: ' + Math.round(s.brightnessNow / 2.55) + '%' + (s.time ? '' : ' (in attesa dell\'ora)') : '';
   if (!editing('hgMin')) $('hgMin').value = String(s.settings.hgMin);
   renderPet(s.pet);
+  renderCreatures(s.creatures);
   if (!dirty.formula && !editing('formulaText')) $('formulaText').value = s.settings.formula;
   const w = s.world;
   $('worldInfo').textContent = [w.air !== null ? 'Aria ' + w.airBand + ' (indice ' + w.air + ')' : '',
@@ -864,7 +920,7 @@ function typing() {
 }
 document.addEventListener('keydown', (e) => {
   if (!state || typing()) return;
-  if ((playable() || state.active === 'pet') && (ARROWS[e.code] || e.code === 'Space')) {
+  if ((playable() || state.active === 'pet' || (state.creatures && state.creatures[state.active])) && (ARROWS[e.code] || e.code === 'Space')) {
     // Arrows and space drive the game (space: jump / drop).
     e.preventDefault();
     if (!e.repeat || e.code !== 'Space') sendKey(ARROWS[e.code] || 'A');
@@ -1136,7 +1192,7 @@ function loadDiag() {
 // always full, letters = marks with a role.
 const sp = { list: [], cur: null, rows: [], frame: 0, brush: '9' };
 const SP_BRUSHES = ['.', '0', '2', '4', '6', '9', '+'];
-const SP_GROUPS = { notify: 'Notifiche', pet: 'Animaletto', geek: 'Icone geek', season: 'Ricorrenze', gallery: 'Disegni',
+const SP_GROUPS = { notify: 'Notifiche', pet: 'Animaletto', cat: 'Gatto', dragon: 'Draghetto', geek: 'Icone geek', season: 'Ricorrenze', gallery: 'Disegni',
                     runner: 'Dino', sonic: 'Sonic', doom: 'Doom', mario: 'Super Mario', weather: 'Meteo', world: 'Mondo' };
 function spLevel(ch) {
   if (ch >= '0' && ch <= '9') return Math.round(255 * (ch - '0') / 9);
