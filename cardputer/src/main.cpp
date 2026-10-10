@@ -18,6 +18,7 @@
 #include <M5Cardputer.h>
 
 #include "lamp.h"
+#include "sounds.h"
 
 namespace {
 
@@ -528,6 +529,7 @@ void setup() {
   canvas.setFont(&fonts::Font0);
   canvas.setTextSize(1);
   lamp::begin();  // creates the data mutex before either task runs
+  sounds::begin();
   xTaskCreatePinnedToCore(uiTask, "ui", 8192, nullptr, 2, nullptr, 1);
   xTaskCreatePinnedToCore(bleTask, "ble", 8192, nullptr, 1, nullptr, 0);
 }

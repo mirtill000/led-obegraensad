@@ -387,12 +387,12 @@
 
     <details id="soundBox">
       <summary>Suoni</summary>
-      <label class="check"><input type="checkbox" id="soundOn"> Suoni attivi (serve l'altoparlante)</label>
+      <label class="check"><input type="checkbox" id="soundOn"> Suoni attivi (dall'altoparlante della lampada e dal Cardputer collegato)</label>
       <label for="soundVol">Volume</label>
       <input type="range" id="soundVol" min="0" max="100">
       <label class="check"><input type="checkbox" id="soundChime"> Un rintocco ogni ora, di giorno</label>
       <div class="actions"><button class="btn" id="soundTest">Prova</button></div>
-      <p class="hint">Suonano i giochi (non le demo), le creature, le notifiche e la sveglia con l'alba. Di notte la lampada sta zitta, tranne la sveglia.</p>
+      <p class="hint">Suonano i giochi (non le demo), le creature, le notifiche e la sveglia con l'alba. Di notte la lampada sta zitta, tranne la sveglia. Se il Cardputer è collegato, i suoni escono anche dal suo altoparlante, allo stesso volume: si può usare in attesa di montare l'altoparlante sulla lampada.</p>
       <details class="help"><summary>Come collegare l'altoparlante</summary>
         <p>Con un amplificatore MAX98357A: VIN al 5 V della lampada, GND a GND, BCLK al GPIO 15, LRC al GPIO 16, DIN al GPIO 17; SD e GAIN liberi. L'altoparlante (4 o 8 Ω) ai due morsetti dell'amplificatore. Poi attiva «Suoni attivi» e premi «Prova».</p>
       </details>

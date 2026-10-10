@@ -13,6 +13,9 @@ bool bleConnected();
 // The scene catalog changed (a drawing saved or deleted): remotes read the
 // new one the next time they connect.
 void bleCatalogChanged();
+// A sound to play on the connected remote, if any: its name (sound_synth.h)
+// and the volume 0-100.
+void bleSound(const char *name, uint8_t volume);
 // Forgets every paired remote and picks a new PIN (takes effect on restart).
 void bleForgetRemotes();
 

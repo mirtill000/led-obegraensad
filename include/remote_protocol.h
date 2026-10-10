@@ -12,6 +12,7 @@
 #define REMOTE_FRAME_UUID "8f3e0003-5c1a-4a6b-9b8e-0b5e6a1d0bea"    // read/notify: 128 bytes
 #define REMOTE_CATALOG_UUID "8f3e0004-5c1a-4a6b-9b8e-0b5e6a1d0bea"  // read: the scene catalog
 #define REMOTE_SETTINGS_UUID "8f3e0005-5c1a-4a6b-9b8e-0b5e6a1d0bea" // read/notify: the settings a remote may change
+#define REMOTE_SOUND_UUID "8f3e0006-5c1a-4a6b-9b8e-0b5e6a1d0bea"    // notify: "<sound> <volume 0-100>" to play
 
 // The same data reaches the page over WiFi (Server-Sent Events on port 81,
 // GET /events) in the same formats (src/live.cpp):

@@ -127,7 +127,10 @@ singing every few seconds once the sun is up) and, if wanted, a soft
 silent except for the alarm. Off by default (`soundOn`), volume
 `soundVol` 0-100 (kept well below clipping), `soundChime`; the command
 `u <name>` plays one (`u test`, `u meow`...). `docs/suoni_lampada.wav`
-has all of them one after the other.
+has all of them one after the other. The sounds and the synthesizer are in
+`include/sound_synth.h`, shared with the Cardputer: a connected Cardputer
+plays every sound too, out of its own speaker (see the Bluetooth remote
+below) - handy before the amplifier is fitted.
 
 ### Opening the lamp
 
@@ -857,6 +860,13 @@ the keycaps), Enter chooses, `` ` `` goes back.
   to the lamp appears here without touching the Cardputer; `,` `/` change
   the selected one (`o <name> <value>`, checked by the lamp like the page's)
 - **Abbinamento (PIN)** - `F` forgets the lamp (after changing its PIN)
+- **Sounds**: while connected, the Cardputer plays the lamp's sounds out
+  of its own speaker (`cardputer/src/sounds.cpp`): the lamp notifies the
+  `sound` characteristic with a sound's name and its volume ("meow 50"),
+  and the same synthesizer as the lamp's (`include/sound_synth.h`, shared)
+  plays it, streamed to the speaker in 32 ms chunks. On or off and how
+  loud are the lamp's settings (Suoni, Volume - also in *Impostazioni
+  lampada*); a lamp without a loudspeaker of its own works too
 
 The screen and keyboard run on their own task pinned to core 1, redrawing
 a single full-screen off-screen canvas (in internal SRAM, this board has no

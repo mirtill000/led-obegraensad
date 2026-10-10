@@ -19,6 +19,8 @@
 //   settings (read, notify) the settings a remote may change, one per line
 //                          (remoteSettingsText(), settings.h) - sent when
 //                          any of them changes
+//   sound (notify)        "<name> <volume>": a sound for the remote to play
+//                          out of its own speaker (sound_synth.h has them)
 //
 // The BLE stack runs in its own task: commands are queued there and run
 // here, in loop(), like the web page's.
@@ -48,7 +50,8 @@ struct Command {
 
 QueueHandle_t commands = nullptr;
 BLEServer *server = nullptr;
-BLECharacteristic *stateChar = nullptr, *frameChar = nullptr, *catalogChar = nullptr, *settingsChar = nullptr;
+BLECharacteristic *stateChar = nullptr, *frameChar = nullptr, *catalogChar = nullptr, *settingsChar = nullptr,
+                  *soundChar = nullptr;
 bool running = false;
 
 class CommandCallbacks : public BLECharacteristicCallbacks {
@@ -82,7 +85,7 @@ void bleBegin() {
   server = BLEDevice::createServer();
   server->setCallbacks(new ServerCallbacks());
   server->advertiseOnDisconnect(true);
-  BLEService *service = server->createService(REMOTE_SERVICE_UUID);
+  BLEService *service = server->createService(BLEUUID(REMOTE_SERVICE_UUID), 32);  // room for every handle
   const uint32_t readSecure = BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_READ_AUTHEN;
 
   BLECharacteristic *command = service->createCharacteristic(
@@ -95,6 +98,7 @@ void bleBegin() {
   catalogChar->setValue(catalogText());
   settingsChar = service->createCharacteristic(REMOTE_SETTINGS_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
   settingsChar->setValue(remoteSettingsText());
+  soundChar = service->createCharacteristic(REMOTE_SOUND_UUID, readSecure | BLECharacteristic::PROPERTY_NOTIFY);
   service->start();
 
   BLEAdvertising *adv = BLEDevice::getAdvertising();
@@ -106,6 +110,12 @@ void bleBegin() {
 }
 
 bool bleConnected() { return running && server->getConnectedCount() > 0; }
+
+void bleSound(const char *name, uint8_t volume) {
+  if (!bleConnected()) return;
+  soundChar->setValue(String(name) + " " + volume);
+  soundChar->notify();
+}
 
 void bleForgetRemotes() {
   if (running) ble_store_clear();

@@ -9,6 +9,7 @@
 #include <host/ble_store.h>
 
 #include "protocol.h"
+#include "sounds.h"
 
 namespace lamp {
 
@@ -143,6 +144,9 @@ void parseSettings(const String &text) {
 // The list doesn't fit a notification: it only says "read me again".
 void onSettings(BLERemoteCharacteristic *, uint8_t *, size_t, bool) { settingsPending = true; }
 
+// A sound to play: handed to the audio task at once.
+void onSound(BLERemoteCharacteristic *, uint8_t *data, size_t length, bool) { sounds::received((const char *)data, length); }
+
 void onState(BLERemoteCharacteristic *, uint8_t *data, size_t length, bool) {
   String s;
   s.concat((const char *)data, length);
@@ -241,6 +245,8 @@ bool connect() {
     parseSettings(settingsChar->readValue());
     if (settingsChar->canNotify()) settingsChar->registerForNotify(onSettings);
   }
+  BLERemoteCharacteristic *soundChar = service->getCharacteristic(LAMP_SOUND_UUID);  // missing on older lamps
+  if (soundChar && soundChar->canNotify()) soundChar->registerForNotify(onSound);
   stateChar->registerForNotify(onState);
   frameChar->registerForNotify(onFrame);
   const String first = frameChar->readValue();
