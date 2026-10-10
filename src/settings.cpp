@@ -192,10 +192,18 @@ const SettingDef SETTING_DEFS[] = {
     {"gameStyle", "gameStyle", T::Text, F_(gameStyle), 0, 0, "soft", "soft|crisp", SW, 0, nullptr, nullptr, "Grafica giochi", "Sfumata|Nitida"},
     {"playlistOn", "plOn", T::Bool, F_(playlistOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr, "Playlist", nullptr},
     {"playlist", "playlist", T::Text, F_(playlist), 0, 400, "clock:10,quotes:3,ambient:5,games:5", nullptr, SW, FX_PLAYLIST, nullptr, checkPlaylist},
-    {"scenesOn", "scenesOn", T::Bool, F_(scenesOn), 0, 1, "0", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr, "Fasce orarie", nullptr},
-    {"scenes", "scenes", T::Text, F_(scenes), 0, 1000,
-     "0700|200|clock:10,forecast:1,quotes:3;1300|255|clock:10,web:3,ambient:10,games:5;"
-     "1900|120|quotes:3,ambient:10,clock:5;2300|25|clock:30",
+    {"scenesOn", "scenesOn", T::Bool, F_(scenesOn), 0, 1, "1", nullptr, SW, FX_PLAYLIST | FX_MODES, nullptr, nullptr, "Fasce orarie", nullptr},
+    {"scenes", "scenes", T::Text, F_(scenes), 0, 1600,
+     // A day: coffee and the day's phrases at dawn, the info and the
+     // geek icons in the morning, games and 3D after lunch, the city and
+     // the games' demos towards evening, night scenes and Saturn in the
+     // evening, stars and a slow breath at night (out-of-season ones skipped).
+     "0630|150|a/coffee:2,quotes:3,clock:5,forecast:2,a/bird:2,a/sky:4,a/breath:2,web:3,bonsai:2,world:2;"
+     "0900|0|clock:5,a/terminal:2,quotes:3,a/aquarium:5,world:3,a/rocket:2,a/clouds:4,cat:3,a/floppy:2,web:3,a/voxel:4,a/gameboy:2,forecast:2,a/matrix:2;"
+     "1300|0|a/burger:2,clock:5,g/mario:3,a/plasma:3,g/tetris:3,dragon:3,a/solidcube:3,g/invaders:3,a/metaball3d:3,g/dino:3,life:3,formula:3,a/pacicon:2,g/pong:2,a/dice:2,g/sonic:3;"
+     "1730|0|clock:5,a/rain:3,g/breakout:3,a/sky:4,g/snake:3,a/invader:2,g/flappy:3,a/metaballs:3,g/doom:3,a/cube:3,g/maze:3,a/city:4,g/tron:3,gallery:3,pet:3,a/mandelbrot:3;"
+     "2000|120|clock:5,a/train:4,a/planet:4,a/lighthouse:4,quotes:3,a/campfire:5,a/saturnmoon:4,g/kong:3,a/aurora:5,a/tunnel:3,a/fireflies:4,a/pumpkin:5,a/skull:2,a/xmastree:5,a/hearts:5,a/cake:5;"
+     "2230|40|a/stars:6,a/saturnclose:3,a/meteors:5,clock:5,a/rainglass:4,a/snow:5,a/fireworks:5,a/startrails:6,cat:3,a/house:2,a/breath:4,a/waves:5,a/fire:5",
      nullptr, SW, FX_PLAYLIST, nullptr, checkScenes},
     {"demoOff", "demoOff", T::Text, F_(demoOff), 0, 300, "", nullptr, 0, 0, nullptr, nullptr},
     {"formula", "formula", T::Text, F_(formula), 0, 300, "sin(t-hypot(x-7.5,y-7.5))", nullptr, SET_SHOW, 0, nullptr, nullptr},
@@ -383,7 +391,7 @@ static void storeSetting(const SettingDef &d) {
 int cleanPlaylist(const String &items, String &clean) {
   clean = "";
   int start = 0, count = 0;
-  while (start < (int)items.length() && count < 12) {
+  while (start < (int)items.length() && count < MAX_PLAYLIST_ITEMS) {
     int end = items.indexOf(',', start);
     if (end < 0) end = items.length();
     const String item = items.substring(start, end);
@@ -399,7 +407,7 @@ int cleanPlaylist(const String &items, String &clean) {
   return count;
 }
 
-// Time slots: "HHMM|brightness|items" separated by ';', at most 4, each
+// Time slots: "HHMM|brightness|items" separated by ';', at most MAX_SCENES, each
 // with at least one valid item.
 int cleanScenes(const String &raw, String &clean) {
   clean = "";
@@ -460,6 +468,18 @@ void loadSettings() {
       settings.clockStyle = settings.ambient;
       settings.ambient = "auto";
       if (settings.mode == "ambient") settings.mode = "clock";
+    }
+  }
+  // 5: a full day of time slots, from coffee at dawn to the stars at night
+  // (up to 6 slots of 16 items now): lamps still on the old default get it,
+  // and the time slots switched on - that is what they are for.
+  if (version < 5) {
+    static const char *OLD_SCENES =
+        "0700|200|clock:10,forecast:1,quotes:3;1300|255|clock:10,web:3,ambient:10,games:5;"
+        "1900|120|quotes:3,ambient:10,clock:5;2300|25|clock:30";
+    if (settings.scenes == OLD_SCENES || !settings.scenes.length()) {
+      settings.scenes = findSetting("scenes")->def;
+      settings.scenesOn = true;
     }
   }
   // Super Mario used to be a mode of its own; it is now one of the games.

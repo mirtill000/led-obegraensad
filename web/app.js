@@ -968,7 +968,7 @@ $('playlistOn').onchange = () => { dirty.playlist = true; };
 function showScenes() {
   $('scenesBox').hidden = !$('scenesOn').checked;
   $('plainPlaylist').hidden = $('scenesOn').checked;
-  $('addScene').hidden = $('scenes').children.length >= 4;
+  $('addScene').hidden = $('scenes').children.length >= 6;
 }
 function addScene(time, bright, items) {
   const box = document.createElement('div');

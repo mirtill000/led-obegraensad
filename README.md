@@ -274,12 +274,30 @@ animation menu, ...). General settings are in collapsible sections:
   drawings; what the playlist picks doesn't change the animation, game or
   drawing chosen in their own modes (by default clock 10 min, quote 3 min,
   animations 5 min, games 5 min). With **Cambia per
-  fascia oraria** up to four time slots ("scene") each have their own
-  start time, brightness and list - e.g. mornings clock and forecast,
-  evenings quotes and animations, late at night just a dim clock; a slot
-  lasts until the next one (the last carries on past midnight) and
-  starts its list from the top. The night schedule and the alarm still
-  win. Picking something by hand stops the playlist.
+  fascia oraria** (on by default) up to six time slots ("scene") each
+  have their own start time, brightness and list of up to 16 items; a
+  slot lasts until the next one (the last carries on past midnight) and
+  starts its list from the top. The default is a whole day that uses
+  nearly everything the lamp has (72 scenes):
+  - 06:30, dim - coffee, the day's phrase, clock, forecast, the little
+    bird, the window on the sky, a breath, the web, the bonsai, the world;
+  - 09:00 - clock, terminal, phrases, aquarium, world, rocket, above the
+    clouds, the cat, floppy, the web, hills, Game Boy, forecast, Matrix;
+  - 13:00 - burger, clock, then games and 3D: Mario, plasma, Tetris, the
+    dragon, the solid cube, Invaders, 3D metaballs, Dino, Game of Life,
+    formulas, Pac-Man, Pong, the die, Sonic;
+  - 17:30 - clock, digital rain, Breakout, the sky, Snake, the alien,
+    Flappy, metaballs, Doom, the cube, the maze, the city at night, Tron,
+    the drawings, the pet, Mandelbrot;
+  - 20:00, dimmer - clock, the night train, Saturn, the lighthouse, a
+    phrase, the campfire, Saturn and its moon, Donkey Kong, the aurora,
+    the tunnel, fireflies, and the special days' scenes (pumpkin, skull,
+    Christmas tree, hearts, the birthday cake - skipped out of season);
+  - 22:30, low - stars, Saturn up close, shooting stars, clock, rain on
+    the glass, snow, fireworks (in season), star trails, the sleeping
+    cat, the little house, a breath, waves, fire.
+  The night schedule and the alarm still win. Picking something by hand
+  stops the playlist.
 - **Sveglia con l'alba** - on the chosen days, from 5-60 minutes before the
   alarm a sun rises on the panel while the brightness slowly goes up; it
   stays bright for a while after. It wins over everything else; the mode

@@ -206,8 +206,8 @@ static void evaluate(uint32_t now) {
     bool found = false;
     for (int tries = 0; tries < 24 && !found; tries++) {
       found = playlistItem(playlistPos, mode, minutes, pick);
-      if (!found) playlistPos = tries < 12 ? playlistPos + 1 : 0;
-      if (playlistPos >= 12) playlistPos = 0;
+      if (!found) playlistPos = tries < MAX_PLAYLIST_ITEMS ? playlistPos + 1 : 0;
+      if (playlistPos >= MAX_PLAYLIST_ITEMS) playlistPos = 0;
     }
     if (found) wanted = mode;
     else pick = "";

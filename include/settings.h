@@ -93,7 +93,7 @@ extern Settings settings;
 
 void loadSettings();
 // Version of the saved settings' layout: loadSettings() migrates older ones.
-static const uint8_t SETTINGS_VERSION = 4;
+static const uint8_t SETTINGS_VERSION = 5;
 // Writes the settings that changed since they were last loaded or saved
 // (each NVS write wears the flash: only the differences go).
 void saveSettings();

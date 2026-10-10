@@ -63,7 +63,9 @@ bool isNight();
 // Position in the playlist of the item being shown, or -1.
 int playlistPosition();
 // The time slot ("scena") whose playlist runs now, or -1 (see modes.cpp).
-static const int MAX_SCENES = 4;
+static const int MAX_SCENES = 6;
+// Items in one playlist (the plain one or a time slot's).
+static const int MAX_PLAYLIST_ITEMS = 16;
 int activeScene();
 
 // The user picks a mode (no-op if unknown); this stops the playlist.
