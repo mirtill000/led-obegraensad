@@ -61,7 +61,12 @@ Two things that made a still picture (the clock) flicker now and then:
   some tens of ms. Writes are kept rare: the creatures and the pet are
   saved hourly (and right after care), the web caches every 3 hours.
   *Diagnostica* shows the refresh's longest delay ("Ritardo medio /
-  massimo") and the plane changes it missed.
+  massimo"), the plane changes it missed and the stalls ("Blocchi": how
+  many, the longest). After a stall the next plane is timed from the
+  moment the interrupt finally runs: timing it from the missed alarm, as
+  before, fired a burst of catch-up interrupts that raced through the
+  planes - each stall made a brief flash of wrong brightness (and those
+  were the "missed" plane changes).
 
 ## Wiring
 

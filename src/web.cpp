@@ -295,7 +295,7 @@ static void handleDiag() {
   json += ",\"sources\":" + sourcesJson();
   json += ",\"refresh\":{\"hw\":" + jsonBool(r.hardwareTimer) + ",\"planes\":" + String(r.planes);
   json += ",\"missed\":" + String(r.missed) + ",\"avg\":" + String(r.avgLatencyUs) + ",\"max\":" + String(r.maxLatencyUs);
-  json += ",\"cycleUs\":" + String(r.cycleUs) + "}";
+  json += ",\"cycleUs\":" + String(r.cycleUs) + ",\"stalls\":" + String(r.stalls) + ",\"maxStall\":" + String(r.maxStallUs) + "}";
   const uint32_t secs = max<uint32_t>(1, (millis() - loopSince) / 1000);
   json += ",\"loop\":{\"perSec\":" + String(loopRounds / secs) + ",\"maxMs\":" + String(loopMaxUs / 1000.0f, 1) + "}";
   json += ",\"ble\":{\"on\":" + jsonBool(settings.bleOn) + ",\"connected\":" + jsonBool(bleConnected()) + "}";

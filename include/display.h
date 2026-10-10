@@ -61,6 +61,7 @@ class Display {
   struct RefreshStats {
     bool hardwareTimer;  // REFRESH_HW_TIMER in use (else no figures)
     uint32_t planes, missed, maxLatencyUs, avgLatencyUs, cycleUs;
+    uint32_t stalls, maxStallUs;  // the refresh stopped (flash writes): how often, the longest
   };
   static RefreshStats refreshStats();
   static void resetRefreshStats();

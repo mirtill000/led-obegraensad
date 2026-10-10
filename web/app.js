@@ -1180,6 +1180,9 @@ function loadDiag() {
       rows.push(['Cambi di livello', d.refresh.planes.toLocaleString('it-IT')]);
       rows.push(['Cambi di livello saltati', d.refresh.missed.toLocaleString('it-IT')]);
       rows.push(['Ritardo medio / massimo', d.refresh.avg + ' / ' + d.refresh.max + ' µs']);
+      if (d.refresh.stalls !== undefined) {
+        rows.push(['Blocchi (scritture in memoria)', d.refresh.stalls ? d.refresh.stalls.toLocaleString('it-IT') + ' · il più lungo ' + (d.refresh.maxStall / 1000).toFixed(1) + ' ms' : 'nessuno']);
+      }
     } else {
       rows.push(['Rinfresco', 'esp_timer (senza statistiche)']);
     }

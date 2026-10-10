@@ -105,14 +105,28 @@ static volatile int64_t notifiedAt = 0;  // when the interrupt woke the task, us
 // Refresh statistics for the diagnostics page (hardware path only).
 static volatile uint32_t statPlanes = 0, statMissed = 0, statMaxLatency = 0;
 static volatile uint64_t statLatencySum = 0;
+// Stalls: the interrupt itself came late (the flash being written stops
+// everything not in IRAM, this interrupt included), how many, the longest.
+static volatile uint32_t statStalls = 0, statMaxStallUs = 0;
 
 // The alarm fires once per plane, when its time is up, and is re-armed for
 // the length of the next one (a fixed 100 us tick would interrupt the core
 // 10000 times a second; this is 1600).
 static bool IRAM_ATTR onTick(gptimer_handle_t timer, const gptimer_alarm_event_data_t *event, void *) {
   isrPlane = isrPlane + 1 == PLANES ? 0 : isrPlane + 1;
+  // Normally the next plane is timed from this one's alarm, so no error
+  // builds up. After a stall, though, that moment is long gone: timing
+  // from it would fire a burst of catch-up interrupts racing through the
+  // planes (a flash of wrong brightness); time from now instead.
+  uint64_t base = event->alarm_value;
+  const uint64_t late = event->count_value - event->alarm_value;
+  if (late > TICK_US) {
+    base = event->count_value;
+    statStalls = statStalls + 1;
+    if (late > statMaxStallUs) statMaxStallUs = (uint32_t)late;
+  }
   gptimer_alarm_config_t alarm = {};
-  alarm.alarm_count = event->alarm_value + PLANE_TICKS[isrPlane] * TICK_US;
+  alarm.alarm_count = base + PLANE_TICKS[isrPlane] * TICK_US;
   gptimer_set_alarm_action(timer, &alarm);
   notifiedAt = esp_timer_get_time();
   BaseType_t woken = pdFALSE;
@@ -161,6 +175,8 @@ Display::RefreshStats Display::refreshStats() {
   r.maxLatencyUs = statMaxLatency;
   r.avgLatencyUs = r.planes ? (uint32_t)(statLatencySum / r.planes) : 0;
   r.cycleUs = TICK_US * 31;
+  r.stalls = statStalls;
+  r.maxStallUs = statMaxStallUs;
   return r;
 }
 
@@ -169,6 +185,8 @@ void Display::resetRefreshStats() {
   statMissed = 0;
   statMaxLatency = 0;
   statLatencySum = 0;
+  statStalls = 0;
+  statMaxStallUs = 0;
 }
 
 // --- esp_timer path (REFRESH_HW_TIMER false) -------------------------------
