@@ -552,6 +552,9 @@ function renderExtras() {
   $('occasions').checked = s.settings.occasions;
   $('occasionInfo').textContent = s.occasion ? 'Oggi: ' + s.occasion + '.' : 'Oggi nessuna ricorrenza.';
   $('autoBright').checked = s.settings.autoBright;
+  $('soundOn').checked = s.settings.soundOn;
+  if (!editing('soundVol')) $('soundVol').value = s.settings.soundVol;
+  $('soundChime').checked = s.settings.soundChime;
   $('autoMinBox').hidden = !s.settings.autoBright;
   if (!editing('autoMin')) $('autoMin').value = s.settings.autoMin;
   $('brightInfo').textContent = s.settings.autoBright ? 'Ora: ' + Math.round(s.brightnessNow / 2.55) + '%' + (s.time ? '' : ' (in attesa dell\'ora)') : '';
@@ -1069,6 +1072,10 @@ $('transition').onchange = (e) => saveSettings({ transition: e.target.value })
   .then(() => status('Passaggio: ' + e.target.selectedOptions[0].textContent.toLowerCase())).catch(fail);
 $('brightness').onchange = (e) => saveSettings({ brightness: e.target.value }).catch(fail);
 $('occasions').onchange = (e) => saveSettings({ occasions: b01(e.target.checked) }).catch(fail);
+$('soundOn').onchange = (e) => saveSettings({ soundOn: b01(e.target.checked) }).catch(fail);
+$('soundVol').onchange = (e) => saveSettings({ soundVol: e.target.value }).then(() => post('/api/cmd', { c: 'u click' })).catch(fail);
+$('soundChime').onchange = (e) => saveSettings({ soundChime: b01(e.target.checked) }).catch(fail);
+$('soundTest').onclick = () => post('/api/cmd', { c: 'u test' }).then(() => status(state.settings.soundOn ? 'Suono di prova' : 'Prima attiva i suoni')).catch(fail);
 $('autoBright').onchange = (e) => saveSettings({ autoBright: b01(e.target.checked) }).catch(fail);
 $('autoMin').onchange = (e) => saveSettings({ autoMin: e.target.value }).catch(fail);
 

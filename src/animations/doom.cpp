@@ -139,7 +139,10 @@ class DoomGame : public ArcadeGame {
     } else {
       bool any = false;
       for (const Imp &m : imps_) any |= m.alive;
-      if (!any) cleared_ = 30;
+      if (!any) {
+        cleared_ = 30;
+        sfx(sound::WIN);
+      }
     }
     draw();
   }
@@ -199,12 +202,14 @@ class DoomGame : public ArcadeGame {
     if (reload_ > 0) return;
     reload_ = 8;
     flash_ = 3;
+    sfx(sound::CLICK);
     const int i = target();
     if (i < 0) return;
     Imp &m = imps_[i];
     m.alive = false;
     m.dying = 10;
     kills_++;
+    sfx(sound::BLIP);
   }
 
   void moveImps() {
@@ -257,6 +262,7 @@ class DoomGame : public ArcadeGame {
         b.used = false;
         health_ -= 15;
         hurt_ = 4;
+        sfx(sound::HIT);
       }
     }
   }

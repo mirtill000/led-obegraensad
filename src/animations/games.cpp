@@ -218,6 +218,7 @@ class TetrisAnimation : public ArcadeGame {
     for (int y = 0; y < H; y++) anyFull |= rowFull(y);
     if (anyFull) {
       phase_ = CLEARING;
+      sfx(sound::LINE);
       phaseFrames_ = 0;
     } else {
       spawn();
@@ -497,6 +498,7 @@ class SnakeAnimation : public ArcadeGame {
     if (eats) {
       length_++;
       hungry_ = 0;
+      sfx(sound::EAT);
     }
     memmove(body_ + 1, body_, length_ - 1);
     body_[0] = next;

@@ -133,9 +133,11 @@ class KongGame : public ArcadeGame {
     releaseFire();
     if (hit()) {
       dying_ = 40;
+      sfx(sound::HIT);
     } else if (floor_ == FLOORS - 1 && climb_ == 0 && x_ >= PAULINE_X - 2) {
       points_ += 500;
       won_ = 40;
+      sfx(sound::WIN);
     }
     draw();
   }
@@ -201,7 +203,10 @@ class KongGame : public ArcadeGame {
   }
 
   void jump() {
-    if (climb_ == 0 && jump_ == 0) jump_ = JUMP_TICKS;
+    if (climb_ == 0 && jump_ == 0) {
+      jump_ = JUMP_TICKS;
+      sfx(sound::JUMP);
+    }
   }
 
   // --- barrels ----------------------------------------------------------------
@@ -252,6 +257,7 @@ class KongGame : public ArcadeGame {
       if (!b.jumped && jump_ > 0 && b.x == x_ && b.y == feet() + 1) {
         b.jumped = true;
         points_ += 100;
+        sfx(sound::POINT);
       }
     }
   }
@@ -325,6 +331,7 @@ class KongGame : public ArcadeGame {
       if (!f.jumped && jump_ > 0 && climb_ == 0 && f.floor == floor_ && f.climb == 0 && f.x == x_) {
         f.jumped = true;
         points_ += 100;
+        sfx(sound::POINT);
       }
     }
   }

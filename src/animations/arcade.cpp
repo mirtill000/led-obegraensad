@@ -65,6 +65,7 @@ class PongGame : public ArcadeGame {
     if (x_ >= COLS - 2 && vx_ > 0) bounce(right_, COLS - 2);
     if (x_ < -1 || x_ > COLS) {
       (x_ < 0 ? scoreR_ : scoreL_)++;
+      sfx(x_ < 0 ? sound::HIT : sound::POINT);
       if (scoreL_ == 5 || scoreR_ == 5) {
         gameOver(scoreL_);
         return;
@@ -208,7 +209,9 @@ class BreakoutGame : public ArcadeGame {
       bricks_[row][col] = false;
       vy_ = -vy_;
       points_ += BRICK_ROWS - row;  // higher rows are worth more
+      sfx(sound::BLIP);
       if (--left_ == 0) {  // level cleared: faster next time
+        sfx(sound::WIN);
         speed_ = fminf(0.5f, speed_ + 0.05f);
         fillBricks();
         newBall();
@@ -229,6 +232,7 @@ class BreakoutGame : public ArcadeGame {
         gameOver(points_);
         return false;
       }
+      sfx(sound::HIT);
       newBall();
       return false;
     }
@@ -306,7 +310,10 @@ class FlappyGame : public ArcadeGame {
         pipeGap_[i] = randomGap();
       }
       // Passed a pipe: a point.
-      if (pipeX_[i] + 2 <= BIRD_X && pipeX_[i] + 2 + SPEED > BIRD_X) points_++;
+      if (pipeX_[i] + 2 <= BIRD_X && pipeX_[i] + 2 + SPEED > BIRD_X) {
+        points_++;
+        sfx(sound::POINT);
+      }
     }
     if (hits(y_, pipeX_)) {
       gameOver(points_);
@@ -322,6 +329,7 @@ class FlappyGame : public ArcadeGame {
   static int randomGap() { return 2 + esp_random() % (ROWS - GAP - 3); }  // top row of the gap
 
   void flap() {
+    sfx(sound::CLICK);
     vy_ = FLAP;
     started_ = true;
   }
@@ -443,12 +451,14 @@ class InvadersGame : public ArcadeGame {
           aliens_[i] = false;
           alive_--;
           points_ += 3 - i / COLS_A;  // top rows are worth more
+          sfx(sound::BLIP);
           shotY_ = -1;
           break;
         }
       }
     }
     if (alive_ == 0) {
+      sfx(sound::WIN);
       wave_ = min(wave_ + 1, 5);
       newWave();
     }
@@ -467,6 +477,7 @@ class InvadersGame : public ArcadeGame {
         gameOver(points_);
         return;
       }
+      sfx(sound::HIT);
     }
     draw();
   }

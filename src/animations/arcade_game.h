@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sound.h"
 #include "animation.h"
 #include "scroller.h"
 
@@ -46,8 +47,18 @@ class ArcadeGame : public Animation {
 
  protected:
   virtual void tick(uint32_t now) = 0;
-  void gameOver(int points) { score_.show(String("Punti ") + points); }
-  void gameOver(const String &text) { score_.show(text); }  // e.g. a match result
+  void gameOver(int points) {
+    sfx(sound::LOSE);
+    score_.show(String("Punti ") + points);
+  }
+  void gameOver(const String &text) {  // e.g. a match result
+    sfx(sound::WIN);
+    score_.show(text);
+  }
+  // A sound, only when someone is playing (the demos stay silent).
+  void sfx(sound::Id id) const {
+    if (!demo_) sound::play(id);
+  }
   bool demo_ = true;
 
  private:

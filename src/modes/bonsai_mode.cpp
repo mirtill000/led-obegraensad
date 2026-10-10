@@ -10,6 +10,7 @@
 #include <math.h>
 
 #include "modes/creature.h"
+#include "sound.h"
 #include "timekeeping.h"
 #include "weather.h"
 
@@ -178,6 +179,8 @@ class BonsaiMode : public Creature {
     }
     anim_ = next;
     animStart_ = ms;
+    static const sound::Id SOUND[] = {sound::CLICK, sound::WATER, sound::SNIP, sound::SPARKLE, sound::NO};
+    sound::play(SOUND[next]);
     return next != REFUSE;
   }
 

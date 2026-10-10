@@ -5,6 +5,7 @@
 #include "display.h"
 #include "gfx.h"
 #include "settings.h"
+#include "sound.h"
 #include "timekeeping.h"
 
 static const int WEEK = 7 * 24 * 60;
@@ -85,7 +86,13 @@ void SunriseMode::update(uint32_t now) {
       gfx::plot(x, y, fminf(1, r - d + 0.5f));
     }
   }
-  // Once it's time: pulsing rays.
+  // Once it's time: pulsing rays, and birds singing now and then.
+  static uint32_t lastBirds = 0;
+  if (p >= 1 && (!lastBirds || now - lastBirds > 9000)) {
+    lastBirds = now;
+    sound::play(sound::BIRDS, true);
+  }
+  if (p < 1) lastBirds = 0;
   if (p >= 1) {
     const float pulse = 0.5f + 0.5f * sinf(now / 300.0f);
     for (int i = 0; i < 8; i++) {

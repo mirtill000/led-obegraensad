@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include "modes/creature.h"
+#include "sound.h"
 #include "modes/notify_mode.h"
 #include "sprite_atlas.h"
 #include "timekeeping.h"
@@ -88,6 +89,7 @@ class CatMode : public Creature {
     if (sawNote_ && act_ != NOTE && act_ != EAT && act_ != PURR) {
       sawNote_ = false;
       begin(NOTE, now, 6000);
+      sound::play(sound::MEOW);
     }
     if (now >= until_) pick(now);
     move(now, dt);
@@ -142,6 +144,7 @@ class CatMode : public Creature {
         life_.food = min(100.0f, life_.food + 40);
         life_.love = min(100.0f, life_.love + 3);
         begin(EAT, now, 3500);
+        sound::play(sound::MEOW);
         return true;
       case 'R':
       case 'U':
@@ -156,14 +159,17 @@ class CatMode : public Creature {
           ballV_ = 5;
           begin(YARN, now, 5000);
         }
+        sound::play(sound::CLICK);
         return true;
       case 'A':
         life_.love = min(100.0f, life_.love + 12);
         if (life_.sulking && life_.love >= 40) life_.sulking = false;
         begin(life_.sulking ? SULK : PURR, now, 2500);
+        sound::play(life_.sulking ? sound::NO : sound::PURR);
         return true;
     }
     begin(REFUSE, now, 900);
+    sound::play(sound::NO);
     return false;
   }
 

@@ -81,6 +81,7 @@ class TronGame : public ArcadeGame {
             if (!cycles_[1].alive && cycles_[0].alive) cycles_[0].score++;
             phase_ = CRASH;
             phaseStart_ = now;
+            sfx(sound::HIT);
           }
         }
         break;

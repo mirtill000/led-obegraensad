@@ -91,6 +91,44 @@ reference project already uses for ESP32-S3 boards.
   project runs on 3.3V boards) - just make sure GND is common between the
   two supplies.
 
+### Sound (optional)
+
+A MAX98357A I2S amplifier board (about 5 €) and a 4-8 ohm loudspeaker
+(a 3 W one, or the driver of an old Bluetooth speaker, in its box) give
+the lamp a voice:
+
+| MAX98357A | XH-S3E | Notes |
+| :-------: | :----: | ----- |
+| VIN | 5V | from the 5V feed, like the panel |
+| GND | GND | common ground |
+| BCLK | GPIO15 | bit clock |
+| LRC | GPIO16 | word select |
+| DIN | GPIO17 | audio data |
+| SD, GAIN | - | unconnected: on, 9 dB |
+| + / - | loudspeaker | its two wires |
+
+GPIO15/16/17 are free, non-strapping and next to each other on the
+header (`PIN_I2S_*` in `include/constants.h`). Then *Impostazioni → Suoni*
+on the page: *Suoni attivi*, the volume, *Prova*. Taking the driver out of
+a Bluetooth speaker: unplug its wires from the speaker's board and wire
+them to the MAX98357A; unplug the speaker's battery too and tape its
+connector (the board isn't used, nothing is soldered, plugging both back
+makes it a Bluetooth speaker again).
+
+`src/sound.cpp` is a tiny synthesizer (two voices of square, triangle,
+sine or noise, with pitch glides and soft edges) in a task of its own on
+core 0, 16 kHz into the amplifier: the panel and the page never wait on
+it. The sounds (`sound.h`): the games when someone plays (points, jumps,
+lives lost, game over - the demos stay silent), the creatures and the
+pet (meows, purring, the dragon's flame, watering, pruning, refusals,
+the mini-games), the notifications (a ding), the sunrise alarm (birds
+singing every few seconds once the sun is up) and, if wanted, a soft
+"ding-dong" every hour by day. At night (the night schedule) it is
+silent except for the alarm. Off by default (`soundOn`), volume
+`soundVol` 0-100 (kept well below clipping), `soundChime`; the command
+`u <name>` plays one (`u test`, `u meow`...). `docs/suoni_lampada.wav`
+has all of them one after the other.
+
 ### Opening the lamp
 
 IKEA uses rivets, not screws: slide a screwdriver between a rivet and the

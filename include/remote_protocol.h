@@ -38,6 +38,7 @@
 //   s <1-9> [mode id]    speed (of the mode on show if no id)
 //   w <x> <y> <0-255>    paint a pixel of the Game of Life's board (shows it)
 //   w c                  clear the board      w l   set it going
+//   u <sound>            play a sound (sound.h: meow, test, ...)
 //   o <name> <value>     change a setting (names and limits: the settings
 //                        characteristic, one per line "name, kind B/C/N,
 //                        value, label, choices|..., choice names|..., min,

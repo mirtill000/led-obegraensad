@@ -273,8 +273,13 @@ void MarioGame::tick(uint32_t now) {
     s_.vy = JUMP_SPEED;
     s_.onGround = false;
     jumpQueuedUntil_ = now;
+    sfx(sound::JUMP);
   }
-  if (!step(s_)) {
+  const int scoreBefore = s_.score;
+  const bool alive = step(s_);
+  if (s_.score > scoreBefore) sfx(sound::POINT);
+  if (!alive) {
+    sfx(sound::HIT);
     phase_ = DYING;
     deathY_ = s_.y;
     deathVy_ = -2.5f;

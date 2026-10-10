@@ -12,6 +12,7 @@
 #include <math.h>
 
 #include "modes/creature.h"
+#include "sound.h"
 #include "sprite_atlas.h"
 #include "timekeeping.h"
 
@@ -96,6 +97,7 @@ class DragonMode : public Creature {
     lastDraw_ = now;
     if (stage() != shownStage_) {
       if (shownStage_ != 255) display.beginPageTransition(900);  // it hatches, it grows
+      if (shownStage_ != 255) sound::play(sound::SPARKLE);
       shownStage_ = stage();
     }
     if (game_ != NO_GAME) {
@@ -190,6 +192,8 @@ class DragonMode : public Creature {
     }
     anim_ = next;
     animStart_ = now;
+    sound::play(next == FEED ? sound::EAT : next == REFUSE ? sound::NO
+                : stage() == ADULT && form() == FIRE ? sound::FLAME : sound::CHEEP);
     return next != REFUSE;
   }
 
@@ -208,6 +212,7 @@ class DragonMode : public Creature {
   char seq_[8] = {};        // Memoria: the arrows to repeat
   uint8_t len_ = 0, typed_ = 0;
   bool showing_ = false;    // Memoria: showing the sequence (not your turn)
+  int beeped_ = -1;         // Memoria: the arrow already sounded
   char last_ = 0;           // the key you just pressed, echoed
   uint32_t lastAt_ = 0;
   bool over_ = false;       // showing the result
@@ -255,6 +260,7 @@ class DragonMode : public Creature {
       len_ = 3;
       for (char &k : seq_) k = ARROWS[esp_random() % 4];
       showing_ = true;
+      beeped_ = -1;
     }
     display.beginTransition();
   }
@@ -269,6 +275,7 @@ class DragonMode : public Creature {
     life_.joy = min(100.0f, life_.joy + 6);
     life_.food = max(0.0f, life_.food - 5);
     save();
+    sound::play(sound::WIN);
     over_ = true;
     phaseStart_ = now;
   }
@@ -282,12 +289,14 @@ class DragonMode : public Creature {
         if (!cue_) return;
         if (key == cue_) hits_++;
         else misses_++;
+        sound::play(key == cue_ ? sound::POINT : sound::NO);
         cue_ = 0;
         phaseStart_ = now;
         break;
       case MEMORY:
         if (showing_ || !strchr(ARROWS, key)) return;
         if (key != seq_[typed_]) {
+          sound::play(sound::NO);
           finish(now);  // wrong: the game ends here
           return;
         }
@@ -299,10 +308,14 @@ class DragonMode : public Creature {
           len_++;
           typed_ = 0;
           showing_ = true;
+          beeped_ = -1;
           phaseStart_ = now + 500;
         }
         break;
-      case MIGHT: presses_++; break;
+      case MIGHT:
+        presses_++;
+        if (presses_ % 3 == 0) sound::play(sound::FLAME);
+        break;
       default: break;
     }
   }
@@ -340,6 +353,7 @@ class DragonMode : public Creature {
           phaseStart_ = now;
         } else if (cue_ && t > window) {
           misses_++;  // too slow
+          sound::play(sound::NO);
           cue_ = 0;
           phaseStart_ = now;
         }
@@ -364,6 +378,10 @@ class DragonMode : public Creature {
             phaseStart_ = now;
           } else if (t % 800 < 600) {
             arrow(c, 8, 8, seq_[i], 0.9f);
+            if (i != beeped_) {
+              beeped_ = i;
+              sound::play(sound::BLIP);
+            }
           }
           for (int k = 0; k < len_; k++) c.set(4 + k, 0, k <= i ? 0.6f : 0.2f);
         } else {

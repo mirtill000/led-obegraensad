@@ -107,6 +107,7 @@ class RunnerGame : public ArcadeGame {
   }
   void jump() {
     State s = state();
+    if (s.y <= 0) sfx(sound::JUMP);
     startJump(s);
     load(s);
   }

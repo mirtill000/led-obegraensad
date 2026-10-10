@@ -19,6 +19,7 @@ constexpr const char *UNKNOWN_COMMAND = "Comando sconosciuto";
 constexpr const char *UNKNOWN_KEY = "Tasto sconosciuto";
 constexpr const char *UNKNOWN_MODE = "Modalità sconosciuta";
 constexpr const char *UNKNOWN_GAME = "Gioco sconosciuto";
+constexpr const char *UNKNOWN_SOUND = "Suono sconosciuto";
 constexpr const char *UNKNOWN_ANIMATION = "Animazione sconosciuta";
 constexpr const char *UNKNOWN_SCENE = "Non c'è niente con questo nome";
 constexpr const char *OUT_OF_SEASON = "Fuori stagione";

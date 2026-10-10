@@ -14,6 +14,13 @@
 #define PIN_LATCH  6  // CLA - latch / store clock
 #define PIN_BUTTON 4  // optional push button, other leg to GND
 
+// Optional sound: a MAX98357A I2S amplifier (its VIN to 5V, GND to GND,
+// SD and GAIN left unconnected) driving a 4-8 ohm loudspeaker. Free,
+// non-strapping GPIOs, side by side on the board's header.
+#define PIN_I2S_BCLK 15  // MAX98357A BCLK
+#define PIN_I2S_LRC  16  // MAX98357A LRC (word select)
+#define PIN_I2S_DIN  17  // MAX98357A DIN
+
 #define COLS 16
 #define ROWS 16
 #define TOTAL_PIXELS (ROWS * COLS)

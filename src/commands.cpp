@@ -8,6 +8,7 @@
 #include "modes/notify_mode.h"
 #include "remote_protocol.h"
 #include "settings.h"
+#include "sound.h"
 #include "texts.h"
 #include "timekeeping.h"
 #include "weather.h"
@@ -36,6 +37,7 @@ void applySettingEffects(const SettingDef *const *changed, int count) {
   if (fx & FX_WEATHER) requestWeatherUpdate();
   if (fx & FX_WEB) requestWebInfoUpdate();
   if (fx & FX_PLAYLIST) restartPlaylist();
+  if (fx & FX_SOUND) sound::apply();
   bool restarted = false;
   for (int i = 0; i < count; i++) {
     const SettingDef &d = *changed[i];
@@ -85,6 +87,13 @@ const char *runCommand(const String &command) {
       if (!(a && a->isGame())) return txt::UNKNOWN_GAME;
       setDemoMode(id.c_str(), on == "1");
       saveSettings();
+      return nullptr;
+    }
+    case 'u': {
+      // A sound, by name ("u meow"), e.g. to try the loudspeaker.
+      sound::Id id;
+      if (!sound::find(arg, id)) return txt::UNKNOWN_SOUND;
+      sound::play(id);
       return nullptr;
     }
     case 'x':

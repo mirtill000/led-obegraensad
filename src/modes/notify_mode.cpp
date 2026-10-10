@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "display.h"
+#include "sound.h"
 #include "sprite_atlas.h"
 
 namespace {
@@ -73,6 +74,7 @@ void NotifyMode::begin(uint32_t now) {
     phase_ = DONE;
     return;
   }
+  sound::play(sound::NOTIFY);
   if (queue[0].scene) {
     phase_ = SCENE;
     lastFrame_ = 0;

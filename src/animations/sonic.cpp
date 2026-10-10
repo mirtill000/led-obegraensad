@@ -88,7 +88,10 @@ class SonicGame : public ArcadeGame {
   void input(char key) override {
     if (key == 'R') rightUntil_ = tick_ + 4;
     if (key == 'L') leftUntil_ = tick_ + 4;
-    if (key == 'A' || key == 'U') jump(s_);
+    if (key == 'A' || key == 'U') {
+      if (s_.onGround) sfx(sound::JUMP);
+      jump(s_);
+    }
   }
 
  protected:
@@ -111,7 +114,11 @@ class SonicGame : public ArcadeGame {
     if (demo_ && plan == JUMP) jump(s_);
     const int ringsBefore = s_.rings;
     step(s_, right, left);
-    if (s_.rings > ringsBefore) ringsTotal_ += s_.rings - ringsBefore;
+    if (s_.rings > ringsBefore) {
+      ringsTotal_ += s_.rings - ringsBefore;
+      sfx(sound::POINT);
+    }
+    if (s_.hurt || s_.dead) sfx(sound::HIT);
     if (s_.dead) {
       dying_ = 40;
       dieY_ = s_.y - 3;

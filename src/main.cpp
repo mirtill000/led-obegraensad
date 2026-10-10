@@ -11,6 +11,7 @@
 #include "modes.h"
 #include "net.h"
 #include "settings.h"
+#include "sound.h"
 #include "timekeeping.h"
 #include "web.h"
 
@@ -84,6 +85,7 @@ void setup() {
   webBegin();
   startNetTask();
   bleBegin();
+  sound::begin();
   Serial.printf("Control page: http://%s  (http://%s.local)\n", ip.c_str(), HOSTNAME);
 
   // Show where to find the control page, then start the saved mode.
@@ -104,6 +106,7 @@ void loop() {
   bleLoop();
   eventsLoop();
   checkButton();
+  sound::loop();
   updateMode();
   noteLoopTime(micros() - start);
 }

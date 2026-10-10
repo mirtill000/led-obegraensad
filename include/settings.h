@@ -56,6 +56,9 @@ struct Settings {
   String formula;  // the Formule mode's expression (see formula.h)
   uint8_t hourglassMinutes;  // the sand timer's time (1-120)
   bool notifyNight;
+  bool soundOn;       // the loudspeaker (sound.h)
+  uint8_t soundVol;   // 0-100
+  bool soundChime;    // a chime every hour, by day
   bool bleOn;        // Bluetooth remote control
   uint32_t blePin;   // its 6-digit pairing PIN          // show phone notifications during the night too
   bool alarmOn;
@@ -116,6 +119,7 @@ enum SettingEffect : uint16_t {
   FX_TIMEZONE = 1 << 8,    // switch the clock's time zone
   FX_PLAYLIST = 1 << 9,    // start the playlist over
   FX_REBOOT = 1 << 10,     // only takes effect after a restart
+  FX_SOUND = 1 << 11,      // the loudspeaker on/off, its volume
 };
 
 enum SettingFlag : uint8_t {

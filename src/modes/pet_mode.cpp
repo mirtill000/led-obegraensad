@@ -5,6 +5,7 @@
 #include <time.h>
 
 #include "display.h"
+#include "sound.h"
 #include "sprite_atlas.h"
 #include "timekeeping.h"
 
@@ -335,6 +336,7 @@ bool PetMode::input(char key) {
   if (stage() == EGG) {
     anim = REFUSE;
     animStart = millis();
+    sound::play(sound::NO);
     return true;
   }
   if (anim != NONE && millis() - animStart < ANIM_MS[anim]) return true;  // one thing at a time
@@ -388,6 +390,8 @@ bool PetMode::input(char key) {
   }
   anim = next;
   animStart = millis();
+  static const sound::Id SOUND[] = {sound::CLICK, sound::EAT, sound::CHEEP, sound::WATER, sound::SPARKLE, sound::CHEEP, sound::NO};
+  sound::play(SOUND[next]);
   if (next != REFUSE) save();
   return true;
 }
