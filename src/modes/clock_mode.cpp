@@ -3,59 +3,63 @@
 #include "animation.h"
 
 #include "display.h"
-#include "font_small.h"
+#include "font_mini.h"
+#include "moon.h"
 #include "settings.h"
 #include "timekeeping.h"
 #include "ui.h"
 #include "weather.h"
+#include "weather_art.h"
 #include "weather_icons.h"
 
 // Layout (the outer border is the seconds track):
 //
 //   +----------------+
-//   |temp° icon      |   temperature x1-6, rows 1-6, degree sign x8, row 1
-//   |                |   weather icon x9-14, rows 1-7
-//   |HH MM           |   hours x1-6 and minutes x8-14, rows 8-13
+//   |tt° picture     |   temperature x1-6, rows 1-5, degree sign x7, row 1
+//   |    picture     |   the weather, drawn shaded and moving (weather_art.h),
+//   |    picture     |   x8-14, rows 1-9
+//   |HH MM           |   hours x1-6 and minutes x8-14, rows 10-14
 //   +----------------+
 //
-// All numbers are in the text font (font A, 6-row "Morbido" digits).
-//
+// All numbers are in the 5-row digits of the mini font (the text font's
+// rounded shapes, a row shorter), so the weather gets a 7x9 picture.
 // Everything stays inside the seconds track: the hours have no leading zero
 // and a 2-pixel tens digit (only ever 1 or 2), so they take the same
 // columns as the temperature above them.
 //
 // Until there is weather data only the time is shown, in the same digits,
-// centred (rows 5-10); until the time is known, the shared "waiting" dots
+// centred (rows 5-9); until the time is known, the shared "waiting" dots
 // (see ui.h).
 
+static const int DIGIT_ROWS = MINI_HEIGHT;  // 5
+static const int TIME_ROW = 10;             // the time's top row (with weather)
 
 // 2-pixel-wide tens digits, so a two-digit temperature or hour fits in 6
-// columns: the text font's rounded shapes, squeezed (its 1 is already 2
-// pixels wide).
-static const int DIGIT_ROWS = 6;
+// columns.
 struct NarrowGlyph {
   char c;
   uint8_t rows[DIGIT_ROWS];  // bit 7 = leftmost column
 };
 static const NarrowGlyph NARROW_TENS[] = {
-    {'2', {0x80, 0x40, 0x40, 0x80, 0x80, 0xC0}},
-    {'3', {0x80, 0x40, 0x80, 0x40, 0x40, 0x80}},
-    {'-', {0x00, 0x00, 0xC0, 0x00, 0x00, 0x00}},
+    {'1', {0x40, 0xC0, 0x40, 0x40, 0x40}},
+    {'2', {0x80, 0x40, 0x40, 0x80, 0xC0}},
+    {'3', {0x80, 0x40, 0x80, 0x40, 0x80}},
+    {'-', {0x00, 0x00, 0xC0, 0x00, 0x00}},
 };
+
+static void drawRows(int x, int y, const uint8_t *rows, int width) {
+  for (int r = 0; r < DIGIT_ROWS; r++) {
+    for (int k = 0; k < width; k++) {
+      if (rows[r] & (0x80 >> k)) display.setPixel(x + k, y + r, true);
+    }
+  }
+}
 
 // Tens digit (or minus) in x1-2; false if `c` has no 2-pixel form.
 static bool drawNarrow(int y, char c) {
-  if (c == '1') {
-    display.drawChar(1, y, '1');
-    return true;
-  }
   for (const NarrowGlyph &g : NARROW_TENS) {
     if (g.c != c) continue;
-    for (int r = 0; r < DIGIT_ROWS; r++) {
-      for (int k = 0; k < 2; k++) {
-        if (g.rows[r] & (0x80 >> k)) display.setPixel(1 + k, y + r, true);
-      }
-    }
+    drawRows(1, y, g.rows, 2);
     return true;
   }
   return false;
@@ -78,7 +82,10 @@ static void borderPixel(int s, int &x, int &y) {
 
 // A digit right-aligned in the 3-column slot at x, so the narrower 1
 // doesn't shift the digits next to it.
-static void drawDigit(int x, int y, char c) { display.drawChar(x + 3 - findGlyph(c)->width, y, c); }
+static void drawDigit(int x, int y, char c) {
+  const MiniGlyph *g = findMiniGlyph(c);
+  drawRows(x + 3 - g->width, y, g->rows, g->width);
+}
 
 // Hours in x1-6: the units at x4-6 and, from 10, a 2-pixel tens digit at
 // x1-2 (the same columns as the temperature's).
@@ -94,10 +101,9 @@ static void drawNumber(int x, int y, int value) {
 }
 
 // Temperature from x1, clamped to -9..99, with a one-pixel degree sign
-// after it on its top row. Two-digit values starting with 1, 2, 3 or a
-// minus use 2-pixel tens so the number fits in x1-6; the degree sits at x8,
-// a column away from the digits' full top row, and the icon pixel next to
-// it is turned off. 40 and above take x1-7 and go without it.
+// after it on its top row (x7). Two-digit values starting with 1, 2, 3 or a
+// minus use 2-pixel tens so the number fits in x1-6; 40 and above take
+// x1-7 and go without the degree.
 static void drawTemperature(int y, float celsius) {
   int t = (int)lroundf(celsius);
   if (t < -9) t = -9;
@@ -111,8 +117,7 @@ static void drawTemperature(int y, float celsius) {
     drawNumber(1, y, t);  // x1-7: no room for the degree sign
     return;
   }
-  display.setPixel(9, y, false);  // keep the degree apart from the icon
-  display.setPixel(8, y, true);
+  display.setPixel(7, y, true);
 }
 
 // Seconds with a fractional part: milliseconds since the second last
@@ -182,13 +187,15 @@ void ClockMode::update(uint32_t now) {
   const Weather weather = weatherNow();
   display.clear();
   if (weather.valid) {
-    drawHours(8, t.tm_hour);
-    drawNumber(8, 8, t.tm_min);
-    // Rain within 2 hours: the icon alternates with an umbrella every 2 s.
-    const bool umbrella = rainSoon(weather) && (now / 2000) % 2;
-    const Sprite &icon = umbrella ? spr::WEATHER_UMBRELLA : iconFor(weather.code, weather.isDay);
-    sprites::draw(icon, 9, 1, sprites::frameAt(icon, now));
-    drawTemperature(1, weather.temperature);  // after the icon: it clears a pixel of it
+    drawTemperature(1, weather.temperature);
+    drawHours(TIME_ROW, t.tm_hour);
+    drawNumber(8, TIME_ROW, t.tm_min);
+    // Rain within 2 hours: the picture alternates with an umbrella every 2 s.
+    if (rainSoon(weather) && (now / 2000) % 2) {
+      sprites::draw(spr::WEATHER_UMBRELLA, 8, 2, sprites::frameAt(spr::WEATHER_UMBRELLA, now));
+    } else {
+      drawWeatherArt(weather.code, weather.isDay, moonPhase(time(nullptr)), 8, 1, 7, 9, now);
+    }
   } else {
     // No weather yet: just the time, in the same digits, centred.
     drawHours(5, t.tm_hour);

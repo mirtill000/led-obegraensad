@@ -82,7 +82,7 @@ float moon(float px, float py, float cx, float cy, float r, float phase) {
   const float edge = k * half;  // the terminator's x
   const bool waxing = phase < 0.5f;
   const float lit = waxing ? clamp01((dx - edge) * r + 0.5f) : clamp01((-dx - edge) * r + 0.5f);
-  return in * (0.06f + 0.94f * lit);
+  return in * (0.2f + 0.8f * lit);  // the dark side still shows: a new moon is a moon too
 }
 
 float pixel(const Scene &s, float px, float py) {

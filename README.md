@@ -419,10 +419,13 @@ Current modes:
   `clockStyle`): binary (one column of bits per digit of HH:MM, a bar
   filling with the seconds), in Italian words ("sono le tre e un quarto",
   "è l'una meno cinque"...), in English words ("it's quarter past three"),
-  or - the default - clock and weather on one screen, numbers in the text font: on top the
-  temperature with a
-  one-pixel degree sign and an animated weather icon (falling rain or snow,
-  flashing lightning, drifting clouds, ...), below the time (hours without a
+  or - the default - clock and weather on one screen, numbers in the
+  5-row digits (the text font's rounded shapes, a row shorter): top left
+  the temperature with a one-pixel degree sign, beside it a 7x9 picture of
+  the weather drawn shaded and moving (`src/weather_art.cpp`: a sun with
+  turning rays, the moon in its real phase, clouds lit from above, falling
+  rain and drifting snow, lightning, banks of fog; an umbrella by turns
+  when rain is due within 2 hours), at the bottom the time (hours without a
   leading zero, then the minutes), and a dot gliding round the border for the
   seconds (it moves continuously, its light shared between neighbouring
   pixels, with a short fading trail). Weather is
