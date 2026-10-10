@@ -75,7 +75,9 @@ void Creature::tick() {
       dirty_ = true;
     }
   }
-  if (dirty_ && ms - lastSaveMs_ > 15 * 60000UL) save();
+  // Hourly (care is saved at once): every flash write stalls the panel's
+  // refresh for a moment, a blink that shows on a still picture.
+  if (dirty_ && ms - lastSaveMs_ > 60 * 60000UL) save();
 }
 
 bool Creature::input(char key) {

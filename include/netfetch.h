@@ -35,6 +35,7 @@ class Source {
  private:
   const uint32_t everyMs_;
   const char *cacheName_;
+  uint32_t cacheSavedAt_ = 0;  // millis() of the last cache write, 0 = none yet
   uint32_t lastTry_ = 0, lastOk_ = 0;
   uint8_t failures_ = 0;
   int lastCode_ = 0;

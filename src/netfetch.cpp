@@ -107,6 +107,12 @@ static String cachePath(const char *name) { return String("/cache/") + name; }
 
 void Source::saveCache(const String &text) {
   if (!cacheName_) return;
+  // At most every 3 hours (and once after boot): the cache only has to give
+  // something to show right after a restart, and every write to the flash
+  // stalls the panel's refresh for a moment (a visible blink).
+  const uint32_t ms = millis();
+  if (cacheSavedAt_ && ms - cacheSavedAt_ < 3 * 3600 * 1000UL) return;
+  cacheSavedAt_ = ms ? ms : 1;
   if (!LittleFS.exists("/cache")) LittleFS.mkdir("/cache");
   File f = LittleFS.open(cachePath(cacheName_), "w");
   if (!f) return;

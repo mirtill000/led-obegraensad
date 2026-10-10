@@ -306,7 +306,7 @@ void PetMode::tickClock() {
       liveOneMinute(-1);
     }
   }
-  if (dirty && ms - lastSaveMs > 15 * 60000UL) save();
+  if (dirty && ms - lastSaveMs > 60 * 60000UL) save();  // hourly: see Creature::tick()
 }
 
 void PetMode::start() {

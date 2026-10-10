@@ -48,6 +48,21 @@ costs a few percent of core 1. `REFRESH_HW_TIMER` in
 callback on core 0, which WiFi traffic can delay); `GRAYSCALE false` goes
 back to plain on/off pixels.
 
+Two things that made a still picture (the clock) flicker now and then:
+
+- The brightness is PWM on the EN pin, at exactly 40 kHz: four PWM
+  periods in each 100 us tick, both from the same 80 MHz clock, so every
+  plane gets the same whole number of pulses. At 39 kHz the PWM slid past
+  the planes, the shortest ones got 3 or 4 pulses by turns, and below full
+  brightness the dim pixels shimmered at ~30 Hz.
+- While the flash is written (settings, the pet and the creatures, the
+  web caches) both cores stop running code from flash, the refresh
+  included, and whatever plane is latched stays on: a blink of a few to
+  some tens of ms. Writes are kept rare: the creatures and the pet are
+  saved hourly (and right after care), the web caches every 3 hours.
+  *Diagnostica* shows the refresh's longest delay ("Ritardo medio /
+  massimo") and the plane changes it missed.
+
 ## Wiring
 
 1. Open the lamp (see below) and unplug/remove the original controller
@@ -921,7 +936,8 @@ normal period), one status shown in the page and in Diagnostica ("aggiornato
 3 min fa", "errore 503 · riprovo tra 4 min · ultimo dato di 2 h fa"), and
 the last good answer kept in flash (`/cache/` in LittleFS) for weather,
 Wikipedia and air quality, so after a restart the lamp shows them before
-the network is back ("dalla memoria").
+the network is back ("dalla memoria"). The cache is written at most every
+3 hours (and once after boot): see the flash writes below.
 
 ## Texts
 

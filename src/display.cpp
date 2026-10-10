@@ -198,8 +198,13 @@ void Display::begin() {
   pinMode(PIN_LATCH, OUTPUT);
   digitalWrite(PIN_LATCH, LOW);
   // EN is active low, so PWM on it dims the whole panel: the larger the duty
-  // cycle, the longer the outputs are off.
-  ledcAttach(PIN_ENABLE, 39000, 8);
+  // cycle, the longer the outputs are off. 40 kHz exactly: 25 us, four
+  // periods to each 100 us refresh tick, both counted from the same 80 MHz
+  // clock - every bit plane gets the same whole number of PWM pulses in the
+  // same phase. (At 39 kHz the PWM slid past the planes and the shortest
+  // ones got 3 or 4 pulses by turns: dim pixels shimmered at ~30 Hz as soon
+  // as the brightness was below full.)
+  ledcAttach(PIN_ENABLE, 40000, 8);
   setBrightness(255);
 
   SPI.begin(PIN_CLOCK, -1 /* MISO unused */, PIN_DATA, -1 /* SS unused */);
