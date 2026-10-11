@@ -421,10 +421,11 @@ Current modes:
   "è l'una meno cinque"...), in English words ("it's quarter past three"),
   or - the default - clock and weather on one screen, numbers in the
   5-row digits (the text font's rounded shapes, a row shorter): top left
-  the temperature with a one-pixel degree sign, beside it a 7x9 picture of
-  the weather drawn shaded and moving (`src/weather_art.cpp`: a sun with
-  turning rays, the moon in its real phase, clouds lit from above, falling
-  rain and drifting snow, lightning, banks of fog; an umbrella by turns
+  the temperature with a one-pixel degree sign, beside it a 7x9 weather
+  icon, crisp pixel art with a few frames (`weather.*_big` in the atlas: a
+  sun with its long and short rays taking turns, a crescent with a star
+  twinkling, the sun peeking over a cloud, an outlined cloud, rain falling,
+  snow drifting, a bolt now and then, banks of fog; an umbrella by turns
   when rain is due within 2 hours), at the bottom the time (hours without a
   leading zero, then the minutes), and a dot gliding round the border for the
   seconds (it moves continuously, its light shared between neighbouring

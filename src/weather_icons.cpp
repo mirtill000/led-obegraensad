@@ -10,3 +10,14 @@ const Sprite &iconFor(int code, bool isDay) {
   if (code >= 51) return spr::WEATHER_RAIN;
   return spr::WEATHER_CLOUD;
 }
+
+const Sprite &bigIconFor(int code, bool isDay) {
+  if (code == 0) return isDay ? spr::WEATHER_BIG_SUN : spr::WEATHER_BIG_MOON;
+  if (code <= 2) return isDay ? spr::WEATHER_BIG_PARTLY : spr::WEATHER_BIG_CLOUD;
+  if (code == 3) return spr::WEATHER_BIG_CLOUD;
+  if (code == 45 || code == 48) return spr::WEATHER_BIG_FOG;
+  if ((code >= 71 && code <= 77) || code == 85 || code == 86) return spr::WEATHER_BIG_SNOW;
+  if (code >= 95) return spr::WEATHER_BIG_STORM;
+  if (code >= 51) return spr::WEATHER_BIG_RAIN;
+  return spr::WEATHER_BIG_CLOUD;
+}

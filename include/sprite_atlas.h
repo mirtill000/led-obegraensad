@@ -79,6 +79,14 @@ extern const Sprite WEATHER_RAIN;
 extern const Sprite WEATHER_SNOW;
 extern const Sprite WEATHER_STORM;
 extern const Sprite WEATHER_UMBRELLA;
+extern const Sprite WEATHER_BIG_SUN;
+extern const Sprite WEATHER_BIG_MOON;
+extern const Sprite WEATHER_BIG_PARTLY;
+extern const Sprite WEATHER_BIG_CLOUD;
+extern const Sprite WEATHER_BIG_RAIN;
+extern const Sprite WEATHER_BIG_SNOW;
+extern const Sprite WEATHER_BIG_STORM;
+extern const Sprite WEATHER_BIG_FOG;
 extern const Sprite WORLD_MAP;
 
 }  // namespace spr

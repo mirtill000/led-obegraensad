@@ -438,6 +438,54 @@ static const char *const WEATHER_UMBRELLA_ROWS[] = {
 };
 const Sprite WEATHER_UMBRELLA = {"weather.umbrella", 6, 7, 3, 300, WEATHER_UMBRELLA_ROWS};
 
+// clock face, 7x9: turning rays: the long and short ones take turns
+static const char *const WEATHER_BIG_SUN_ROWS[] = {
+    ".......", "#..#..#", ".......", "..###..", "#.###.#", "..###..", ".......", "#..#..#", ".......", ".......", ":..#..:", ".......", "..###..", "#.###.#", "..###..", ".......", ":..#..:", ".......", ".......", "#..:..#", ".......", "..###..", ":.###.:", "..###..", ".......", "#..:..#", ".......",
+};
+const Sprite WEATHER_BIG_SUN = {"weather.sun_big", 7, 9, 3, 500, WEATHER_BIG_SUN_ROWS};
+
+// clock face, 7x9: a crescent, a star twinkling by it
+static const char *const WEATHER_BIG_MOON_ROWS[] = {
+    ".......", "..###..", ".##...:", "##.....", "##.....", "##.....", ".##....", "..###..", ".......", ".......", "..###..", ".##....", "##...:.", "##.....", "##.....", ".##...:", "..###..", ".......",
+};
+const Sprite WEATHER_BIG_MOON = {"weather.moon_big", 7, 9, 2, 900, WEATHER_BIG_MOON_ROWS};
+
+// clock face, 7x9: the sun peeking over a cloud
+static const char *const WEATHER_BIG_PARTLY_ROWS[] = {
+    "....:.:", ".....#.", "...:###", "..##.#.", ".####..", "######.", "######.", ".####..", ".......", ".....:.", "....:#:", "....###", "..##:#:", ".####..", "######.", "######.", ".####..", ".......",
+};
+const Sprite WEATHER_BIG_PARTLY = {"weather.partly_big", 7, 9, 2, 700, WEATHER_BIG_PARTLY_ROWS};
+
+// clock face, 7x9: an outlined cloud, drifting a pixel
+static const char *const WEATHER_BIG_CLOUD_ROWS[] = {
+    ".......", ".......", "...##..", ".##..#.", "#.....#", "#.....#", ".#####.", ".......", ".......", ".......", ".......", "..##...", ".#..##.", "#.....#", "#.....#", ".#####.", ".......", ".......",
+};
+const Sprite WEATHER_BIG_CLOUD = {"weather.cloud_big", 7, 9, 2, 1200, WEATHER_BIG_CLOUD_ROWS};
+
+// clock face, 7x9: drops falling out of the cloud
+static const char *const WEATHER_BIG_RAIN_ROWS[] = {
+    "...##..", ".#####.", "#######", ".#####.", ".......", "#..#..#", ".......", ".#..#..", ".......", "...##..", ".#####.", "#######", ".#####.", ".......", ".#..#..", ".......", "..#..#.", ".......", "...##..", ".#####.", "#######", ".#####.", ".......", "..#..#.", ".......", "#..#..#", ".......",
+};
+const Sprite WEATHER_BIG_RAIN = {"weather.rain_big", 7, 9, 3, 220, WEATHER_BIG_RAIN_ROWS};
+
+// clock face, 7x9: flakes drifting down
+static const char *const WEATHER_BIG_SNOW_ROWS[] = {
+    "...##..", ".#####.", "#######", ".#####.", ".......", ".#...#.", "...#...", ".......", ".#...#.", "...##..", ".#####.", "#######", ".#####.", ".......", "...#...", ".#...#.", ".......", "...#...",
+};
+const Sprite WEATHER_BIG_SNOW = {"weather.snow_big", 7, 9, 2, 500, WEATHER_BIG_SNOW_ROWS};
+
+// clock face, 7x9: a bolt, now and then
+static const char *const WEATHER_BIG_STORM_ROWS[] = {
+    "...##..", ".#####.", "#######", ".#####.", "...#...", "..#....", "..###..", "...#...", "..#....", "...##..", ".#####.", "#######", ".#####.", ".......", ".......", ".......", ".......", ".......", "...##..", ".#####.", "#######", ".#####.", ".......", ".......", ".......", ".......", ".......", "...##..", ".#####.", "#######", ".#####.", ".......", ".......", ".......", ".......", ".......",
+};
+const Sprite WEATHER_BIG_STORM = {"weather.storm_big", 7, 9, 4, 300, WEATHER_BIG_STORM_ROWS};
+
+// clock face, 7x9: banks of fog sliding
+static const char *const WEATHER_BIG_FOG_ROWS[] = {
+    ".......", "######.", ".......", ".######", ".......", "######.", ".......", ".######", ".......", ".......", ".######", ".......", "######.", ".......", ".######", ".......", "######.", ".......",
+};
+const Sprite WEATHER_BIG_FOG = {"weather.fog_big", 7, 9, 2, 900, WEATHER_BIG_FOG_ROWS};
+
 // The world, 16 x 8 (22.5 degrees a cell), from 180 W and from the pole.
 static const char *const WORLD_MAP_ROWS[] = {
     "....#.#.....#...",  // 79 N
@@ -530,6 +578,14 @@ const Sprite *const ATLAS[] = {
     &spr::WEATHER_SNOW,
     &spr::WEATHER_STORM,
     &spr::WEATHER_UMBRELLA,
+    &spr::WEATHER_BIG_SUN,
+    &spr::WEATHER_BIG_MOON,
+    &spr::WEATHER_BIG_PARTLY,
+    &spr::WEATHER_BIG_CLOUD,
+    &spr::WEATHER_BIG_RAIN,
+    &spr::WEATHER_BIG_SNOW,
+    &spr::WEATHER_BIG_STORM,
+    &spr::WEATHER_BIG_FOG,
     &spr::WORLD_MAP,
 };
 const uint16_t ATLAS_COUNT = sizeof(ATLAS) / sizeof(ATLAS[0]);

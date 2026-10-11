@@ -8,3 +8,5 @@
 // WMO weather code -> icon (https://open-meteo.com/en/docs). The umbrella
 // (spr::WEATHER_UMBRELLA) is shown in turn with it when rain is on its way.
 const Sprite &iconFor(int code, bool isDay);
+// The same, 7x9 (weather.*_big): the clock face's larger icons.
+const Sprite &bigIconFor(int code, bool isDay);

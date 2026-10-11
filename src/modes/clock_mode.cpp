@@ -4,25 +4,23 @@
 
 #include "display.h"
 #include "font_mini.h"
-#include "moon.h"
 #include "settings.h"
 #include "timekeeping.h"
 #include "ui.h"
 #include "weather.h"
-#include "weather_art.h"
 #include "weather_icons.h"
 
 // Layout (the outer border is the seconds track):
 //
 //   +----------------+
-//   |tt° picture     |   temperature x1-6, rows 1-5, degree sign x7, row 1
-//   |    picture     |   the weather, drawn shaded and moving (weather_art.h),
-//   |    picture     |   x8-14, rows 1-9
+//   |tt° icon        |   temperature x1-6, rows 1-5, degree sign x7, row 1
+//   |    icon        |   the weather icon, 7x9, crisp and animated
+//   |    icon        |   (weather.*_big in the atlas), x8-14, rows 1-9
 //   |HH MM           |   hours x1-6 and minutes x8-14, rows 10-14
 //   +----------------+
 //
 // All numbers are in the 5-row digits of the mini font (the text font's
-// rounded shapes, a row shorter), so the weather gets a 7x9 picture.
+// rounded shapes, a row shorter), so the weather gets a 7x9 icon.
 // Everything stays inside the seconds track: the hours have no leading zero
 // and a 2-pixel tens digit (only ever 1 or 2), so they take the same
 // columns as the temperature above them.
@@ -190,11 +188,12 @@ void ClockMode::update(uint32_t now) {
     drawTemperature(1, weather.temperature);
     drawHours(TIME_ROW, t.tm_hour);
     drawNumber(8, TIME_ROW, t.tm_min);
-    // Rain within 2 hours: the picture alternates with an umbrella every 2 s.
+    // Rain within 2 hours: the icon alternates with an umbrella every 2 s.
     if (rainSoon(weather) && (now / 2000) % 2) {
       sprites::draw(spr::WEATHER_UMBRELLA, 8, 2, sprites::frameAt(spr::WEATHER_UMBRELLA, now));
     } else {
-      drawWeatherArt(weather.code, weather.isDay, moonPhase(time(nullptr)), 8, 1, 7, 9, now);
+      const Sprite &icon = bigIconFor(weather.code, weather.isDay);
+      sprites::draw(icon, 8, 1, sprites::frameAt(icon, now));
     }
   } else {
     // No weather yet: just the time, in the same digits, centred.
